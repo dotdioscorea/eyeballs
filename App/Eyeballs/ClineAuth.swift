@@ -63,7 +63,7 @@ enum ClineAuth {
         guard ["/api/v1/users/me", "/api/v1/auth/register", "/api/v1/auth/refresh"].contains(path) || balance else { throw UsageError.invalidResponse }
         var request = URLRequest(url: URL(string: issuer + path)!); request.timeoutInterval = 25
         request.setValue("application/json", forHTTPHeaderField: "Accept"); request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
         if let accessToken { request.setValue("Bearer " + (accessToken.hasPrefix("workos:") ? accessToken : "workos:" + accessToken), forHTTPHeaderField: "Authorization") }
         if let body {
             guard path.hasPrefix("/api/v1/auth/") else { throw UsageError.invalidResponse }

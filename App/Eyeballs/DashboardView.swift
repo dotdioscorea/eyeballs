@@ -56,7 +56,7 @@ struct DashboardView: View {
         ScrollView {
             if store.accounts.isEmpty {
                 VStack(spacing: 22) {
-                    EyeballsMark(size: 100).padding(.top, 70)
+                    RequotaMark(size: 100).padding(.top, 70)
                     Text("No accounts").font(.title2.weight(.semibold))
                     Button("Add account") { adding = true }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("connect-first")
                 }.padding(24).frame(maxWidth: 500).frame(maxWidth: .infinity)
@@ -75,7 +75,7 @@ struct DashboardView: View {
                 }.padding(.horizontal, compact ? 12 : 16).padding(.top, compact ? 4 : 10).padding(.bottom, 20).frame(maxWidth: 650).frame(maxWidth: .infinity)
             }
         }
-        .background(Theme.background).navigationTitle("Eyeballs").navigationBarTitleDisplayMode(.inline)
+        .background(Theme.background).navigationTitle("Requota").navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
             Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Add account").accessibilityIdentifier("add-account")
         } }
@@ -97,30 +97,23 @@ struct DashboardView: View {
                     }
                 }
                 Spacer()
-                if compact {
-                    Button { searching.toggle() } label: { Image(systemName: "magnifyingglass") }.accessibilityLabel("Search accounts")
-                    Menu {
-                        Button("All providers") { filter = nil }
-                        ForEach(Provider.allCases) { provider in Button(provider.name) { filter = provider } }
-                    } label: { Text(filter?.name ?? "All").font(.caption) }.accessibilityLabel("Filter provider")
-                }
                 Menu {
                     Picker("Sort accounts", selection: $sortValue) { ForEach(AccountSort.allCases) { Text($0.title).tag($0.rawValue) } }
                     Button("Reorder accounts") { adoptCustomOrder(); reordering = true }
                 } label: { Label(sort.title, systemImage: "arrow.up.arrow.down").font(.caption.weight(.medium)) }
                     .accessibilityLabel("Sort accounts").accessibilityIdentifier("sort-accounts")
             }
-            if !compact || searching || !search.isEmpty { HStack {
+            HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search accounts", text: $search).font(.subheadline).accessibilityIdentifier("search-accounts")
                 if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Clear search") }
-            }.padding(9).background(Theme.card, in: RoundedRectangle(cornerRadius: 10)) }
-            if !compact { ScrollView(.horizontal, showsIndicators: false) {
+            }.padding(compact ? 7 : 9).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     filterButton("All", selected: filter == nil) { filter = nil }
                     ForEach(Provider.allCases) { provider in filterButton(provider.name, selected: filter == provider) { filter = provider } }
                 }
-            } }
+            }
         }.padding(.horizontal, 16).padding(.vertical, compact ? 4 : 10).background(Theme.background)
     }
     private func adoptCustomOrder() {
@@ -182,10 +175,13 @@ struct AccountCard: View {
                     }
                 }
                 }
-                if readings.isEmpty, let credits = account.snapshot?.creditBalance { Text("Credits: \(credits)").font(.subheadline) }
+                if let credits = account.snapshot?.creditBalance {
+                    HStack { Text("Credits").foregroundStyle(.secondary); Spacer(); Text(credits).monospacedDigit().fontWeight(.medium) }.font(compact ? .caption : .subheadline)
+                    if !account.exhaustedWindows.isEmpty { Text(account.exhaustedWindows.map(\.title).joined(separator: ", ") + " allowance exhausted").font(.caption2).foregroundStyle(.orange) }
+                }
                 HStack(alignment: .top, spacing: 8) {
                     if account.needsLogin { Text("Reconnect to update").foregroundStyle(.orange) }
-                    else if let reset = account.displayedReset(for: readings) { Text(reset <= context.date ? "Reset due" : "Reset in \(ResetText.relative(reset, now: context.date))").foregroundStyle(.secondary) }
+                    else if let window = account.displayedResetWindow(for: readings), let reset = window.resetsAt { Text(reset <= context.date ? "\(window.shortTitle) reset due" : "\(window.shortTitle) resets in \(ResetText.relative(reset, now: context.date))").foregroundStyle(.secondary) }
                     Spacer(minLength: 0)
                     if let snapshot = account.snapshot {
                         Text(UpdatedText.relative(snapshot.updatedAt, now: context.date) + (snapshot.isStale(at: context.date) ? " · stale" : "")).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
@@ -214,22 +210,28 @@ struct AccountTile: View {
         GeometryReader { geometry in
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let readings = account.readings(at: context.date)
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 HStack(spacing: 6) {
                     ProviderLogo(provider: account.provider, color: account.color, size: 17)
                     Text(account.title).font(.subheadline.weight(.semibold)).lineLimit(1)
                     Spacer(minLength: 0)
                 }
-                if readings.isEmpty, let balance = account.snapshot?.creditBalance { VStack(spacing: 4) { Text(balance).font(.title2.monospacedDigit()); Text("Credits").font(.caption).foregroundStyle(.secondary) }.frame(height: min(96, geometry.size.width * 0.48)) }
-                else { UsageRing(readings: readings, color: account.color, size: min(96, geometry.size.width * 0.48), lineWidth: readings.count > 2 ? 5 : 7) }
-                HStack(spacing: 8) {
-                    ForEach(Array(readings.prefix(2).enumerated()), id: \.element.id) { index, reading in
-                        Text("\(reading.window?.duration == 18000 ? "5h" : reading.window?.title ?? "Usage") \(reading.value)")
-                            .foregroundStyle(MetricColor.color(index, base: account.color)).lineLimit(1).minimumScaleFactor(0.7)
+                if readings.isEmpty, let balance = account.snapshot?.creditBalance { VStack(spacing: 4) { Text(balance).font(.title2.monospacedDigit()); Text("Credits").font(.caption).foregroundStyle(.secondary) }.frame(height: min(92, geometry.size.width * 0.44)) }
+                else { UsageRing(readings: readings, color: account.color, size: min(92, geometry.size.width * 0.44), lineWidth: readings.count > 2 ? 5 : 7) }
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)], alignment: .leading, spacing: 2) {
+                    ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
+                        HStack(spacing: 2) {
+                            Circle().fill(MetricColor.color(index, base: account.color)).frame(width: 3, height: 3)
+                            Text((reading.definition.kind == .time && reading.window?.shortTitle == "Weekly" ? "Wk" : reading.window?.shortTitle ?? "Usage") + (reading.definition.kind == .time ? " time" : "")).foregroundStyle(.secondary).lineLimit(1)
+                            Text(reading.value).fontWeight(.medium).fixedSize()
+                        }
                     }
-                }.font(.system(size: 10)).monospacedDigit()
-                Text(account.needsLogin ? "Reconnect" : account.displayedReset(for: readings).map { $0 <= context.date ? "Reset due" : "Reset in \(ResetText.relative($0, now: context.date))" } ?? account.provider.name)
-                    .font(.caption2).foregroundStyle(account.needsLogin ? .orange : .secondary).lineLimit(1)
+                }.font(.system(size: 9)).monospacedDigit()
+                if !readings.isEmpty, let credits = account.snapshot?.creditBalance { HStack { Text("Credits").foregroundStyle(.secondary); Text(credits).monospacedDigit() }.font(.system(size: 9)) }
+                if account.needsLogin { Text("Reconnect").font(.caption2).foregroundStyle(.orange) }
+                else if let window = account.displayedResetWindow(for: readings), let reset = window.resetsAt {
+                    Text(reset <= context.date ? "\(window.shortTitle) reset due" : "\(window.shortTitle) reset \(ResetText.relative(reset, now: context.date))").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
                 if let updated = account.snapshot?.updatedAt { Text(UpdatedText.relative(updated, now: context.date)).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
             }.padding(10).frame(width: geometry.size.width, height: geometry.size.height)
                 .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))

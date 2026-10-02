@@ -10,6 +10,7 @@ struct RingDefinition: Codable, Equatable, Identifiable, Sendable {
     var windowID: String
     var kind: MetricKind = .usage
     var direction: AmountDirection?
+    var windowTitle: String?
     var id: String { windowID + ":" + kind.rawValue }
 }
 struct AccountDisplay: Codable, Equatable, Sendable {
@@ -22,7 +23,7 @@ struct MetricReading: Identifiable, Equatable {
     var direction: AmountDirection
     var date: Date
     var id: String { definition.id }
-    var title: String { (window?.title ?? "Unavailable") + (definition.kind == .time ? " time" : "") }
+    var title: String { (window?.title ?? definition.windowTitle ?? "Unavailable") + (definition.kind == .time ? " time" : "") + (window == nil && definition.windowTitle != nil ? " · unavailable" : "") }
     var caption: String {
         if definition.kind == .time { return direction == .remaining ? "time left" : "elapsed" }
         return direction == .remaining ? "left" : "used"
@@ -47,14 +48,15 @@ struct MetricReading: Identifiable, Equatable {
     var value: String { percent.map { "\(Int($0.rounded()))%" } ?? "—" }
 }
 extension AgentAccount {
+    var exhaustedWindows: [UsageWindow] { (snapshot?.windows ?? []).filter { ($0.safePercent ?? -1) >= 100 } }
     var displaySettings: AccountDisplay {
         display ?? defaultDisplay
     }
     var defaultDisplay: AccountDisplay {
         let windows = snapshot?.windows ?? []
-        var rings = Array(windows.prefix(2)).map { RingDefinition(windowID: $0.id) }
+        var rings = Array(windows.prefix(2)).map { RingDefinition(windowID: $0.id, windowTitle: $0.title) }
         if let weekly = window(for: .weekly), weekly.duration != nil, weekly.resetsAt != nil {
-            rings.append(RingDefinition(windowID: weekly.id, kind: .time))
+            rings.append(RingDefinition(windowID: weekly.id, kind: .time, windowTitle: weekly.title))
         }
         return AccountDisplay(rings: rings)
     }
@@ -66,7 +68,19 @@ extension AgentAccount {
         }
     }
     func displayedReset(for readings: [MetricReading]) -> Date? {
-        readings.compactMap { $0.window?.resetsAt }.min() ?? snapshot?.windows.compactMap(\.resetsAt).min()
+        displayedResetWindow(for: readings)?.resetsAt
+    }
+    mutating func retainMetricNames() {
+        guard var display else { return }
+        for index in display.rings.indices {
+            if let window = snapshot?.windows.first(where: { $0.id == display.rings[index].windowID }) { display.rings[index].windowTitle = window.title }
+        }
+        self.display = display
+    }
+    func displayedResetWindow(for readings: [MetricReading]) -> UsageWindow? {
+        let selected = readings.compactMap(\.window).filter { $0.resetsAt != nil }
+        let available = selected.isEmpty ? (snapshot?.windows ?? []).filter { $0.resetsAt != nil } : selected
+        return available.min { ($0.resetsAt ?? .distantFuture) < ($1.resetsAt ?? .distantFuture) }
     }
     func window(for period: UsagePeriod) -> UsageWindow? {
         let windows = snapshot?.windows ?? []
@@ -74,6 +88,19 @@ extension AgentAccount {
         case .session: return windows.first { $0.duration.map { $0 > 0 && $0 <= 21600 } == true }
         case .weekly: return windows.first { $0.duration.map { abs($0 - 604800) < 60 } == true || $0.title.localizedCaseInsensitiveContains("weekly") }
         }
+    }
+}
+extension UsageWindow {
+    var shortTitle: String {
+        let generic = ["weekly", "weekly credits", "daily", "daily requests", "current window", "primary window", "session"].contains(title.lowercased()) || title.range(of: "^[0-9]+-hour window$", options: .regularExpression) != nil
+        guard generic else { return title }
+        if let duration {
+            if duration > 0 && duration < 3600 { return "\(Int(duration / 60))m" }
+            if duration > 0 && duration <= 21600 { return "\(Int(duration / 3600))h" }
+            if abs(duration - 604800) < 60 { return "Weekly" }
+            if abs(duration - 86400) < 60 { return "Daily" }
+        }
+        return title
     }
 }
 

@@ -1,8 +1,28 @@
 import SwiftUI
+import UIKit
 
 enum MetricColor {
     static func color(_ index: Int, base: Color) -> Color {
-        [base, Color(hex: 0x91C7EE), Color(hex: 0xF2AD8B), Color(hex: 0xAAA5FF)][index % 4]
+        var palette = [base]
+        for candidate in [Color(hex: 0x91C7EE), Color(hex: 0xF2AD8B), Color(hex: 0xAAA5FF), Color(hex: 0xB9F577), Color(hex: 0x79D6B3), Color(hex: 0xF29BCB)] {
+            guard palette.count < 4 else { break }
+            if palette.allSatisfy({ distinctHue(candidate, $0) }) { palette.append(candidate) }
+        }
+        return palette[index % palette.count]
+    }
+    private static func distinctHue(_ first: Color, _ second: Color) -> Bool {
+        var h1: CGFloat = 0, s1: CGFloat = 0, h2: CGFloat = 0, s2: CGFloat = 0
+        guard UIColor(first).getHue(&h1, saturation: &s1, brightness: nil, alpha: nil),
+              UIColor(second).getHue(&h2, saturation: &s2, brightness: nil, alpha: nil), s1 > 0.15, s2 > 0.15 else { return true }
+        let distance = abs(h1 - h2)
+        return min(distance, 1 - distance) >= 1 / 12
+    }
+}
+extension AgentAccount {
+    func usageColor(for windowID: String) -> Color {
+        let index = displaySettings.rings.firstIndex { $0.windowID == windowID && $0.kind == .usage }
+            ?? snapshot?.windows.firstIndex { $0.id == windowID } ?? 0
+        return MetricColor.color(index, base: color)
     }
 }
 struct UsageRing: View {
@@ -12,30 +32,48 @@ struct UsageRing: View {
     var lineWidth: CGFloat = 8
     var showsNumber: Bool = true
     var body: some View {
+        let count = min(4, readings.count)
+        let gap: CGFloat = size < 110 ? 2 : 4
+        let stroke = min(lineWidth, max(1.5, (size * 0.45 - 2 * gap * CGFloat(max(0, count - 1))) / CGFloat(max(1, 2 * count - 1))))
+        let hole = max(1, size - CGFloat(max(0, count - 1)) * 2 * (stroke + gap) - stroke - 4)
+        let value = readings.primary?.value ?? "—"
+        let caption = hole >= 40 ? readings.primary?.centerCaption ?? "" : ""
+        let captionSize = max(6, min(size * 0.075, hole * 0.14))
         ZStack {
             ForEach(Array(readings.prefix(4).enumerated()), id: \.element.id) { index, reading in
-                let inset = CGFloat(index) * (lineWidth + 4)
+                let inset = CGFloat(index) * (stroke + gap)
                 let tint = MetricColor.color(index, base: color)
-                Circle().stroke(tint.opacity(0.13), lineWidth: lineWidth).padding(inset)
+                Circle().stroke(tint.opacity(0.13), lineWidth: stroke).padding(inset)
                 if let percent = reading.percent, percent > 0 {
                     Circle().trim(from: 0, to: percent / 100)
-                        .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                        .stroke(tint, style: StrokeStyle(lineWidth: stroke, lineCap: .round))
                         .rotationEffect(.degrees(-90)).padding(inset)
                 } else if reading.percent == nil {
-                    Circle().stroke(tint.opacity(0.3), style: StrokeStyle(lineWidth: lineWidth, dash: [2, 5])).padding(inset)
+                    Circle().stroke(tint.opacity(0.3), style: StrokeStyle(lineWidth: stroke, dash: [2, 5])).padding(inset)
                 }
             }
             if readings.isEmpty { Circle().stroke(color.opacity(0.15), style: StrokeStyle(lineWidth: lineWidth, dash: [3, 6])) }
             if showsNumber {
-                let hole = max(24, size - CGFloat(max(0, readings.count - 1)) * 2 * (lineWidth + 4) - lineWidth * 2 - 8)
                 VStack(spacing: 1) {
-                    Text(readings.primary?.value ?? "—").font(.system(size: min(size * 0.235, hole * 0.45), weight: .semibold, design: .rounded)).monospacedDigit().minimumScaleFactor(0.6)
-                    Text(readings.primary?.centerCaption ?? "").font(.system(size: max(6, min(size * 0.075, hole * 0.14)), weight: .medium)).foregroundStyle(.secondary)
+                    Text(value).font(.system(size: fittedSize(value, caption: caption, captionSize: captionSize, hole: hole), weight: .semibold, design: .rounded)).monospacedDigit().lineLimit(1).fixedSize()
+                    if !caption.isEmpty { Text(caption).font(.system(size: captionSize, weight: .medium)).foregroundStyle(.secondary).lineLimit(1).fixedSize() }
                 }.frame(width: hole)
             }
         }.frame(width: size, height: size)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(readings.map { "\($0.title), \($0.value) \($0.caption)" }.joined(separator: ", "))
+    }
+    private func fittedSize(_ value: String, caption: String, captionSize: CGFloat, hole: CGFloat) -> CGFloat {
+        var pointSize = min(size * 0.235, hole * 0.55)
+        for _ in 0..<20 {
+            let descriptor = UIFont.monospacedDigitSystemFont(ofSize: pointSize, weight: .semibold).fontDescriptor
+            let font = UIFont(descriptor: descriptor.withDesign(.rounded) ?? descriptor, size: pointSize)
+            let bounds = (value as NSString).size(withAttributes: [.font: font])
+            let captionHeight = caption.isEmpty ? 0 : captionSize * 1.25 + 1
+            if hypot(bounds.width + 2, bounds.height + captionHeight) <= hole { break }
+            pointSize *= 0.95
+        }
+        return pointSize
     }
 }
 struct MetricBars: View {
@@ -49,7 +87,7 @@ struct MetricBars: View {
                     HStack {
                         Text(reading.title).lineLimit(1)
                         Spacer(minLength: 4)
-                        Text("\(reading.value) \(reading.caption)").monospacedDigit().fixedSize()
+                        Text("\(reading.value) \(reading.caption)").monospacedDigit().fixedSize().foregroundStyle(.primary).fontWeight(.medium)
                     }.font(dense ? .system(size: 10) : .caption).foregroundStyle(.secondary)
                     GeometryReader { geometry in
                         ZStack(alignment: .leading) {

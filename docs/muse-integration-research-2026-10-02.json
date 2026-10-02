@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-02T21:22:34.432229+00:00",
+  "provider": "Meta Muse / Muse Code",
+  "implementationStatus": "Research; not included in TestFlight build 10",
+  "sources": [
+    "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/",
+    "https://dev.meta.ai/docs/muse-code/auth",
+    "https://dev.meta.ai/help/subscriptions/what-is-a-muse-code-subscription",
+    "https://dev.meta.ai/install.sh",
+    "https://api.meta.ai/muse-launcher.sh"
+  ],
+  "verified": {
+    "personalAgentAndCodingCliAreSeparateProducts": true,
+    "museCodeAuthentication": "Meta browser device authorization or API key",
+    "subscriptionPlansUsdMonthly": [
+      5,
+      15,
+      50
+    ],
+    "officialLauncherClientId": "1031625952748946",
+    "deviceAuthorizationEndpoint": "https://auth.meta.com/oidc/device/authorization/",
+    "deviceTokenEndpoint": "https://auth.meta.com/oidc/device/token/",
+    "officialArtifactVersion": "1.4.2-R4684.1",
+    "officialArtifactSha256": "e9987ef4267a648dc1931c2836a23f6f16f8b4417368b126a810bece2abd308d",
+    "artifactChecksumVerified": true,
+    "artifactInstalledOrExecuted": false
+  },
+  "notYetVerified": [
+    "Completed native iPhone sign-in",
+    "Authenticated account identity and refresh",
+    "Live quota response for a subscription account",
+    "An authenticated usage endpoint that does not provision an inference key"
+  ],
+  "constraints": [
+    "No paid plan or model usage purchased",
+    "No browser cookie import, webpage scraping or desktop companion"
+  ]
+}

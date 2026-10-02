@@ -79,7 +79,7 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertEqual(value("scope"), "openid profile email offline_access")
         XCTAssertNil(value("resource"))
         XCTAssertNil(value("agent_name_hint"))
-        XCTAssertEqual(value("originator"), "eyeballs")
+        XCTAssertEqual(value("originator"), "requota")
         XCTAssertEqual(value("code_challenge_method"), "S256")
         XCTAssertEqual(value("code_challenge"), Data(SHA256.hash(data: Data(first.verifier.utf8))).base64URL)
         XCTAssertEqual(value("redirect_uri"), callback.absoluteString)

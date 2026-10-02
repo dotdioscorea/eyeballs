@@ -33,9 +33,9 @@ struct PrivacyView: View {
     var body: some View {
         List {
             Section {
-                Text("Sign-in uses the iOS system browser. Tokens are stored in this iPhone’s Keychain and don’t sync to iCloud. Eyeballs doesn’t store passwords.")
+                Text("Sign-in uses the iOS system browser. Tokens are stored in this iPhone’s Keychain and don’t sync to iCloud. Requota doesn’t store passwords.")
                 Text("Usage history is kept for up to 90 days. Account names and notes are stored on this device. Widgets receive names and usage, without emails, identities, notes or tokens.")
-                Text("Requests go directly to provider APIs. Eyeballs has no backend, ads or analytics.")
+                Text("Requests go directly to provider APIs. Requota has no backend, ads or analytics.")
                 Text("Removing an account deletes its local tokens and saved data.")
             }
             Section {
@@ -91,7 +91,7 @@ struct ProblemReportView: View {
     }
     private func openIssue() {
         var url = URLComponents(string: "https://github.com/dotdioscorea/eyeballs/issues/new")!
-        let body = String(details.prefix(6000)) + "\n\nApp: \(Diagnostics.version)\niOS: \(UIDevice.current.systemVersion)" + (includeDebug ? "\n\nAttach eyeballs-debug.json here." : "")
+        let body = String(details.prefix(6000)) + "\n\nApp: \(Diagnostics.version)\niOS: \(UIDevice.current.systemVersion)" + (includeDebug ? "\n\nAttach requota-debug.json here." : "")
         url.queryItems = [URLQueryItem(name: "title", value: String(title.prefix(160))), URLQueryItem(name: "body", value: body)]
         if let url = url.url { openURL(url) }
     }

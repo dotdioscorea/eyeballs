@@ -50,7 +50,7 @@ struct OAuthAttempt {
                 URLQueryItem(name: "code_challenge", value: Data(SHA256.hash(data: Data(verifier.utf8))).base64URL)
             ]
             if provider == .gemini { parts.queryItems! += [URLQueryItem(name: "access_type", value: "offline"), URLQueryItem(name: "prompt", value: "consent select_account")] }
-            if provider == .grok { parts.queryItems! += [URLQueryItem(name: "nonce", value: nonce), URLQueryItem(name: "referrer", value: "eyeballs")] }
+            if provider == .grok { parts.queryItems! += [URLQueryItem(name: "nonce", value: nonce), URLQueryItem(name: "referrer", value: "requota")] }
             return parts.url!
         }
         let legacyRegistration = clientID.hasPrefix("oaiapp_")
@@ -66,7 +66,7 @@ struct OAuthAttempt {
         if legacyRegistration {
             items += [URLQueryItem(name: "ext_agent_host_id", value: hostID), URLQueryItem(name: "resource", value: "https://api.openai.com/v1")]
         } else {
-            items += [URLQueryItem(name: "id_token_add_organizations", value: "true"), URLQueryItem(name: "codex_cli_simplified_flow", value: "true"), URLQueryItem(name: "originator", value: "eyeballs")]
+            items += [URLQueryItem(name: "id_token_add_organizations", value: "true"), URLQueryItem(name: "codex_cli_simplified_flow", value: "true"), URLQueryItem(name: "originator", value: "requota")]
         }
         if let hint = previous?.idToken { items.append(URLQueryItem(name: "id_token_hint", value: hint)) }
         parts.queryItems = items

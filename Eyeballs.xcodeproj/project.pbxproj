@@ -11,6 +11,7 @@
 		0693CB2F497C68C7DCE33727 /* AuthenticationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE3CCDC959AEFB204D546C7 /* AuthenticationTests.swift */; };
 		07378C34ABD8316DF1613B47 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA47537705E50CB6EC65A726 /* WidgetIntents.swift */; };
 		0BB1A11BA6A2F7904A85E162 /* EyeballsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3193C2CE03CF0CA3BBECC747 /* EyeballsApp.swift */; };
+		0EF2C88B831DB1C7150F8C97 /* AllowanceChanges.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17AF5688A17179558AF4EB28 /* AllowanceChanges.swift */; };
 		148AFA9CB7E9CCD8712244C6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91BB496ACAC09C661690C30 /* SettingsView.swift */; };
 		166D758AB5C27CF4B3846114 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D37FE1D71CF154B12341312D /* DemoData.swift */; };
 		1ED79E8BD244F71E3C03A910 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4C42AB581D58EB654E496C /* WidgetCache.swift */; };
@@ -18,6 +19,7 @@
 		2F7376ACC2D49B95FE05FBDA /* CopilotBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442EC851C13AC561AF132D8D /* CopilotBrowser.swift */; };
 		38742D24F93F30DBE07EFA12 /* CredentialVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */; };
 		38F74B9EB8C562C6DF7FFAE4 /* CopilotAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = E88869C5AFC93BA7FDBB7E05 /* CopilotAuth.swift */; };
+		3908DAC3F8DCC6A2458F876B /* HistoryPlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0032F4ABED451CA8B4919EE1 /* HistoryPlot.swift */; };
 		3AEF1B963EC1883CDD28BA19 /* ProviderAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DE281900BE28A9DF2AEEE232 /* ProviderAssets.xcassets */; };
 		3D2C6A7E9E9A9602289E99BE /* ProviderAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DE281900BE28A9DF2AEEE232 /* ProviderAssets.xcassets */; };
 		43A2EFF0A099DE77554A3AF7 /* OpenAIAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */; };
@@ -29,6 +31,7 @@
 		75065CCED2E79E97CF944FDE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */; };
 		77D4BD237AACAF92F7ED4674 /* ProviderLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019C17C1A379490985ED6FF8 /* ProviderLogo.swift */; };
 		7E24CE8E158AB83109058255 /* DisplayAndHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0994ECBFFDA50E8B2A7BDC78 /* DisplayAndHistoryTests.swift */; };
+		7E5588FDC8710ABDC5559733 /* UsageAnalysisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09423D49CC8BBBEBDD59C925 /* UsageAnalysisTests.swift */; };
 		7F55F1ECBF6E5E38DC47FC65 /* WidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA47537705E50CB6EC65A726 /* WidgetIntents.swift */; };
 		825BFE17C9A718E42CF4B1DF /* CredentialVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6C216786AFDAD32A68746E /* CredentialVault.swift */; };
 		857C28387CCF689043E67253 /* Rings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6A5FE6D05A77A7AD24B /* Rings.swift */; };
@@ -41,12 +44,15 @@
 		940DC0DC6F9EC9D841DA1B79 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4C42AB581D58EB654E496C /* WidgetCache.swift */; };
 		9A55CB2D8F00A7B7264ACCD7 /* ProviderAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 237FA47F8F46B8FD3A98C502 /* ProviderAuth.swift */; };
 		9C708E093CEA00589B210085 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65929DC8B984D88BE27D375E /* Models.swift */; };
+		A254766BA40EE647896B563B /* AllowanceTransitionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207B8136599A82F479E0111C /* AllowanceTransitionTests.swift */; };
 		A48D20DAA386AAB1A142BFC2 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56F04F43CF1D3627795B32C /* AccountStore.swift */; };
 		A506078F1F50325C806889F9 /* ClineAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C2672D37B7B28F59AFFB235 /* ClineAuth.swift */; };
 		A5535733E6EA70F5844208A8 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3306B7B51777233C9826251 /* Diagnostics.swift */; };
 		AEC98F93B644A0F5BF18A6C6 /* EyeballsWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB7C96965668FA84945135BD /* EyeballsWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B17BAB9B0B9961BC2195B4C2 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */; };
 		B78636509C532C5DBD80E187 /* SimulatorFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E222D06115E48D6C4B8A45F /* SimulatorFixtures.swift */; };
+		BC423998ACA466C55241EDEB /* UsageAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E2F5C2BDB8CC0FC25607B4 /* UsageAnalysis.swift */; };
+		BC860660C15C35988FC10F73 /* AllowanceChanges.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17AF5688A17179558AF4EB28 /* AllowanceChanges.swift */; };
 		C05B8879AF5C0ECFCC861D61 /* CursorAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11DF0FB35290D1DD4DB23F11 /* CursorAuth.swift */; };
 		C353FE54EF29D9B82B4F7990 /* UsageClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */; };
 		C8A970A48C24A58202AE0F44 /* GeminiAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAEB5F6AFC79AD6D417A033F /* GeminiAuth.swift */; };
@@ -103,14 +109,17 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0032F4ABED451CA8B4919EE1 /* HistoryPlot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPlot.swift; sourceTree = "<group>"; };
 		019C17C1A379490985ED6FF8 /* ProviderLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderLogo.swift; sourceTree = "<group>"; };
 		0286561A7270BF75941657F9 /* EyeballsUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EyeballsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0568FF4A40E5DD98C07AC800 /* EyeballsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EyeballsUITests.swift; sourceTree = "<group>"; };
+		09423D49CC8BBBEBDD59C925 /* UsageAnalysisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageAnalysisTests.swift; sourceTree = "<group>"; };
 		0994ECBFFDA50E8B2A7BDC78 /* DisplayAndHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayAndHistoryTests.swift; sourceTree = "<group>"; };
 		0AB592D3EBCC0F7D04BDFF58 /* SignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInTests.swift; sourceTree = "<group>"; };
 		0E222D06115E48D6C4B8A45F /* SimulatorFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorFixtures.swift; sourceTree = "<group>"; };
 		106F2C7617F7DE3A8122E39A /* DemoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoTests.swift; sourceTree = "<group>"; };
 		11DF0FB35290D1DD4DB23F11 /* CursorAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorAuth.swift; sourceTree = "<group>"; };
+		17AF5688A17179558AF4EB28 /* AllowanceChanges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllowanceChanges.swift; sourceTree = "<group>"; };
 		181841084ED748786CD43750 /* UsageHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageHistory.swift; sourceTree = "<group>"; };
 		1B0CADB0B5A3485C1468D6FA /* UsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTests.swift; sourceTree = "<group>"; };
 		1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
@@ -118,6 +127,7 @@
 		1C2672D37B7B28F59AFFB235 /* ClineAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClineAuth.swift; sourceTree = "<group>"; };
 		1E4C42AB581D58EB654E496C /* WidgetCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCache.swift; sourceTree = "<group>"; };
 		1EEAEE20CF95404145476053 /* HistoryCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCharts.swift; sourceTree = "<group>"; };
+		207B8136599A82F479E0111C /* AllowanceTransitionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllowanceTransitionTests.swift; sourceTree = "<group>"; };
 		22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageClient.swift; sourceTree = "<group>"; };
 		237FA47F8F46B8FD3A98C502 /* ProviderAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAuth.swift; sourceTree = "<group>"; };
 		2D64A389A37C2185E8AD904D /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
@@ -127,6 +137,7 @@
 		442EC851C13AC561AF132D8D /* CopilotBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopilotBrowser.swift; sourceTree = "<group>"; };
 		4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIAuth.swift; sourceTree = "<group>"; };
+		57E2F5C2BDB8CC0FC25607B4 /* UsageAnalysis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageAnalysis.swift; sourceTree = "<group>"; };
 		586D2A36DAC6AD2D0EC7C502 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		65929DC8B984D88BE27D375E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVaultTests.swift; sourceTree = "<group>"; };
@@ -175,6 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				78B6E314C46A3C70FFC088BA /* AccountDisplay.swift */,
+				17AF5688A17179558AF4EB28 /* AllowanceChanges.swift */,
 				65929DC8B984D88BE27D375E /* Models.swift */,
 				79AECE995479EE0B545151E2 /* PrivacyInfo.xcprivacy */,
 				DE281900BE28A9DF2AEEE232 /* ProviderAssets.xcassets */,
@@ -201,6 +213,7 @@
 			isa = PBXGroup;
 			children = (
 				1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */,
+				207B8136599A82F479E0111C /* AllowanceTransitionTests.swift */,
 				9AE3CCDC959AEFB204D546C7 /* AuthenticationTests.swift */,
 				99904C44853D1BAEC77FA838 /* ClineTests.swift */,
 				671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */,
@@ -208,6 +221,7 @@
 				0994ECBFFDA50E8B2A7BDC78 /* DisplayAndHistoryTests.swift */,
 				86C0271AE508B96055D14825 /* EventAndChartTests.swift */,
 				0AB592D3EBCC0F7D04BDFF58 /* SignInTests.swift */,
+				09423D49CC8BBBEBDD59C925 /* UsageAnalysisTests.swift */,
 				1B0CADB0B5A3485C1468D6FA /* UsageTests.swift */,
 			);
 			path = Tests;
@@ -234,6 +248,7 @@
 				3193C2CE03CF0CA3BBECC747 /* EyeballsApp.swift */,
 				FAEB5F6AFC79AD6D417A033F /* GeminiAuth.swift */,
 				1EEAEE20CF95404145476053 /* HistoryCharts.swift */,
+				0032F4ABED451CA8B4919EE1 /* HistoryPlot.swift */,
 				B597A58B390FDC870026C7AF /* Info.plist */,
 				575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */,
 				237FA47F8F46B8FD3A98C502 /* ProviderAuth.swift */,
@@ -243,6 +258,7 @@
 				2D64A389A37C2185E8AD904D /* SignInView.swift */,
 				0E222D06115E48D6C4B8A45F /* SimulatorFixtures.swift */,
 				586D2A36DAC6AD2D0EC7C502 /* Theme.swift */,
+				57E2F5C2BDB8CC0FC25607B4 /* UsageAnalysis.swift */,
 				22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */,
 				181841084ED748786CD43750 /* UsageHistory.swift */,
 			);
@@ -428,6 +444,7 @@
 				46ECBE83B6165FFC0BC72494 /* AccountDisplay.swift in Sources */,
 				92619770F287401B12EAA6AA /* AccountEvents.swift in Sources */,
 				A48D20DAA386AAB1A142BFC2 /* AccountStore.swift in Sources */,
+				BC860660C15C35988FC10F73 /* AllowanceChanges.swift in Sources */,
 				A506078F1F50325C806889F9 /* ClineAuth.swift in Sources */,
 				72F585409FFFD8DE6CF834AF /* ClineBrowser.swift in Sources */,
 				38F74B9EB8C562C6DF7FFAE4 /* CopilotAuth.swift in Sources */,
@@ -441,6 +458,7 @@
 				0BB1A11BA6A2F7904A85E162 /* EyeballsApp.swift in Sources */,
 				C8A970A48C24A58202AE0F44 /* GeminiAuth.swift in Sources */,
 				D2C3C57A237011D6D8512B54 /* HistoryCharts.swift in Sources */,
+				3908DAC3F8DCC6A2458F876B /* HistoryPlot.swift in Sources */,
 				91B31B26197F4D7EADB74682 /* Models.swift in Sources */,
 				43A2EFF0A099DE77554A3AF7 /* OpenAIAuth.swift in Sources */,
 				9A55CB2D8F00A7B7264ACCD7 /* ProviderAuth.swift in Sources */,
@@ -452,6 +470,7 @@
 				8860B7922A6C370D2D056FB5 /* SignInView.swift in Sources */,
 				B78636509C532C5DBD80E187 /* SimulatorFixtures.swift in Sources */,
 				51F894819DFCDFCB48AEB7BF /* Theme.swift in Sources */,
+				BC423998ACA466C55241EDEB /* UsageAnalysis.swift in Sources */,
 				C353FE54EF29D9B82B4F7990 /* UsageClient.swift in Sources */,
 				F7CBA12E8CE9089FC185DFC8 /* UsageHistory.swift in Sources */,
 				1ED79E8BD244F71E3C03A910 /* WidgetCache.swift in Sources */,
@@ -472,6 +491,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				25DB3C929330C33219C14A47 /* AccountDisplay.swift in Sources */,
+				0EF2C88B831DB1C7150F8C97 /* AllowanceChanges.swift in Sources */,
 				D5B1D5CCE8C975AAB6375936 /* EyeballsWidgets.swift in Sources */,
 				9C708E093CEA00589B210085 /* Models.swift in Sources */,
 				77D4BD237AACAF92F7ED4674 /* ProviderLogo.swift in Sources */,
@@ -486,6 +506,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EF56B745C7CC542B3E6207F5 /* AccountStoreTests.swift in Sources */,
+				A254766BA40EE647896B563B /* AllowanceTransitionTests.swift in Sources */,
 				0693CB2F497C68C7DCE33727 /* AuthenticationTests.swift in Sources */,
 				8C5CCB3C9BFE75B379CBF679 /* ClineTests.swift in Sources */,
 				38742D24F93F30DBE07EFA12 /* CredentialVaultTests.swift in Sources */,
@@ -493,6 +514,7 @@
 				7E24CE8E158AB83109058255 /* DisplayAndHistoryTests.swift in Sources */,
 				48500BFEE22B433E15ED4725 /* EventAndChartTests.swift in Sources */,
 				CDA134D2CBBC11BF9BF7817B /* SignInTests.swift in Sources */,
+				7E5588FDC8710ABDC5559733 /* UsageAnalysisTests.swift in Sources */,
 				CF2A98DA37A20459358F48E5 /* UsageTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

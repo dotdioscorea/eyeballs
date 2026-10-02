@@ -172,5 +172,14 @@
       "us"
     ]
   },
-  "registrarQuote": "Porkbun requires authenticated API access; no registration or purchase performed."
+  "registrarQuote": "Porkbun requires authenticated API access; no registration or purchase performed.",
+  "decision": {
+    "name": "Requota",
+    "selectedBy": "Owner",
+    "date": "2026-10-02",
+    "appStoreConnectName": "Requota",
+    "appStoreConnectSubtitle": "AI Usage Tracker",
+    "appleMetadataVerified": true,
+    "domainPurchased": false
+  }
 }

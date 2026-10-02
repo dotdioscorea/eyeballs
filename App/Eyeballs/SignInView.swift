@@ -76,7 +76,15 @@ struct SignInView: View {
                         Text("Exit Demo to sign in to a provider.").font(.caption).foregroundStyle(.secondary)
                     } else if let snapshot = model.snapshot, let credential = model.credential {
                         HStack(spacing: 20) {
-                            UsageRing(readings: AgentAccount(provider: account.provider, snapshot: snapshot).readings(), color: account.provider.color, size: 100)
+                            let readings = AgentAccount(provider: account.provider, snapshot: snapshot).readings()
+                            if readings.isEmpty, let balance = snapshot.creditBalance {
+                                VStack(spacing: 5) {
+                                    Text(balance).font(.title2.monospacedDigit())
+                                    Text("Credits").font(.caption).foregroundStyle(.secondary)
+                                }.frame(width: 100, height: 100)
+                            } else {
+                                UsageRing(readings: readings, color: account.provider.color, size: 100)
+                            }
                             VStack(alignment: .leading, spacing: 8) {
                                 Label("Account verified", systemImage: "checkmark.seal.fill").foregroundStyle(Theme.accent)
                                 if let email = credential.email { Text(email).font(.subheadline).foregroundStyle(.secondary) }

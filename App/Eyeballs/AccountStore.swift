@@ -62,7 +62,10 @@ final class AccountStore: ObservableObject {
         #if DEBUG
         if !isDemo, SimulatorFixtures.enabled {
             let fresh = SimulatorFixtures.accounts()
-            for index in accounts.indices { if let sample = fresh.first(where: { $0.id == accounts[index].id }) { accounts[index].snapshot = sample.snapshot } }
+            for index in accounts.indices { if let sample = fresh.first(where: { $0.id == accounts[index].id }) {
+                accounts[index].snapshot = sample.snapshot
+                if ProcessInfo.processInfo.arguments.contains("--ring-boundaries") { accounts[index].display = sample.display }
+            } }
             for account in accounts {
                 histories[account.id] = (0..<72).map { index in
                     var windows = account.snapshot!.windows
@@ -98,6 +101,7 @@ final class AccountStore: ObservableObject {
         if let existing {
             var merged = accounts[existing]
             try vault.save(credential, id: merged.id)
+            merged.retainMetricNames()
             if let snapshot = account.snapshot { merged.snapshot = observe(snapshot, previous: merged.snapshot, id: merged.id) }; merged.needsLogin = false; merged.issue = nil; merged.needsReport = nil
             revisions[merged.id, default: 0] += 1; cooldowns[merged.id] = nil
             accounts[existing] = merged
@@ -117,7 +121,8 @@ final class AccountStore: ObservableObject {
         // An editor may have opened before a refresh; preserve the latest usage and connection.
         accounts[index].label = account.label; accounts[index].workstream = account.workstream
         accounts[index].notes = account.notes; accounts[index].renewalReminder = account.renewalReminder
-        accounts[index].favorite = account.favorite; accounts[index].display = account.display; accounts[index].colorHex = account.colorHex; persist()
+        accounts[index].favorite = account.favorite; accounts[index].display = account.display; accounts[index].colorHex = account.colorHex
+        accounts[index].retainMetricNames(); persist()
     }
     func reorder(_ ids: [UUID]) {
         let ranks = Dictionary(uniqueKeysWithValues: Array(Set(ids)).map { ($0, ids.firstIndex(of: $0)!) })
@@ -218,6 +223,7 @@ final class AccountStore: ObservableObject {
             }
             guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return }
             recordHistory(snapshot, id: id)
+            accounts[index].retainMetricNames()
             accounts[index].snapshot = observe(snapshot, previous: accounts[index].snapshot, id: id); accounts[index].issue = nil; accounts[index].needsLogin = false; accounts[index].needsReport = nil
             if integratesWithSystem { Diagnostics.record(.refreshSucceeded, provider: account.provider) }
         } catch {
@@ -242,7 +248,7 @@ final class AccountStore: ObservableObject {
             do {
                 let accepted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
                 notificationsEnabled = accepted
-                if !accepted { error = "Reset reminders are disabled in iOS Settings. You can enable them under Notifications → Eyeballs." }
+                if !accepted { error = "Reset reminders are disabled in iOS Settings. You can enable them under Notifications → Requota." }
             } catch { self.error = "Notifications could not be enabled. Please try again."; notificationsEnabled = false }
         } else {
             notificationsEnabled = false
@@ -280,7 +286,7 @@ final class AccountStore: ObservableObject {
                 if event.kind == .weeklyReset { continue }
                 let content = UNMutableNotificationContent()
                 content.title = "\(account.title): \(event.kind.title.lowercased())"
-                content.body = event.detail.isEmpty ? "Open Eyeballs for details." : event.detail
+                content.body = event.detail.isEmpty ? "Open Requota for details." : event.detail
                 content.sound = .default; content.userInfo = ["accountID": account.id.uuidString]
                 Task { try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "observed-" + event.id, content: content, trigger: nil)) }
             }

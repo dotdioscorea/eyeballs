@@ -42,12 +42,12 @@ struct AccountQuery: EntityStringQuery {
 enum WidgetAmount: String, AppEnum {
     case account, remaining, used
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Amounts"
-    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [.account: "Account settings", .remaining: "Remaining", .used: "Used / elapsed"]
+    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [.account: "Same as account", .remaining: "Remaining", .used: "Used / elapsed"]
 }
 enum WidgetMetrics: String, AppEnum {
-    case account, sessionAndWeek, weekAndTime, week, session
+    case account, sessionAndWeek, weekAndTime, sessionAndTime, timeWindows, week, session
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Metrics"
-    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [.account: "Account settings", .sessionAndWeek: "5-hour + weekly", .weekAndTime: "Weekly + weekly time", .week: "Weekly", .session: "5-hour"]
+    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [.account: "Same as account", .sessionAndWeek: "5-hour + weekly", .weekAndTime: "Weekly + weekly time", .sessionAndTime: "5-hour + 5-hour time", .timeWindows: "5-hour time + weekly time", .week: "Weekly", .session: "5-hour"]
     func settings(for account: AgentAccount, amount: WidgetAmount) -> AccountDisplay {
         var settings = account.displaySettings
         if self != .account {
@@ -55,6 +55,8 @@ enum WidgetMetrics: String, AppEnum {
             switch self {
             case .sessionAndWeek: settings.rings = [session, week].compactMap { $0 }.map { RingDefinition(windowID: $0.id) }
             case .weekAndTime: settings.rings = week.map { [RingDefinition(windowID: $0.id), RingDefinition(windowID: $0.id, kind: .time)] } ?? []
+            case .sessionAndTime: settings.rings = session.map { [RingDefinition(windowID: $0.id), RingDefinition(windowID: $0.id, kind: .time)] } ?? []
+            case .timeWindows: settings.rings = [session, week].compactMap { $0 }.filter { $0.duration != nil && $0.resetsAt != nil }.map { RingDefinition(windowID: $0.id, kind: .time) }
             case .week: settings.rings = week.map { [RingDefinition(windowID: $0.id)] } ?? []
             case .session: settings.rings = session.map { [RingDefinition(windowID: $0.id)] } ?? []
             case .account: break

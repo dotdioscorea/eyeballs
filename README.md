@@ -1,6 +1,6 @@
-# Eyeballs
+# Requota
 
-An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot and Cursor accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
+An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot, Cursor and Cline accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
 - Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
@@ -8,7 +8,9 @@ An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Co
 - Account and multi-account widgets with selectable accounts, bars or rings, metrics and sorting. Dense rows show up to six accounts in a medium widget or twelve in a large widget, with account links.
 - Provider logos, default brand colours and per-account colour overrides.
 - Banked Codex reset counts, reported expiry dates and first detection timestamps.
-- Local line charts and daily, weekly and monthly heatmaps; account and metric comparisons.
+- Local line charts with tappable reset events, consumption heatmaps and account/metric comparisons.
+- Recent percentage burn rates for 1h, 6h and 12h, with estimated time to zero.
+- Display choices survive tier changes; known plan/allowance changes are recorded and start new analysis baselines.
 - Pull-to-refresh, timestamps, configurable reset/expiry/unused-allowance reminders and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
@@ -16,7 +18,7 @@ TestFlight **1.0 (9)** is available for internal testing, built from commit `3f1
 
 ## Provider connections
 
-Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
+Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline uses WorkOS device authorization. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
 
 | Provider | Usage endpoint | Identity |
 | --- | --- | --- |
@@ -26,6 +28,7 @@ Sign-in uses `ASWebAuthenticationSession` and the providers’ public native cli
 | Gemini CLI | `cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota` | Authenticated Google user-info API |
 | GitHub Copilot | `api.github.com/copilot_internal/user` | Authenticated GitHub user API |
 | Cursor | `api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage` | Authenticated Cursor GetMe API |
+| Cline | `api.cline.bot/api/v1/users/{id}/balance` | Authenticated Cline profile API |
 
 Gemini reports Gemini CLI and Code Assist model quota buckets. It does not report the Gemini chat website's message allowance. Google must supply an existing Code Assist project for the account; the app does not create a Google account or enroll it into a new service. Unknown quota durations stay unknown. Google's system sign-in presentation and cancellation and the quota parser have been tested; a completed live Gemini authorization remains for the owner to test with their existing account.
 
@@ -33,13 +36,19 @@ Copilot requests only `read:user` and rejects credentials with repository scopes
 
 Cursor reports included, Auto and named-model usage percentages and the reported billing cycle. A free test account completed the native handshake; identity, usage and plan requests returned HTTP 200. The browser session expires after the provider’s reported token lifetime (currently 60 days) and requires sign-in again; the app does not create an API key. 65 unit tests and the native Cursor browser presentation/cancellation check passed. Cursor is included in build 8.
 
-Cline's SDK WorkOS device flow, native token registration and authenticated credit-balance parser are implemented on this provider branch. A free account completed browser authorization; registration, identity, balance, refresh and renewed identity/balance requests returned HTTP 200 with the same identity. The balance conversion was checked against Cline's dashboard and [credit controller](https://github.com/cline/cline/blob/main/apps/vscode/src/core/controller/account/getUserCredits.ts)/[display formatter](https://github.com/cline/cline/blob/main/apps/vscode/webview-ui/src/utils/format.ts): a REST balance of 500,000 is 0.5000 displayed credits. The app preserves zero and does not invent percentage quotas or reset dates.
+Cline uses the SDK's WorkOS device flow, native token registration and authenticated credit-balance endpoint. A free account completed browser authorization; registration, identity, balance, refresh and renewed identity/balance requests returned HTTP 200 with the same identity. The balance conversion was checked against Cline's dashboard and [credit controller](https://github.com/cline/cline/blob/main/apps/vscode/src/core/controller/account/getUserCredits.ts)/[display formatter](https://github.com/cline/cline/blob/main/apps/vscode/webview-ui/src/utils/format.ts): a REST balance of 500,000 is 0.5000 displayed credits. The app preserves zero and does not invent percentage quotas or reset dates.
 
-The provider branch previously passed 79 unit tests. All five updated Cline tests now pass against the live response's expiry format and balance units. The simulator loaded Cline's system sign-in page and cancelled without saving a connection; a completed native iPhone sign-in remains a separate manual check. Cline is not included in TestFlight build 9.
+Five Cline tests cover the live response's expiry format and balance units. The simulator loaded Cline's system sign-in page and cancelled without saving a connection; a completed native iPhone sign-in remains a separate manual check. Cline is not included in TestFlight build 9.
 
 These integrations use provider-controlled interfaces. Distribution permission is separate from technical access; see the [current permission investigation](docs/provider-integration-permissions-2026-10-02.md). Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
 
 Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts), [GitHub device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow), [VS Code GitHub authentication client](https://github.com/microsoft/vscode/tree/main/extensions/github-authentication), [Cursor CLI authentication](https://cursor.com/docs/cli/reference/authentication).
+
+The [Opus 5.5 design review](docs/design-review-2026-10-02.json) records the reviewed native views and implementation decisions.
+
+Claude refreshes its authenticated profile to read the current plan and rate-limit tier. A live Max 20× response was checked against the installed Claude client’s profile protocol. New quota fields become available in display settings; saved rings, amount choices, colours and names remain attached to the account if a downgrade removes a metric. Unavailable metrics show a dash and return when reported again. Known plan, cap, duration or amount-unit changes are recorded separately from resets and split history/forecast baselines. Unknown tier metadata never implies an upgrade or downgrade.
+
+The app is now named Requota. Existing bundle IDs, Keychain services, App Groups, widget kinds and local data paths retain their original identifiers so updates preserve accounts, history and widget configuration.
 
 ## Storage and updates
 
@@ -51,7 +60,7 @@ Widgets read an atomic App Group summary file. They receive names, workstreams, 
 
 Usage is fetched when the app opens, every five minutes while it is active, on pull-to-refresh, and during background app refresh when iOS allows it. Widgets show cached readings; timestamp entries update their time rings. A widget does not keep the app running or guarantee extra provider fetches. [Apple controls widget update budgets](https://developer.apple.com/documentation/widgetkit/keeping-a-widget-up-to-date/) and background execution.
 
-History records successful provider readings, retains up to 90 days and is capped at 12,000 samples per account. Charts connect observed readings across gaps and reset drops, while unknown readings remain breaks. Heatmap cells average observed usage levels; blank cells have no readings. Provider-reported amounts are shown only where available and comparisons keep different units separate. Widget timelines never create history samples.
+History records successful provider readings, retains up to 90 days and is capped at 12,000 samples per account. Charts connect observed readings across gaps and reset drops, while unknown readings remain breaks. Long traces reduce rendering points while preserving endpoints and observed extrema; selection and analysis still use the full history. Unchanged reads keep a starting point and their latest timestamp. Heatmaps default to consumption between readings in the same allowance cycle. Reset drops are excluded; deltas crossing cell boundaries are assigned only when the interval is at most twenty minutes. Longer unobserved intervals are never spread across cells. Daily views use a 24-hour strip, weekly views use weekday/hour rows, and monthly views align to the local calendar. Quota level remains an option showing average reported levels. Unknown, observed zero and future cells have distinct appearances. Provider-reported amounts are shown only where available and comparisons keep different units separate. Widget timelines never create history samples. Burn-rate estimates use only the current allowance cycle within the selected 1h/6h/12h period, require recent readings and sufficient observed duration, and report when a reset precedes exhaustion. They estimate percentage points per hour, not token counts or credit charging.
 
 Events retain up to 90 days, capped at 2,000 records. Early resets and banked reset use are inferred from large quota drops before the known deadline; unexplained reductions in banked counts are recorded as removals, not asserted to be used. Reset reminders use provider dates and the last reported allowance. Observed-event notifications depend on successful refreshes; iOS does not guarantee background refresh intervals. Parsing failures keep the previous reading and offer a report with an optional debug bundle.
 

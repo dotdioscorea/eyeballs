@@ -58,7 +58,7 @@ enum ProviderAuth {
         let endpoint = provider == .claude ? issuer(provider) + "/v1/oauth/token" : issuer(provider) + "/oauth2/token"
         var request = URLRequest(url: URL(string: endpoint)!)
         request.httpMethod = "POST"; request.timeoutInterval = 30
-        request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
         if provider == .claude {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: fields)
@@ -83,11 +83,7 @@ enum ProviderAuth {
         let accountID: String?
         let email: String?
         if provider == .claude {
-            var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/profile")!)
-            request.timeoutInterval = 20
-            request.setValue("Bearer " + access, forHTTPHeaderField: "Authorization")
-            request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-            request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
+            let request = claudeProfileRequest(accessToken: access)
             let identity = try claudeIdentity(try await ProviderHTTP.json(request, unauthorizedError: .usageAccessDenied))
             subject = identity.subject; accountID = identity.accountID; email = identity.email
         } else {
@@ -124,6 +120,14 @@ enum ProviderAuth {
               let organization = raw["organization"] as? [String: Any], let id = organization["uuid"] as? String, !id.isEmpty else { throw AuthError.invalidIdentity }
         return (subject, id, account["email"] as? String)
     }
+    static func claudeProfileRequest(accessToken: String) -> URLRequest {
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/profile")!)
+        request.timeoutInterval = 10
+        request.setValue("Bearer " + accessToken, forHTTPHeaderField: "Authorization")
+        request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
+        return request
+    }
     static func grokIdentity(_ verifiedClaims: [String: Any]) throws -> (subject: String, accountID: String, principalType: String) {
         guard let subject = verifiedClaims["sub"] as? String, !subject.isEmpty,
               let type = (verifiedClaims["principal_type"] ?? verifiedClaims["principalType"]) as? String, ["User", "Team"].contains(type),
@@ -156,7 +160,7 @@ enum LoopbackRequest {
         }
         guard method == "GET" else { throw AuthError.invalidCallback }
         do { _ = try attempt.validateCallback(url) } catch AuthError.cancelled { /* Validated denial returns to the app. */ }
-        let body = "<!doctype html><meta name=viewport content='width=device-width'><title>Eyeballs</title><p>You can return to Eyeballs.</p>"
+        let body = "<!doctype html><meta name=viewport content='width=device-width'><title>Requota</title><p>You can return to Requota.</p>"
         return LoopbackReply(preflight: false, callback: url, response: "HTTP/1.1 200 OK\r\n\(cors)Content-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nContent-Security-Policy: default-src 'none'\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)")
     }
 }

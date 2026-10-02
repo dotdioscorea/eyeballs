@@ -56,6 +56,7 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
     var updatedAt: Date = .now
     var source: String = "Provider"
     var bankedResets: [BankedReset]?
+    var allowanceContext: String?
     var nextReset: Date? { windows.compactMap(\.resetsAt).filter { $0 > .now }.min() }
     func isStale(at date: Date = .now) -> Bool {
         date.timeIntervalSince(updatedAt) > 30 * 60 || windows.contains { $0.resetDue(at: date) }

@@ -5,6 +5,7 @@ import Charts
 struct UsageHistorySample: Codable, Equatable, Identifiable {
     var date: Date
     var windows: [UsageWindow]
+    var allowanceContext: String?
     var id: Date { date }
 }
 struct UsageHistoryStore {
@@ -19,11 +20,17 @@ struct UsageHistoryStore {
     func append(_ snapshot: UsageSnapshot, to samples: [UsageHistorySample], now: Date = .now) -> [UsageHistorySample] {
         guard snapshot.updatedAt <= now.addingTimeInterval(60), snapshot.updatedAt >= now.addingTimeInterval(-Self.retention) else { return samples }
         var samples = samples.filter { $0.date >= now.addingTimeInterval(-Self.retention) }
-        let sample = UsageHistorySample(date: snapshot.updatedAt, windows: snapshot.windows)
+        let sample = UsageHistorySample(date: snapshot.updatedAt, windows: snapshot.windows, allowanceContext: snapshot.allowanceContext ?? snapshot.plan)
         if let last = samples.last {
             guard sample.date > last.date else { return samples }
-            // Closely spaced identical reads add no detail; retain their latest timestamp.
-            if last.windows == sample.windows, sample.date.timeIntervalSince(last.date) < 300 { samples.removeLast() }
+            // Coalesce an unchanged tail while preserving its starting point.
+            // Otherwise repeated quick refreshes can erase the evidence of zero burn.
+            if samples.count > 1 {
+                let anchor = samples[samples.count - 2]
+                if last.windows == sample.windows, anchor.windows == sample.windows,
+                   last.allowanceContext == sample.allowanceContext, anchor.allowanceContext == sample.allowanceContext,
+                   sample.date.timeIntervalSince(anchor.date) < 300 { samples.removeLast() }
+            }
         }
         samples.append(sample)
         return Array(samples.suffix(12_000))
@@ -41,54 +48,65 @@ struct UsageHistoryStore {
 struct UsageHistoryView: View {
     let samples: [UsageHistorySample]
     let account: AgentAccount
+    var events: [AccountEvent] = []
     @State private var days = 7
-    @State private var selectedDate: Date?
+    @State private var rangeEnd = Date.now
+    @State private var hiddenWindows = Set<String>()
     @State private var heatmapWindow = ""
     @State private var measure = HistoryMeasure.remaining
     @State private var unit = ""
-    private var units: [String] { Array(Set(visible.flatMap(\.windows).filter { $0.usedAmount != nil }.compactMap(\.amountUnit))).sorted() }
+    private var domain: ClosedRange<Date> { rangeEnd.addingTimeInterval(-Double(days) * 86400)...rangeEnd }
+    private var visible: [UsageHistorySample] { samples.filter { domain.contains($0.date) } }
+    private var units: [String] { Array(Set(samples.flatMap(\.windows).filter { $0.usedAmount != nil }.compactMap(\.amountUnit))).sorted() }
     private var activeUnit: String { units.contains(unit) ? unit : units.first ?? "" }
-    private var visible: [UsageHistorySample] { samples.filter { $0.date >= Date.now.addingTimeInterval(-Double(days) * 86400) } }
     private var windows: [UsageWindow] {
         var seen = Set<String>()
-        return visible.reversed().flatMap(\.windows).filter { seen.insert($0.id).inserted && (measure != .amount || $0.amountUnit == activeUnit) }
+        return (account.snapshot?.windows ?? []) + samples.reversed().flatMap(\.windows).filter { window in
+            !(account.snapshot?.windows.contains { $0.id == window.id } ?? false) && seen.insert(window.id).inserted
+        }
+    }
+    private var plottedWindows: [UsageWindow] { windows.filter { !hiddenWindows.contains($0.id) && (measure != .amount || $0.amountUnit == activeUnit) } }
+    private var series: [HistoryPlotSeries] {
+        plottedWindows.map { window in
+            HistoryPlotSeries(id: window.id, title: window.shortTitle, color: account.usageColor(for: window.id), segments: HistorySeries.segments(samples: visible, windowID: window.id, measure: measure, unit: measure == .amount ? activeUnit : nil), subdued: days >= 7 && window.duration.map { $0 <= 21600 } == true)
+        }
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Usage history").font(.headline)
-            Picker("History period", selection: $days) { Text("24h").tag(1); Text("7d").tag(7); Text("30d").tag(30); Text("90d").tag(90) }.pickerStyle(.segmented)
-            if !units.isEmpty { Picker("Measure", selection: $measure) { ForEach(HistoryMeasure.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented) }
-            if measure == .amount { Picker("Units", selection: Binding(get: { activeUnit }, set: { unit = $0 })) { ForEach(units, id: \.self) { Text($0).tag($0) } } }
-            if visible.isEmpty { Text("History starts with your next successful refresh.").font(.caption).foregroundStyle(.secondary) }
-            else if !visible.flatMap(\.windows).contains(where: { measure.value($0) != nil }) { Text("No readings for this measure.").font(.caption).foregroundStyle(.secondary) }
-            else {
-                Chart {
-                    ForEach(windows) { window in
-                        let segments = HistorySeries.segments(samples: visible, windowID: window.id, measure: measure)
-                        ForEach(Array(segments.enumerated()), id: \.offset) { segmentIndex, points in
-                            ForEach(points) { point in
-                                let percent = point.usedPercent
-                                LineMark(x: .value("Time", point.date), y: .value("Percent", percent), series: .value("Segment", "\(window.id)-\(segmentIndex)"))
-                                    .interpolationMethod(.stepEnd).foregroundStyle(by: .value("Window", window.title))
-                                if points.count == 1 { PointMark(x: .value("Time", point.date), y: .value("Percent", percent)).symbolSize(16).foregroundStyle(by: .value("Window", window.title)) }
-                            }
-                        }
+        VStack(spacing: 18) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack { Text("Usage history").font(.headline); Spacer(); HistoryMeasureMenu(measure: $measure, unit: $unit, units: units) }
+                HistoryPeriodPicker(days: $days)
+                if series.flatMap({ $0.segments.flatMap { $0 } }).isEmpty { Text(plottedWindows.isEmpty ? "Choose a metric." : "History starts with successful refreshes.").font(.caption).foregroundStyle(.secondary) }
+                else {
+                    HistoryPlot(series: series, domain: domain, measure: measure, unit: activeUnit,
+                                events: ChartEvents.groups(events: events, windows: plottedWindows, domain: domain), accountNames: [account.id: account.title])
+                }
+                if !windows.isEmpty { windowLegend }
+                if !windows.isEmpty { Divider(); BurnRateView(samples: samples, windows: windows, events: events) }
+            }.panel()
+            if let window = windows.first(where: { $0.id == heatmapWindow }) ?? windows.first(where: EventDetection.weekly) ?? windows.first {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Activity").font(.headline)
+                        Spacer()
+                        Picker("Activity metric", selection: Binding(get: { window.id }, set: { heatmapWindow = $0 })) { ForEach(windows) { Text($0.shortTitle).tag($0.id) } }.tint(.primary)
                     }
-                    if let selectedDate { RuleMark(x: .value("Selected", selectedDate)).foregroundStyle(.secondary).annotation(position: .top, alignment: .leading) {
-                        Text(selectedDate.formatted(date: .abbreviated, time: .shortened)).font(.caption2).padding(5).background(Theme.card)
-                    } }
-                }.chartYScale(domain: 0...(measure == .amount ? max(1, visible.flatMap(\.windows).compactMap(\.usedAmount).max() ?? 1) : 100)).chartXAxis { AxisMarks(values: .automatic(desiredCount: 3)) { AxisGridLine(); AxisValueLabel(format: days == 1 ? Date.FormatStyle.dateTime.hour().minute() : Date.FormatStyle.dateTime.month(.abbreviated).day()) } }
-                    .chartYAxis { AxisMarks(values: .automatic(desiredCount: 4)) { value in AxisGridLine(); AxisValueLabel { if let number = value.as(Int.self) { Text(measure == .amount ? "\(number)" : "\(number)%") } } } }
-                    .chartXSelection(value: $selectedDate).frame(height: 190)
-                Picker("Heatmap metric", selection: $heatmapWindow) {
-                    Text("Weekly / primary").tag("")
-                    ForEach(windows) { Text($0.title).tag($0.id) }
-                }.font(.caption)
-                if let window = windows.first(where: { $0.id == heatmapWindow }) ?? windows.first(where: EventDetection.weekly) ?? windows.first {
-                    UsageHeatmap(samples: samples, window: window, color: account.color, measure: measure)
+                    UsageHeatmap(samples: samples, window: window, color: account.usageColor(for: window.id), events: events)
+                }.panel()
+            }
+        }.onAppear { rangeEnd = .now; measure = account.displaySettings.direction == .remaining ? .remaining : .used }
+            .onChange(of: samples.last?.date) { _, _ in rangeEnd = .now }
+    }
+    private var windowLegend: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(windows.filter { measure != .amount || $0.amountUnit == activeUnit }) { window in
+                    Button { if hiddenWindows.contains(window.id) { hiddenWindows.remove(window.id) } else { hiddenWindows.insert(window.id) } } label: {
+                        HStack(spacing: 5) { Circle().fill(account.usageColor(for: window.id)).frame(width: 6, height: 6); Text(window.shortTitle) }.font(.caption).opacity(hiddenWindows.contains(window.id) ? 0.35 : 1)
+                    }.buttonStyle(.plain).accessibilityValue(hiddenWindows.contains(window.id) ? "Hidden" : "Visible")
                 }
             }
-        }.panel().onAppear { measure = account.displaySettings.direction == .remaining ? .remaining : .used }
+        }
     }
 }
 enum HistorySeries {
@@ -97,13 +115,32 @@ enum HistorySeries {
         var usedPercent: Double
         var id: Date { date }
     }
+    // Bound render cost on long histories, preserving endpoints and each bin's
+    // observed extrema. The full samples remain available for selection/analysis.
+    static func renderPoints(_ points: [Point], maximum: Int = 600) -> [Point] {
+        guard maximum >= 4, points.count > maximum else { return points }
+        let width = Int(ceil(Double(points.count) / Double(maximum / 4)))
+        var result: [Point] = []
+        for start in stride(from: 0, to: points.count, by: width) {
+            let group = Array(points[start..<min(points.count, start + width)])
+            let candidates = [group.first!, group.min(by: { $0.usedPercent < $1.usedPercent })!, group.max(by: { $0.usedPercent < $1.usedPercent })!, group.last!]
+            var seen = Set<Date>()
+            result.append(contentsOf: candidates.filter { seen.insert($0.date).inserted }.sorted { $0.date < $1.date })
+        }
+        return result
+    }
     // Lines connect observed readings, including across long gaps and reset drops.
     // Unavailable readings remain breaks instead of being treated as zero.
-    static func segments(samples: [UsageHistorySample], windowID: String, measure: HistoryMeasure = .used) -> [[Point]] {
+    static func segments(samples: [UsageHistorySample], windowID: String, measure: HistoryMeasure = .used, unit: String? = nil) -> [[Point]] {
         var result: [[Point]] = []; var current: [Point] = []
+        var previous: UsageHistorySample?
         for sample in samples {
-            guard let window = sample.windows.first(where: { $0.id == windowID }), let percent = measure.value(window) else {
+            defer { previous = sample }
+            guard let window = sample.windows.first(where: { $0.id == windowID }), let percent = measure.value(window), measure != .amount || unit == nil || window.amountUnit == unit else {
                 if !current.isEmpty { result.append(current); current = [] }; continue
+            }
+            if let previous, AllowanceChanges.contextChanged(previous.allowanceContext, sample.allowanceContext) || previous.windows.first(where: { $0.id == windowID }).map({ AllowanceChanges.windowChanged($0, window) }) == true {
+                if !current.isEmpty { result.append(current); current = [] }
             }
             current.append(Point(date: sample.date, usedPercent: percent))
         }

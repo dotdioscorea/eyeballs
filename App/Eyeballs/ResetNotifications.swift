@@ -17,6 +17,7 @@ struct ResetNotificationRules: Codable, Equatable {
         case .bankedDetected, .bankedUsed, .bankedRemoved: return bankedChanges
         case .bankedExpired: return bankedExpiry
         case .parsingFailure: return parsingFailures
+        case .allowanceChanged: return false
         }
     }
 }
@@ -35,7 +36,7 @@ enum ResetReminderPlan {
                 guard let reset = window.resetsAt, reset > now else { continue }
                 let key = "reminder-\(account.id)-\(window.id)-\(reset.timeIntervalSince1970)"
                 if rules.weeklyReset {
-                    result.append(PlannedReminder(id: key + "-reset", accountID: account.id, date: reset, title: "\(account.title): weekly reset due", body: "\(window.title) · Open Eyeballs to update usage."))
+                    result.append(PlannedReminder(id: key + "-reset", accountID: account.id, date: reset, title: "\(account.title): weekly reset due", body: "\(window.title) · Open Requota to update usage."))
                 }
                 if rules.allowanceReminder, let used = window.safePercent, 100 - used >= Double(max(0, min(100, rules.minimumRemaining))) {
                     let hours = max(1, min(168, rules.allowanceHours))

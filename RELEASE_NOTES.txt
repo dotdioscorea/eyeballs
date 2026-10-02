@@ -1,2 +1,4 @@
-• Add Demo in Settings with separate sample accounts, history, events and widgets.
-• Add a link to the published privacy policy.
+- Renamed to Requota; existing accounts and widgets are preserved.
+- Improved ring percentages, tiles and dense widgets; added 5-hour time presets.
+- Redesigned charts, consumption heatmaps and event markers; added recent burn-rate estimates.
+- Added Cline credit balances, clearer credit displays and handling for plan/allowance changes.

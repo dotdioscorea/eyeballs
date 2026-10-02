@@ -40,7 +40,7 @@ enum CopilotAuth {
         var request = URLRequest(url: URL(string: url)!); request.httpMethod = "POST"; request.timeoutInterval = 25
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
         request.httpBody = OpenAIAuth.form(fields)
         return request
     }
@@ -72,7 +72,7 @@ enum CopilotAuth {
         guard Set(scopes).isSubset(of: ["read:user", "user:email"]) else { throw UsageError.usageAccessDenied }
         var request = URLRequest(url: URL(string: "https://api.github.com/user")!)
         request.setValue("Bearer " + access, forHTTPHeaderField: "Authorization")
-        request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent"); request.timeoutInterval = 20
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent"); request.timeoutInterval = 20
         let rawIdentity = try await ProviderHTTP.json(request, unauthorizedError: .usageAccessDenied)
         let subject = try identity(rawIdentity)
         if let previous, previous.subject != subject { throw UsageError.wrongAccount }

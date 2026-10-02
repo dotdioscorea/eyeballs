@@ -3,7 +3,7 @@ import SwiftUI
 
 struct AccountEvent: Codable, Identifiable, Equatable {
     enum Kind: String, Codable, CaseIterable {
-        case weeklyReset, earlyReset, bankedDetected, bankedUsed, bankedExpired, bankedRemoved, parsingFailure
+        case weeklyReset, earlyReset, bankedDetected, bankedUsed, bankedExpired, bankedRemoved, parsingFailure, allowanceChanged
         var title: String {
             switch self {
             case .weeklyReset: return "Weekly reset"
@@ -13,6 +13,7 @@ struct AccountEvent: Codable, Identifiable, Equatable {
             case .bankedExpired: return "Banked reset expired"
             case .bankedRemoved: return "Banked reset removed"
             case .parsingFailure: return "Usage response changed"
+            case .allowanceChanged: return "Plan or allowance changed"
             }
         }
         var symbol: String {
@@ -22,6 +23,7 @@ struct AccountEvent: Codable, Identifiable, Equatable {
             case .bankedUsed: return "checkmark.circle"
             case .bankedExpired, .bankedRemoved: return "minus.circle"
             case .parsingFailure: return "exclamationmark.triangle"
+            case .allowanceChanged: return "arrow.up.arrow.down"
             }
         }
     }
@@ -31,10 +33,15 @@ struct AccountEvent: Codable, Identifiable, Equatable {
     var date: Date
     var detectedAt: Date
     var window: String?
+    var windowID: String?
+    var previousPlan: String?
+    var plan: String?
     var count: Int?
     var inferred = false
     var detail: String {
-        [window, count.map { "\($0) reset\($0 == 1 ? "" : "s")" }, inferred ? "Inferred from usage" : nil].compactMap { $0 }.joined(separator: " · ")
+        let planChange: String?
+        if let previousPlan, let plan, previousPlan != plan { planChange = previousPlan + " → " + plan } else { planChange = nil }
+        return [window, planChange, count.map { "\($0) reset\($0 == 1 ? "" : "s")" }, inferred ? "Inferred from usage" : nil].compactMap { $0 }.joined(separator: " · ")
     }
 }
 
@@ -47,21 +54,24 @@ enum EventDetection {
         var snapshot = current
         let now = current.updatedAt
         var events: [AccountEvent] = []
-        func event(_ kind: AccountEvent.Kind, key: String, date: Date? = nil, window: String? = nil, count: Int? = nil, inferred: Bool = false) {
-            events.append(AccountEvent(id: "\(accountID):\(kind.rawValue):\(key)", accountID: accountID, kind: kind, date: date ?? now, detectedAt: now, window: window, count: count, inferred: inferred))
+        func event(_ kind: AccountEvent.Kind, key: String, date: Date? = nil, window: String? = nil, windowID: String? = nil, count: Int? = nil, inferred: Bool = false) {
+            events.append(AccountEvent(id: "\(accountID):\(kind.rawValue):\(key)", accountID: accountID, kind: kind, date: date ?? now, detectedAt: now, window: window, windowID: windowID, count: count, inferred: inferred))
         }
         let chronological = previous.map { now > $0.updatedAt } ?? true
         guard chronological else { return Result(snapshot: current, events: []) }
+        let allowanceChanged = previous.map { AllowanceChanges.snapshotChanged($0, current) } ?? false
+        if allowanceChanged { events.append(AccountEvent(id: "\(accountID):allowance:\(now.timeIntervalSince1970)", accountID: accountID, kind: .allowanceChanged, date: now, detectedAt: now, previousPlan: previous?.plan, plan: current.plan)) }
         var early = false
         for window in current.windows {
+            if allowanceChanged { continue }
             guard let old = previous?.windows.first(where: { $0.id == window.id }) else { continue }
             if weekly(window), let reset = old.resetsAt, reset <= now,
                let next = window.resetsAt, next > reset {
-                event(.weeklyReset, key: window.id + "-" + String(reset.timeIntervalSince1970), date: reset, window: window.title)
+                event(.weeklyReset, key: window.id + "-" + String(reset.timeIntervalSince1970), date: reset, window: window.title, windowID: window.id)
             } else if let reset = old.resetsAt, reset > now.addingTimeInterval(300),
                       let before = old.safePercent, let after = window.safePercent, before >= 5, after <= 1, before - after >= 5 {
                 early = true
-                event(.earlyReset, key: window.id + "-" + String(now.timeIntervalSince1970), window: window.title, inferred: true)
+                event(.earlyReset, key: window.id + "-" + String(now.timeIntervalSince1970), window: window.title, windowID: window.id, inferred: true)
             }
         }
         if var resets = snapshot.bankedResets {

@@ -36,7 +36,7 @@ def result(provider, status, body):
 def probe_codex():
     auth = json.loads((HOME_DIR / ".codex/auth.json").read_text())
     tokens = auth.get("tokens") or {}
-    headers = {"Authorization": "Bearer " + tokens["access_token"], "Accept": "application/json", "User-Agent": "Eyeballs/0.1"}
+    headers = {"Authorization": "Bearer " + tokens["access_token"], "Accept": "application/json", "User-Agent": "Requota/1.0"}
     if tokens.get("account_id"):
         headers["ChatGPT-Account-Id"] = tokens["account_id"]
     result("codex", *get_json("https://chatgpt.com/backend-api/wham/usage", headers))
@@ -44,13 +44,13 @@ def probe_codex():
 def probe_grok():
     auth = json.loads((HOME_DIR / ".grok/auth.json").read_text())
     entry = next(v for k, v in auth.items() if k.startswith("https://auth.x.ai::"))
-    result("grok", *get_json("https://cli-chat-proxy.grok.com/v1/billing?format=credits", {"Authorization": "Bearer " + entry["key"], "x-xai-token-auth": "xai-grok-cli", "Accept": "application/json", "User-Agent": "Eyeballs/0.1"}))
+    result("grok", *get_json("https://cli-chat-proxy.grok.com/v1/billing?format=credits", {"Authorization": "Bearer " + entry["key"], "x-xai-token-auth": "xai-grok-cli", "Accept": "application/json", "User-Agent": "Requota/1.0"}))
 
 def probe_claude():
     saved = subprocess.run(["security", "find-generic-password", "-s", "Claude Code-credentials", "-w"], capture_output=True, check=True)
     auth = json.loads(saved.stdout)
     oauth = auth.get("claudeAiOauth") or {}
-    result("claude", *get_json("https://api.anthropic.com/api/oauth/usage", {"Authorization": "Bearer " + oauth["accessToken"], "anthropic-beta": "oauth-2025-04-20", "Accept": "application/json", "User-Agent": "Eyeballs/0.1"}))
+    result("claude", *get_json("https://api.anthropic.com/api/oauth/usage", {"Authorization": "Bearer " + oauth["accessToken"], "anthropic-beta": "oauth-2025-04-20", "Accept": "application/json", "User-Agent": "Requota/1.0"}))
 
 if __name__ == "__main__":
     import argparse

@@ -12,7 +12,7 @@ enum UsageError: LocalizedError {
         case .throttled(let date): return "The provider asked us to wait. Try again after \(date.formatted(date: .omitted, time: .shortened))."
         case .invalidResponse: return "The provider returned an unrecognized usage response. Your last reading has been kept."
         case .wrongAccount: return "This sign-in belongs to a different account. Add it as a new connection instead."
-        case .unsupportedLogin: return "This provider has not enabled a supported sign-in for Eyeballs."
+        case .unsupportedLogin: return "This provider has not enabled a supported sign-in for Requota."
         }
     }
 }
@@ -92,7 +92,7 @@ struct UsageClient {
         var request = URLRequest(url: URL(string: endpoint)!)
         request.timeoutInterval = 20
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
         request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
         if provider == .codex, let id = credential.accountID { request.setValue(id, forHTTPHeaderField: "ChatGPT-Account-Id") }
         if provider == .claude { request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta") }
@@ -141,6 +141,13 @@ struct UsageClient {
             try Task.checkCancellation()
         }
         parsed = snapshot
+        if account.provider == .claude, let profile = try? await ProviderHTTP.json(ProviderAuth.claudeProfileRequest(accessToken: credential.accessToken)),
+           let identity = try? ProviderAuth.claudeIdentity(profile) {
+            guard identity.subject == credential.subject, identity.accountID == credential.accountID else { throw UsageError.wrongAccount }
+            let details = UsageParser.claudePlan(profile)
+            snapshot.plan = details.plan; snapshot.allowanceContext = details.context
+        }
+        try Task.checkCancellation()
         if account.provider == .codex {
             var resetRequest = try request(provider: .codex, credential: credential)
             resetRequest.url = URL(string: "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits")!
@@ -243,6 +250,18 @@ enum UsageParser {
             windows.append(UsageWindow(id: key, title: title, usedPercent: percent(value["utilization"]), resetsAt: date(value["resets_at"]), duration: duration))
         }
         return UsageSnapshot(windows: windows)
+    }
+    static func claudePlan(_ raw: Any) -> (plan: String?, context: String?) {
+        guard let object = raw as? [String: Any], let organization = object["organization"] as? [String: Any],
+              let type = organization["organization_type"] as? String, !type.isEmpty else { return (nil, nil) }
+        let tier = organization["rate_limit_tier"] as? String ?? ""
+        var plan = ["claude_pro": "Pro", "claude_max": "Max", "claude_team": "Team", "claude_enterprise": "Enterprise", "claude_free": "Free"][type]
+        if type == "claude_max", tier == "default_claude_max_5x" { plan = "Max 5×" }
+        if type == "claude_max", tier == "default_claude_max_20x" { plan = "Max 20×" }
+        // Only tier fields contribute; names and organization IDs never do.
+        let seat = organization["seat_tier"] as? String ?? ""
+        let context = SHA256.hash(data: Data([type, tier, seat].joined(separator: "|").utf8)).map { String(format: "%02x", $0) }.joined()
+        return (plan, context)
     }
     static func grok(_ raw: Any) throws -> UsageSnapshot {
         guard let object = raw as? [String: Any], let config = object["config"] as? [String: Any] else { throw UsageError.invalidResponse }

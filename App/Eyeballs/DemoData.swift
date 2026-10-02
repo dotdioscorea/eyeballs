@@ -24,21 +24,26 @@ enum DemoData {
             }
             if provider == .cline { windows = [] }
             let banked: [BankedReset]? = index == 0 ? [BankedReset(id: "demo-weekly", title: "Weekly", expiresAt: now.addingTimeInterval(2 * 86400), firstDetectedAt: now.addingTimeInterval(-3 * 86400))] : nil
-            return AgentAccount(id: id(index), provider: provider, label: "Demo · " + names[index], workstream: index < 5 ? "Sample account" : "", snapshot: UsageSnapshot(windows: windows, plan: "Sample plan", billingEndsAt: now.addingTimeInterval(12 * 86400), updatedAt: now, source: "Demo", creditBalance: provider == .cline ? "0.5000" : nil, bankedResets: banked), addedAt: now.addingTimeInterval(-30 * 86400))
+            return AgentAccount(id: id(index), provider: provider, label: "Demo · " + names[index], workstream: index < 5 ? "Sample account" : "", snapshot: UsageSnapshot(windows: windows, plan: "Sample plan", creditBalance: provider == .cline ? "0.5000" : nil, billingEndsAt: provider == .cline ? nil : now.addingTimeInterval(12 * 86400), updatedAt: now, source: "Demo", bankedResets: banked), addedAt: now.addingTimeInterval(-30 * 86400))
         }
     }
     static func history(for account: AgentAccount, now: Date = .now) -> [UsageHistorySample] {
-        (0...720).map { hour in
-            let date = now.addingTimeInterval(Double(hour - 720) * 3600)
+        (0...2880).map { tick in
+            let date = now.addingTimeInterval(Double(tick - 2880) * 900)
             var windows = account.snapshot?.windows ?? []
             for index in windows.indices {
                 let duration = windows[index].duration ?? 604800
-                let cycle = max(1, Int(duration / 3600))
-                windows[index].usedPercent = Double((hour + index * 11 + (Int(account.id.uuidString.suffix(2), radix: 16) ?? 0)) % cycle) / Double(cycle) * 90
+                let currentEnd = account.snapshot?.windows[index].resetsAt ?? now.addingTimeInterval(duration)
+                let shift = floor(date.timeIntervalSince(currentEnd) / duration) + 1
+                let cycleEnd = currentEnd.addingTimeInterval(shift * duration)
+                let phase = max(0, min(1, 1 - cycleEnd.timeIntervalSince(date) / duration))
+                let currentPhase = max(0.01, 1 - currentEnd.timeIntervalSince(now) / duration)
+                let finalUsed = account.snapshot?.windows[index].safePercent ?? 0
+                windows[index].usedPercent = shift == 0 ? min(100, finalUsed * phase / currentPhase) : phase * 90
                 if let limit = windows[index].limitAmount { windows[index].usedAmount = limit * windows[index].usedPercent! / 100 }
-                windows[index].resetsAt = date.addingTimeInterval(duration)
+                windows[index].resetsAt = cycleEnd
             }
-            if hour == 720 { windows = account.snapshot?.windows ?? [] }
+            if tick == 2880 { windows = account.snapshot?.windows ?? [] }
             return UsageHistorySample(date: date, windows: windows)
         }
     }
@@ -95,7 +100,7 @@ final class AccountSession: ObservableObject {
         do {
             let center = UNUserNotificationCenter.current()
             guard try await center.requestAuthorization(options: [.alert, .sound]) else { demo?.error = "Notifications are disabled in iOS Settings."; return }
-            let content = UNMutableNotificationContent(); content.title = "Eyeballs demo"; content.body = "Sample weekly reset reminder."; content.sound = .default
+            let content = UNMutableNotificationContent(); content.title = "Requota demo"; content.body = "Sample weekly reset reminder."; content.sound = .default
             content.userInfo = ["accountID": DemoData.id(0).uuidString]
             try await center.add(UNNotificationRequest(identifier: "eyeballs-demo-reminder", content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)))
         } catch { demo?.error = "The demo notification could not be scheduled." }

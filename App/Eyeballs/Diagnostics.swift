@@ -212,7 +212,7 @@ enum Diagnostics {
     static func export(_ data: Data) throws -> URL {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("EyeballsReports")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let path = folder.appendingPathComponent("eyeballs-debug.json")
+        let path = folder.appendingPathComponent("requota-debug.json")
         try data.write(to: path, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         return path
     }

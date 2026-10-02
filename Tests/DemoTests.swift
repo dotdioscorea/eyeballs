@@ -34,6 +34,19 @@ final class DemoTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: path), before)
     }
 
+    func testCreditOnlyDemoAccountCanBeAddedWithoutInventingQuotaOrBilling() throws {
+        let demo = AccountStore(location: directory.appendingPathComponent("demo/accounts.json"), integratesWithSystem: false, isDemo: true)
+        demo.resetDemo()
+        demo.addDemoAccount(provider: .cline, name: "Credits")
+        let account = try XCTUnwrap(demo.accounts.last)
+        XCTAssertEqual(account.provider, .cline)
+        XCTAssertTrue(DemoData.contains(account.id))
+        XCTAssertEqual(account.label, "Demo · Credits")
+        XCTAssertEqual(account.snapshot?.creditBalance, "0.5000")
+        XCTAssertEqual(account.snapshot?.windows, [])
+        XCTAssertNil(account.snapshot?.billingEndsAt)
+    }
+
     func testDemoRefreshAndSimulatedResetNeverFetchOrRenewCredentials() async throws {
         let vault = MemoryVault(); var fetches = 0; var renewals = 0
         let demo = AccountStore(location: directory.appendingPathComponent("demo/accounts.json"), vault: vault, integratesWithSystem: false, isDemo: true, fetcher: { _, _ in fetches += 1; throw UsageError.unavailable }, renewer: { _ in renewals += 1; throw UsageError.unavailable })

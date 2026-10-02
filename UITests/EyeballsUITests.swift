@@ -19,7 +19,7 @@ final class EyeballsUITests: XCTestCase {
     }
     private func clearFixtureWidgets(_ home: XCUIApplication) {
         for _ in 0..<8 {
-            let widgets = home.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND value == %@", "Eyeballs", "Widget"))
+            let widgets = home.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND value == %@", "Requota", "Widget"))
             guard let widget = widgets.allElementsBoundByIndex.first(where: { $0.isHittable }) else { return }
             widget.press(forDuration: 1.2)
             guard home.buttons["Remove Widget"].waitForExistence(timeout: 3) else { XCUIDevice.shared.press(.home); return }
@@ -36,6 +36,10 @@ final class EyeballsUITests: XCTestCase {
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
         app.tabBars.buttons["Accounts"].tap()
         XCTAssertTrue(app.buttons["account-Demo · Personal"].waitForExistence(timeout: 5))
+        app.buttons["layout-cards"].tap()
+        let cards = XCTAttachment(screenshot: app.screenshot()); cards.name = "Release demo cards"; cards.lifetime = .keepAlways; add(cards)
+        app.buttons["compact-mode"].tap()
+        let compact = XCTAttachment(screenshot: app.screenshot()); compact.name = "Release demo compact"; compact.lifetime = .keepAlways; add(compact)
         app.buttons["layout-tiles"].tap()
         let dashboard = XCTAttachment(screenshot: app.screenshot()); dashboard.name = "Release demo tiles"; dashboard.lifetime = .keepAlways; add(dashboard)
         app.buttons["account-Demo · Personal"].tap()
@@ -43,7 +47,7 @@ final class EyeballsUITests: XCTestCase {
         app.swipeUp()
         XCTAssertTrue(app.staticTexts["Usage history"].waitForExistence(timeout: 5))
         let history = XCTAttachment(screenshot: app.screenshot()); history.name = "Release demo history"; history.lifetime = .keepAlways; add(history)
-        app.navigationBars.buttons["Eyeballs"].tap()
+        app.navigationBars.buttons["Requota"].tap()
         XCTAssertTrue(app.tabBars.buttons["Events"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Events"].tap()
         XCTAssertTrue(app.staticTexts["Banked reset detected"].waitForExistence(timeout: 5))
@@ -78,6 +82,50 @@ final class EyeballsUITests: XCTestCase {
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["connect-first"].exists)
     }
+    func testHistorySelectionEventsAndCalendar() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
+        app.tabBars.buttons["Accounts"].tap(); app.buttons["account-Demo · Personal"].tap()
+        app.swipeUp()
+        let plot = app.descendants(matching: .any)["history-plot"].firstMatch
+        XCTAssertTrue(plot.waitForExistence(timeout: 10))
+        let start = plot.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.55))
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.99, dy: start.screenPoint.y / app.frame.height))
+        start.press(forDuration: 0.8, thenDragTo: end)
+        let selection = XCTAttachment(screenshot: app.screenshot()); selection.name = "History selection beyond right edge"; selection.lifetime = .keepAlways; add(selection)
+        XCTAssertTrue(app.buttons["chart-event-weeklyReset"].firstMatch.exists)
+        app.buttons["chart-event-weeklyReset"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Events"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Weekly reset"].exists)
+        app.buttons["Done"].tap()
+        app.buttons["90d"].firstMatch.tap()
+        plot.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).press(forDuration: 0.8, thenDragTo: end)
+        let longSelection = XCTAttachment(screenshot: app.screenshot()); longSelection.name = "90 day history selection"; longSelection.lifetime = .keepAlways; add(longSelection)
+        app.swipeUp()
+        XCTAssertTrue(app.buttons["Daily"].firstMatch.waitForExistence(timeout: 5)); app.buttons["Daily"].firstMatch.tap()
+        let daily = XCTAttachment(screenshot: app.screenshot()); daily.name = "Activity day and burn rate"; daily.lifetime = .keepAlways; add(daily)
+        app.buttons["Monthly"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["heatmap-cell-monthly-0"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["heatmap-cell-monthly-1"].exists)
+        let monthly = XCTAttachment(screenshot: app.screenshot()); monthly.name = "Activity calendar month"; monthly.lifetime = .keepAlways; add(monthly)
+    }
+    func testFourRingsFitFullPercentageAndCreditBalance() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--ring-boundaries", "--exit-demo-test"]; app.launch()
+        if app.buttons["Clear search"].exists { app.buttons["Clear search"].tap() }
+        app.buttons["layout-cards"].tap()
+        let cards = XCTAttachment(screenshot: app.screenshot()); cards.name = "Four rings 100 percent cards"; cards.lifetime = .keepAlways; add(cards)
+        app.buttons["layout-tiles"].tap()
+        let tiles = XCTAttachment(screenshot: app.screenshot()); tiles.name = "Four rings 100 percent tiles"; tiles.lifetime = .keepAlways; add(tiles)
+        app.buttons["account-Personal"].tap()
+        XCTAssertTrue(app.staticTexts["Weekly time"].exists); XCTAssertTrue(app.staticTexts["5-hour window time"].exists)
+        Thread.sleep(forTimeInterval: 0.5) // Capture after the navigation transition.
+        let detail = XCTAttachment(screenshot: app.screenshot()); detail.name = "Four rings 100 percent detail"; detail.lifetime = .keepAlways; add(detail)
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["account-Mac mini"].tap()
+        XCTAssertTrue(app.staticTexts["Credits"].exists); XCTAssertTrue(app.staticTexts["15.00"].exists)
+        XCTAssertTrue(app.staticTexts["Weekly allowance exhausted"].exists)
+    }
     func testCompactDisplayConfigurationAndCopyCleanup() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture"]; app.launch()
         XCTAssertTrue(app.buttons["compact-mode"].waitForExistence(timeout: 10))
@@ -98,6 +146,10 @@ final class EyeballsUITests: XCTestCase {
         timeMetric.tap(); XCTAssertEqual(timeMetric.value as? String, "Off")
         timeMetric.tap()
         XCTAssertEqual(timeMetric.value as? String, "On")
+        let sessionTime = app.buttons["metric-session:time"]
+        XCTAssertTrue(sessionTime.waitForExistence(timeout: 5))
+        if sessionTime.value as? String == "Off" { sessionTime.tap() }
+        XCTAssertEqual(sessionTime.value as? String, "On")
         app.buttons["Save"].tap()
         XCTAssertTrue(app.staticTexts["Weekly time"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.firstMatch.tap()
@@ -133,7 +185,7 @@ final class EyeballsUITests: XCTestCase {
         app.tabBars.buttons["Charts"].tap()
         XCTAssertTrue(app.buttons["chart-accounts"].waitForExistence(timeout: 5))
         let lines = XCTAttachment(screenshot: app.screenshot()); lines.name = "Account comparison lines"; lines.lifetime = .keepAlways; add(lines)
-        app.buttons["Heatmaps"].tap()
+        app.buttons["Activity"].tap()
         XCTAssertTrue(app.buttons["Daily"].firstMatch.waitForExistence(timeout: 5)); app.buttons["Daily"].firstMatch.tap()
         let heatmap = XCTAttachment(screenshot: app.screenshot()); heatmap.name = "Daily usage heatmap"; heatmap.lifetime = .keepAlways; add(heatmap)
         app.tabBars.buttons["Events"].tap(); XCTAssertTrue(app.staticTexts["No events recorded."].waitForExistence(timeout: 5))
@@ -237,7 +289,7 @@ final class EyeballsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
     }
     func testWidgetAccountPickerStaysOpenAndSelectsAccount() {
-        let app = XCUIApplication(); app.launchArguments = ["--widget-fixture"]; app.launch()
+        let app = XCUIApplication(); app.launchArguments = ["--widget-fixture", "--ring-boundaries"]; app.launch()
         XCTAssertTrue(app.buttons["compact-mode"].waitForExistence(timeout: 10))
         XCUIDevice.shared.press(.home)
         let home = XCUIApplication(bundleIdentifier: "com.apple.springboard")
@@ -251,15 +303,15 @@ final class EyeballsUITests: XCTestCase {
         home.buttons["Edit"].tap(); home.buttons["Add Widget"].tap()
         let search = home.searchFields["Search Widgets"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.tap(); search.typeText("Eyeballs")
-        let result = home.buttons["Eyeballs"].firstMatch
+        search.tap(); search.typeText("Requota")
+        let result = home.buttons["Requota"].firstMatch
         if result.waitForExistence(timeout: 3) { result.tap() }
-        else { home.staticTexts["Eyeballs"].firstMatch.tap() }
+        else { home.staticTexts["Requota"].firstMatch.tap() }
         let addWidget = home.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Add Widget")).firstMatch
         XCTAssertTrue(addWidget.waitForExistence(timeout: 5))
         addWidget.tap()
         if home.buttons["Done"].waitForExistence(timeout: 5) { home.buttons["Done"].tap() }
-        let widget = home.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND value == %@", "Eyeballs", "Widget")).firstMatch
+        let widget = home.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND value == %@", "Requota", "Widget")).firstMatch
         XCTAssertTrue(widget.waitForExistence(timeout: 5))
         print("WIDGET TARGET " + widget.debugDescription)
         widget.press(forDuration: 1.2)
@@ -269,8 +321,11 @@ final class EyeballsUITests: XCTestCase {
         XCTAssertTrue(parameter.waitForExistence(timeout: 20))
         parameter.buttons.firstMatch.tap()
         XCTAssertTrue(home.staticTexts["Personal"].waitForExistence(timeout: 5))
-        home.staticTexts["Personal"].tap()
+        home.cells.containing(.staticText, identifier: "Personal").allElementsBoundByIndex.first { $0.isHittable }!.tap()
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Widget configured with Personal"; shot.lifetime = .keepAlways; add(shot)
+        XCUIDevice.shared.press(.home); app.terminate()
+        XCTAssertTrue(home.staticTexts["Personal"].firstMatch.waitForExistence(timeout: 15))
+        let face = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); face.name = "Small widget four rings 100 percent"; face.lifetime = .keepAlways; add(face)
     }
     func testDenseRowsWidgetRetainsSixAccountsAndOpensAccount() {
         let app = XCUIApplication(); app.launchArguments = ["--widget-fixture"]; app.launch()
@@ -287,16 +342,16 @@ final class EyeballsUITests: XCTestCase {
         home.buttons["Edit"].tap(); home.buttons["Add Widget"].tap()
         let search = home.searchFields["Search Widgets"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.tap(); search.typeText("Eyeballs")
-        let result = home.buttons["Eyeballs"].firstMatch
+        search.tap(); search.typeText("Requota")
+        let result = home.buttons["Requota"].firstMatch
         if result.waitForExistence(timeout: 3) { result.tap() }
-        else { home.staticTexts["Eyeballs"].firstMatch.tap() }
+        else { home.staticTexts["Requota"].firstMatch.tap() }
         home.swipeLeft(); home.swipeLeft(); home.swipeLeft()
         let addWidget = home.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Add Widget")).firstMatch
         XCTAssertTrue(addWidget.waitForExistence(timeout: 5))
         addWidget.tap()
         if home.buttons["Done"].waitForExistence(timeout: 5) { home.buttons["Done"].tap() }
-        let widget = home.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND value == %@", "Eyeballs", "Widget")).allElementsBoundByIndex.filter { $0.isHittable }.max { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }!
+        let widget = home.descendants(matching: .any).matching(NSPredicate(format: "label == %@ AND value == %@", "Requota", "Widget")).allElementsBoundByIndex.filter { $0.isHittable }.max { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }!
         XCTAssertTrue(widget.waitForExistence(timeout: 5))
         print("WIDGET TARGET " + widget.debugDescription)
         widget.press(forDuration: 1.2)

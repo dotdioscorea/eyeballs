@@ -22,6 +22,12 @@ struct AccountDetailView: View {
                             }.padding(.vertical, 16)
                         }
                         Button("Configure display") { configuring = true }.font(.subheadline.weight(.medium)).accessibilityIdentifier("configure-display")
+                        if let credit = account.snapshot?.creditBalance {
+                            VStack(alignment: .leading, spacing: 8) {
+                                info("Credits", value: credit)
+                                if !account.exhaustedWindows.isEmpty { Text(account.exhaustedWindows.map(\.shortTitle).joined(separator: ", ") + " allowance exhausted").font(.caption).foregroundStyle(.secondary) }
+                            }.panel()
+                        }
                         if let resets = account.snapshot?.bankedResets, !resets.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Banked resets").font(.subheadline.weight(.semibold))
@@ -42,7 +48,7 @@ struct AccountDetailView: View {
                                 ForEach(snapshot.windows) { window in
                                     let reading = MetricReading(definition: RingDefinition(windowID: window.id), window: window, direction: account.displaySettings.direction, date: .now)
                                     VStack(alignment: .leading, spacing: 7) {
-                                        MetricBars(readings: [reading], color: account.color)
+                                        MetricBars(readings: [reading], color: account.usageColor(for: window.id))
                                         if let reset = window.resetsAt {
                                             Text(reset <= .now ? "Reset due" : "Resets \(reset.formatted(.dateTime.weekday(.abbreviated).hour().minute()))").font(.caption).foregroundStyle(.secondary)
                                         }
@@ -51,12 +57,11 @@ struct AccountDetailView: View {
                                 if snapshot.windows.isEmpty { Text("No usage limit reported.").font(.subheadline).foregroundStyle(.secondary) }
                             }.panel()
                         }
-                        UsageHistoryView(samples: store.histories[id] ?? [], account: account)
+                        UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id })
                         if let issue = account.issue { VStack(alignment: .leading, spacing: 10) { Text(issue).font(.subheadline).foregroundStyle(.orange); if account.needsReport == true { Button("Report problem") { reporting = true } } }.frame(maxWidth: .infinity, alignment: .leading).panel() }
                         VStack(alignment: .leading, spacing: 16) {
                             if !account.workstream.isEmpty { info("Workstream", value: account.workstream) }
                             if let email = account.snapshot?.email { info("Signed in as", value: email) }
-                            if let credit = account.snapshot?.creditBalance { info("Credits", value: credit) }
                             if let billing = account.snapshot?.billingEndsAt { info("Billing period ends", value: billing.formatted(date: .abbreviated, time: .omitted)) }
                             if let reminder = account.renewalReminder { info("Renewal reminder", value: reminder.formatted(date: .abbreviated, time: .omitted)) }
                             if !account.notes.isEmpty { Text(account.notes).font(.subheadline).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading) }
@@ -164,7 +169,7 @@ struct DisplaySettingsView: View {
                 .navigationTitle("Display").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Save") { var copy = account; copy.display = settings; copy.colorHex = colorHex; store.update(copy); dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) { Button("Save") { var copy = account; copy.display = settings; copy.retainMetricNames(); copy.colorHex = colorHex; store.update(copy); dismiss() } }
                 }
         }
     }
@@ -192,7 +197,7 @@ struct DisplaySettingsView: View {
         let selected = settings.rings.contains { $0.id == ring.id }
         return Button {
             if selected { settings.rings.removeAll { $0.id == ring.id } }
-            else if settings.rings.count < 4 { settings.rings.append(ring) }
+            else if settings.rings.count < 4 { var named = ring; named.windowTitle = window.title; settings.rings.append(named) }
         } label: {
             HStack {
                 Text(window.title + (kind == .time ? " time" : " usage")).foregroundStyle(.primary)
