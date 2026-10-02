@@ -30,6 +30,7 @@ struct DashboardView: View {
     @State private var adding = false
     @State private var search = ""
     @State private var filter: Provider?
+    @State private var searching = false
     private var sort: AccountSort { AccountSort(rawValue: sortValue) ?? .favorites }
     private var displayed: [AgentAccount] {
         sort.sorted(store.accounts.filter { account in
@@ -45,13 +46,13 @@ struct DashboardView: View {
                     Button("Add account") { adding = true }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("connect-first")
                 }.padding(24).frame(maxWidth: 500).frame(maxWidth: .infinity)
             } else {
-                LazyVStack(spacing: compact ? 8 : 14) {
+                LazyVStack(spacing: compact ? 4 : 14) {
                     ForEach(displayed) { account in
                         NavigationLink(value: account.id) { AccountCard(account: account, compact: compact) }
                             .buttonStyle(.plain).accessibilityIdentifier("account-\(account.title)")
                     }
                     if displayed.isEmpty { ContentUnavailableView.search(text: search) }
-                }.padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 20).frame(maxWidth: 650).frame(maxWidth: .infinity)
+                }.padding(.horizontal, compact ? 12 : 16).padding(.top, compact ? 4 : 10).padding(.bottom, 20).frame(maxWidth: 650).frame(maxWidth: .infinity)
             }
         }
         .background(Theme.background).navigationTitle("Eyeballs").navigationBarTitleDisplayMode(.inline)
@@ -63,30 +64,37 @@ struct DashboardView: View {
         .sheet(isPresented: $adding) { AddAccountView() }
     }
     private var controls: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: compact ? 6 : 10) {
             HStack {
                 Button { compact.toggle() } label: {
                     Label("Compact", systemImage: compact ? "checkmark.square.fill" : "square")
                         .font(.subheadline).padding(.vertical, 5)
                 }.tint(Theme.accent).accessibilityValue(compact ? "On" : "Off").accessibilityIdentifier("compact-mode")
                 Spacer()
+                if compact {
+                    Button { searching.toggle() } label: { Image(systemName: "magnifyingglass") }.accessibilityLabel("Search accounts")
+                    Menu {
+                        Button("All providers") { filter = nil }
+                        ForEach(Provider.allCases) { provider in Button(provider.name) { filter = provider } }
+                    } label: { Text(filter?.name ?? "All").font(.caption) }.accessibilityLabel("Filter provider")
+                }
                 Menu {
                     Picker("Sort accounts", selection: $sortValue) { ForEach(AccountSort.allCases) { Text($0.title).tag($0.rawValue) } }
                 } label: { Label(sort.title, systemImage: "arrow.up.arrow.down").font(.caption.weight(.medium)) }
                     .accessibilityLabel("Sort accounts").accessibilityIdentifier("sort-accounts")
             }
-            HStack {
+            if !compact || searching || !search.isEmpty { HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search accounts", text: $search).font(.subheadline).accessibilityIdentifier("search-accounts")
                 if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Clear search") }
-            }.padding(9).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
-            ScrollView(.horizontal, showsIndicators: false) {
+            }.padding(9).background(Theme.card, in: RoundedRectangle(cornerRadius: 10)) }
+            if !compact { ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     filterButton("All", selected: filter == nil) { filter = nil }
                     ForEach(Provider.allCases) { provider in filterButton(provider.name, selected: filter == provider) { filter = provider } }
                 }
-            }
-        }.padding(.horizontal, 16).padding(.vertical, 10).background(Theme.background)
+            } }
+        }.padding(.horizontal, 16).padding(.vertical, compact ? 4 : 10).background(Theme.background)
     }
     private func filterButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) { Text(title).font(.caption.weight(.medium)).padding(.horizontal, 13).padding(.vertical, 7).background(selected ? Theme.accent : Theme.card, in: Capsule()).foregroundStyle(selected ? Theme.background : .white.opacity(0.7)) }
@@ -99,8 +107,9 @@ struct AccountCard: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let readings = account.readings(at: context.date)
-            VStack(alignment: .leading, spacing: compact ? 8 : 15) {
-                HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: compact ? 5 : 15) {
+                HStack(spacing: compact ? 6 : 9) {
+                    ProviderLogo(provider: account.provider, color: account.color, size: compact ? 16 : 22)
                     Text(account.title).font(compact ? .subheadline.weight(.semibold) : .title3.weight(.semibold)).lineLimit(1)
                     Spacer(minLength: 8)
                     Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · "))
@@ -109,16 +118,12 @@ struct AccountCard: View {
                 if !account.workstream.isEmpty { Text(account.workstream).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 if !readings.isEmpty {
                 if compact {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: readings.count == 1 ? 1 : 2), spacing: 8) {
-                        ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
-                            MetricBars(readings: [reading], color: MetricColor.color(index, base: account.provider.color), dense: true)
-                        }
-                    }
+                    MetricBars(readings: readings, color: account.color, dense: true)
                 }
                 else {
                     HStack(spacing: 22) {
-                        UsageRing(readings: readings, color: account.provider.color, size: 100, lineWidth: readings.count > 2 ? 6 : 8)
-                        MetricLegend(readings: readings, color: account.provider.color)
+                        UsageRing(readings: readings, color: account.color, size: 100, lineWidth: readings.count > 2 ? 6 : 8)
+                        MetricLegend(readings: readings, color: account.color)
                     }
                 }
                 }
@@ -128,11 +133,11 @@ struct AccountCard: View {
                     else if let reset = account.displayedReset(for: readings) { Text(reset <= context.date ? "Reset due" : "Reset in \(ResetText.relative(reset, now: context.date))").foregroundStyle(.secondary) }
                     Spacer(minLength: 0)
                     if let snapshot = account.snapshot {
-                        Text("Updated \(snapshot.updatedAt, style: .relative) ago\(snapshot.isStale(at: context.date) ? " · stale" : "")").foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                        Text(UpdatedText.relative(snapshot.updatedAt, now: context.date) + (snapshot.isStale(at: context.date) ? " · stale" : "")).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
                     }
                 }.font(.caption2)
-            }.padding(compact ? 14 : 18).background(Theme.card, in: RoundedRectangle(cornerRadius: compact ? 14 : 22))
-                .overlay(RoundedRectangle(cornerRadius: compact ? 14 : 22).strokeBorder(Theme.border, lineWidth: 1))
+            }.padding(compact ? 8 : 18).background(Theme.card, in: RoundedRectangle(cornerRadius: compact ? 9 : 22))
+                .overlay(RoundedRectangle(cornerRadius: compact ? 9 : 22).strokeBorder(Theme.border, lineWidth: 1))
         }
     }
 }
@@ -148,6 +153,7 @@ struct AddAccountView: View {
                     ForEach(Provider.allCases) { provider in
                         Button { selected = AgentAccount(provider: provider) } label: {
                             HStack {
+                                ProviderLogo(provider: provider, color: provider.color, size: 24)
                                 Text(provider.name).font(.body.weight(.semibold))
                                 Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
                             }.panel()

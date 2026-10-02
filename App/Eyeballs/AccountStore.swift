@@ -13,6 +13,7 @@ final class AccountStore: ObservableObject {
     private var cooldowns: [UUID: Date] = [:]
     private var revisions: [UUID: Int] = [:]
     private let location: URL
+    private var loadedAccounts = false
     private let integratesWithSystem: Bool
     private let vault: any CredentialStorage
     private let fetcher: (AgentAccount, AccountCredential) async throws -> UsageSnapshot
@@ -28,9 +29,14 @@ final class AccountStore: ObservableObject {
         self.historyStore = UsageHistoryStore(directory: self.location.deletingLastPathComponent().appendingPathComponent("history"))
         self.integratesWithSystem = integratesWithSystem
         self.vault = vault; self.fetcher = fetcher; self.renewer = renewer
-        if let data = try? Data(contentsOf: self.location) {
-            do { accounts = try JSONDecoder().decode([AgentAccount].self, from: data) }
-            catch { self.error = "Your saved accounts could not be read. Your secure sessions have been kept." }
+        do {
+            let data = try Data(contentsOf: self.location)
+            accounts = try JSONDecoder().decode([AgentAccount].self, from: data)
+            loadedAccounts = true
+        } catch {
+            if !FileManager.default.fileExists(atPath: self.location.path) {
+                loadedAccounts = true
+            } else { self.error = "Your saved accounts could not be read. Your secure sessions have been kept." }
         }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--clear-widget-fixture"), !accounts.isEmpty,
@@ -39,7 +45,7 @@ final class AccountStore: ObservableObject {
         if SimulatorFixtures.widgetEnabled { persist() }
         #endif
         for account in accounts { histories[account.id] = historyStore.read(account.id); if let snapshot = account.snapshot { recordHistory(snapshot, id: account.id) } }
-        if integratesWithSystem { publishWidgets() }
+        if integratesWithSystem, loadedAccounts { publishWidgets() }
     }
     private func recordHistory(_ snapshot: UsageSnapshot, id: UUID) {
         let samples = historyStore.append(snapshot, to: histories[id] ?? [])
@@ -52,6 +58,7 @@ final class AccountStore: ObservableObject {
     }
     func savedCredential(for id: UUID) throws -> AccountCredential? { try vault.load(id: id) }
     func connect(_ account: AgentAccount, credential: AccountCredential) throws {
+        guard loadedAccounts else { throw UsageError.unavailable }
         guard account.provider == credential.provider, account.snapshot?.identity == credential.registrationIdentity else { throw UsageError.wrongAccount }
         let identity = credential.registrationIdentity
         let exact = accounts.firstIndex(where: { $0.id == account.id })
@@ -78,7 +85,7 @@ final class AccountStore: ObservableObject {
         // An editor may have opened before a refresh; preserve the latest usage and connection.
         accounts[index].label = account.label; accounts[index].workstream = account.workstream
         accounts[index].notes = account.notes; accounts[index].renewalReminder = account.renewalReminder
-        accounts[index].favorite = account.favorite; accounts[index].display = account.display; persist()
+        accounts[index].favorite = account.favorite; accounts[index].display = account.display; accounts[index].colorHex = account.colorHex; persist()
     }
     func remove(_ id: UUID) throws {
         try vault.delete(id: id)
@@ -89,7 +96,17 @@ final class AccountStore: ObservableObject {
         if integratesWithSystem { UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: notificationIDs(id)) }
         persist()
     }
+    func reloadAccountsIfNeeded() {
+        guard !loadedAccounts else { return }
+        do {
+            accounts = try JSONDecoder().decode([AgentAccount].self, from: Data(contentsOf: location))
+            loadedAccounts = true; error = nil
+            for account in accounts { histories[account.id] = historyStore.read(account.id) }
+            if integratesWithSystem { publishWidgets() }
+        } catch { }
+    }
     func refreshAll() async {
+        reloadAccountsIfNeeded()
         #if DEBUG
         if SimulatorFixtures.enabled { return }
         #endif
@@ -102,6 +119,11 @@ final class AccountStore: ObservableObject {
                 if Task.isCancelled { group.cancelAll(); break }
                 if let id = pending.next() { group.addTask { await self.refresh(id) } }
             }
+        }
+    }
+    private func renewCredential(_ credential: AccountCredential, account: AgentAccount) async throws -> AccountCredential {
+        try await Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
+            try await renewer(credential)
         }
     }
     func refresh(_ id: UUID) async {
@@ -119,7 +141,7 @@ final class AccountStore: ObservableObject {
             guard var credential = try vault.load(id: id) else { throw UsageError.signedOut }
             var renewed = false
             if credential.expiresAt < .now.addingTimeInterval(60) {
-                credential = try await renewer(credential)
+                credential = try await renewCredential(credential, account: account)
                 renewed = true
                 guard revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return }
                 // Save rotating tokens before the usage request, even if that later request fails.
@@ -131,7 +153,7 @@ final class AccountStore: ObservableObject {
                 // One refresh can recover a revoked/expired access token. If the fresh
                 // token is also denied, retain the connection and report permission
                 // failure; only a terminal refresh error requests another sign-in.
-                credential = try await renewer(credential)
+                credential = try await renewCredential(credential, account: account)
                 guard revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return }
                 try vault.save(credential, id: id)
                 snapshot = try await fetcher(account, credential)
@@ -186,6 +208,7 @@ final class AccountStore: ObservableObject {
         }
     }
     private func persist() {
+        guard loadedAccounts else { return }
         do {
             try FileManager.default.createDirectory(at: location.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(accounts).write(to: location, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])

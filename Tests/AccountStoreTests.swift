@@ -17,6 +17,25 @@ final class AccountStoreTests: XCTestCase {
     override func tearDown() { try? FileManager.default.removeItem(at: directory) }
     func store(vault: MemoryVault) -> AccountStore { AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false) }
 
+    func testUnreadableMetadataIsPreservedAndCanRecoverAfterUnlock() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let path = directory.appendingPathComponent("accounts.json")
+        let damaged = Data("unreadable-metadata".utf8)
+        try damaged.write(to: path)
+        let vault = MemoryVault(); let store = store(vault: vault)
+        let credential = Fixture.credential("protected-data")
+        let account = Fixture.account(credential)
+        XCTAssertNotNil(store.error)
+        XCTAssertThrowsError(try store.connect(account, credential: credential))
+        XCTAssertEqual(try Data(contentsOf: path), damaged)
+        XCTAssertTrue(vault.values.isEmpty)
+        // Simulates protected data becoming readable; no empty cache is published.
+        try JSONEncoder().encode([account]).write(to: path)
+        store.reloadAccountsIfNeeded()
+        XCTAssertEqual(store.accounts, [account]); XCTAssertNil(store.error)
+        try store.connect(account, credential: credential)
+        XCTAssertEqual(vault.values[account.id], credential)
+    }
     func testTwoCodexAccountsWithSameEmailStaySeparateAfterRestartAndRemoval() throws {
         let vault = MemoryVault(); let store = store(vault: vault)
         let firstCredential = Fixture.credential("personal"); let secondCredential = Fixture.credential("work")

@@ -14,7 +14,7 @@ enum Provider: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self { case .codex: return "command"; case .claude: return "asterisk"; case .grok: return "slash.circle" }
     }
     var color: Color {
-        switch self { case .codex: return Color(hex: 0xB9F577); case .claude: return Color(hex: 0xF2AD8B); case .grok: return Color(hex: 0xAAA5FF) }
+        switch self { case .codex: return Color(hex: 0x10A37F); case .claude: return Color(hex: 0xD97757); case .grok: return Color(hex: 0xE5E5E5) }
     }
     var usageURL: URL {
         switch self {
@@ -48,10 +48,18 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
     var billingEndsAt: Date?
     var updatedAt: Date = .now
     var source: String = "Provider"
+    var bankedResets: [BankedReset]?
     var nextReset: Date? { windows.compactMap(\.resetsAt).filter { $0 > .now }.min() }
     func isStale(at date: Date = .now) -> Bool {
         date.timeIntervalSince(updatedAt) > 30 * 60 || windows.contains { $0.resetDue(at: date) }
     }
+}
+
+struct BankedReset: Codable, Equatable, Identifiable, Sendable {
+    var id: String
+    var title: String
+    var count: Int = 1
+    var expiresAt: Date?
 }
 
 struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
@@ -66,9 +74,11 @@ struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
     var issue: String?
     var needsLogin: Bool = false
     var display: AccountDisplay?
+    var colorHex: UInt32?
     var addedAt: Date = .now
     var title: String { label.isEmpty ? provider.name : label }
     var nextReset: Date? { snapshot?.nextReset }
+    var color: Color { colorHex.map { Color(hex: $0) } ?? provider.color }
 }
 
 extension Color {

@@ -17,8 +17,11 @@ final class SignInModel: ObservableObject {
     func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false) {
         guard !working else { return }
         working = true; message = nil; credential = nil; snapshot = nil
-        Diagnostics.record(.signInStarted, provider: account.provider, privateSession: usePrivateSession)
+        Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
+            Diagnostics.record(.signInStarted, privateSession: usePrivateSession)
+        }
         task = Task {
+          await Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
             defer { working = false }
             do {
                 let connection: AccountCredential
@@ -33,6 +36,7 @@ final class SignInModel: ObservableObject {
                 try Task.checkCancellation()
             } catch is CancellationError { credential = nil; snapshot = nil }
             catch { snapshot = nil; message = error.localizedDescription; Diagnostics.record(.signInFailed, provider: account.provider, failure: .category(error)) }
+          }
         }
     }
     func cancel() { task?.cancel(); task = nil; browser.cancel() }
@@ -72,7 +76,10 @@ struct SignInView: View {
                             catch { model.message = error.localizedDescription }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     } else {
-                        Text("Sign in with \(account.provider == .codex ? "ChatGPT" : account.provider.name).").font(.subheadline).foregroundStyle(.secondary)
+                        HStack(spacing: 8) {
+                            ProviderLogo(provider: account.provider, color: account.color, size: 22)
+                            Text("Sign in with \(account.provider == .codex ? "ChatGPT" : account.provider.name).").font(.subheadline).foregroundStyle(.secondary)
+                        }
                         if account.snapshot != nil {
                             Text("Reconnect only this account. Choose Add account to connect a different one.").font(.subheadline).foregroundStyle(.secondary).panel()
                         }

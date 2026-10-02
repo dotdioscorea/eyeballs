@@ -3,9 +3,11 @@
 An iPhone app for monitoring multiple Codex, Claude and Grok accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
-- Up to four configurable rings per account: usage or time, with individual amount choices.
+- Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
 - Persistent compact bars, search, provider filters and account sorting.
-- Account and multi-account widgets with selectable accounts, bars or rings, metrics and sorting.
+- Account and multi-account widgets with selectable accounts, bars or rings, metrics and sorting. Dense rows show up to six accounts in a medium widget or twelve in a large widget, with account links.
+- Provider logos, default brand colours and per-account colour overrides.
+- Banked Codex reset counts and expiry dates when reported by the API.
 - Local usage charts for 24 hours, 7, 30 or 90 days.
 - Pull-to-refresh, timestamps, reset reminders and provider billing information where available.
 - GitHub problem reports with an optional, reviewable debug bundle.
@@ -36,7 +38,7 @@ Usage is fetched when the app opens, every five minutes while it is active, on p
 
 History records successful provider readings, retains up to 90 days and is capped at 12,000 samples per account. Charts split resets, unknown readings and gaps over two hours. Widget timelines never create history samples.
 
-Diagnostics retain at most 100 local events for seven days. They accept only typed sign-in stages, provider names, HTTP status codes and error categories. Debug exports also contain app/iOS versions and anonymous availability counts. They exclude tokens, passwords, OAuth state, HTTP bodies, URLs, account IDs, names, emails, workstreams and notes. Nothing is uploaded automatically; users review and attach the JSON file to a public GitHub issue themselves.
+Diagnostics retain at most 100 local events for seven days. They record typed stages, providers, request categories, HTTP status codes, error categories and types of known usage fields. Parsing records identify the calculation used and classify readings as zero, partial, full or missing. Local connection UUIDs are replaced with bundle-local anonymous labels when exported, so multiple accounts can be distinguished. Debug exports also contain app/iOS versions and availability counts. They exclude tokens, passwords, OAuth state, HTTP bodies, URLs, account IDs, names, emails, workstreams and notes. Nothing is uploaded automatically; users review and attach the JSON file to a public GitHub issue themselves.
 
 ## Development
 
@@ -56,7 +58,7 @@ Tests cover account isolation, identity verification, token rotation, OAuth call
 
 ## TestFlight
 
-App and widget build numbers must match and increase for every upload. Apple signing credentials stay outside Git.
+App and widget build numbers must match and increase for every upload. The archive is stamped with both targets’ capabilities before cloud signing. The exported IPA’s actual signatures must contain the shared App Group and distribution entitlements; `scripts/verify-release.py` checks this before the same IPA is uploaded. Apple signing credentials stay outside Git.
 
 ```sh
 APPLE_TEAM_ID=<team-id> IOS_BUILD_NUMBER=<build-number> scripts/archive.sh

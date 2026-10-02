@@ -80,6 +80,14 @@ enum WidgetOrder: String, AppEnum {
         self == .selected ? accounts : (AccountSort(rawValue: rawValue) ?? .name).sorted(accounts)
     }
 }
+enum WidgetRows: String, AppEnum {
+    case automatic, three, six, nine, twelve
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Rows"
+    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [.automatic: "Fit widget", .three: "3 accounts", .six: "6 accounts", .nine: "9 accounts", .twelve: "12 accounts"]
+    var count: Int? {
+        switch self { case .automatic: return nil; case .three: return 3; case .six: return 6; case .nine: return 9; case .twelve: return 12 }
+    }
+}
 struct AccountIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Account"
     @Parameter(title: "Account") var account: AccountEntity?
@@ -93,4 +101,14 @@ struct OverviewIntent: WidgetConfigurationIntent {
     @Parameter(title: "Amounts", default: .account) var amount: WidgetAmount
     @Parameter(title: "Metrics", default: .account) var metrics: WidgetMetrics
     @Parameter(title: "Sort", default: .selected) var sort: WidgetOrder
+    @Parameter(title: "Rows", default: .automatic) var rows: WidgetRows
+}
+
+struct RowsIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Account rows"
+    @Parameter(title: "Accounts") var accounts: [AccountEntity]?
+    @Parameter(title: "Amounts", default: .account) var amount: WidgetAmount
+    @Parameter(title: "Metrics", default: .account) var metrics: WidgetMetrics
+    @Parameter(title: "Sort", default: .selected) var sort: WidgetOrder
+    @Parameter(title: "Rows", default: .automatic) var rows: WidgetRows
 }

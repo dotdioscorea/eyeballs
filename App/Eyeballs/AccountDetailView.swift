@@ -15,18 +15,30 @@ struct AccountDetailView: View {
                     VStack(spacing: 20) {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             VStack(spacing: 22) {
-                                if !account.readings().isEmpty { UsageRing(readings: account.readings(at: context.date), color: account.provider.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13) }
+                                if !account.readings().isEmpty { UsageRing(readings: account.readings(at: context.date), color: account.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13) }
                                 Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary)
-                                MetricLegend(readings: account.readings(at: context.date), color: account.provider.color)
+                                MetricLegend(readings: account.readings(at: context.date), color: account.color)
                             }.padding(.vertical, 16)
                         }
                         Button("Configure display") { configuring = true }.font(.subheadline.weight(.medium)).accessibilityIdentifier("configure-display")
+                        if let resets = account.snapshot?.bankedResets, !resets.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Banked resets").font(.subheadline.weight(.semibold))
+                                ForEach(resets) { reset in
+                                    HStack(alignment: .top) {
+                                        Text("\(reset.count) × \(reset.title)")
+                                        Spacer()
+                                        Text(reset.expiresAt.map { "Expires \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "No expiry reported").foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                                    }.font(.caption)
+                                }
+                            }.frame(maxWidth: .infinity, alignment: .leading).panel()
+                        }
                         if let snapshot = account.snapshot {
                             VStack(alignment: .leading, spacing: 18) {
                                 ForEach(snapshot.windows) { window in
                                     let reading = MetricReading(definition: RingDefinition(windowID: window.id), window: window, direction: account.displaySettings.direction, date: .now)
                                     VStack(alignment: .leading, spacing: 7) {
-                                        MetricBars(readings: [reading], color: account.provider.color)
+                                        MetricBars(readings: [reading], color: account.color)
                                         if let reset = window.resetsAt {
                                             Text(reset <= .now ? "Reset due" : "Resets \(reset.formatted(.dateTime.weekday(.abbreviated).hour().minute()))").font(.caption).foregroundStyle(.secondary)
                                         }
@@ -53,6 +65,7 @@ struct AccountDetailView: View {
                     }.padding(22).frame(maxWidth: 600).frame(maxWidth: .infinity)
                 }.background(Theme.background).refreshable { await store.refresh(id) }
                     .navigationTitle(account.title).navigationBarTitleDisplayMode(.inline)
+                    .toolbar(.hidden, for: .tabBar)
                     .toolbar { ToolbarItem(placement: .topBarTrailing) {
                         Button { var copy = account; copy.favorite.toggle(); store.update(copy) } label: { Image(systemName: account.favorite ? "star.fill" : "star") }.accessibilityLabel(account.favorite ? "Remove from favorites" : "Add to favorites")
                     } }
@@ -112,19 +125,19 @@ struct DisplaySettingsView: View {
     @Environment(\.dismiss) private var dismiss
     let account: AgentAccount
     @State private var settings: AccountDisplay
-    init(account: AgentAccount) { self.account = account; _settings = State(initialValue: account.displaySettings) }
+    init(account: AgentAccount) { self.account = account; _settings = State(initialValue: account.displaySettings); _colorHex = State(initialValue: account.colorHex) }
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    HStack { Spacer(); UsageRing(readings: account.readings(settings: settings), color: account.provider.color, size: 140, lineWidth: settings.rings.count > 2 ? 8 : 11); Spacer() }.padding(.vertical, 12)
+                    HStack { Spacer(); UsageRing(readings: account.readings(settings: settings), color: colorHex.map { Color(hex: $0) } ?? account.provider.color, size: 140, lineWidth: settings.rings.count > 2 ? 8 : 11); Spacer() }.padding(.vertical, 12)
                     Picker("Default amounts", selection: $settings.direction) { ForEach(AmountDirection.allCases) { Text($0.title).tag($0) } }.accessibilityIdentifier("amount-direction")
                 }
                 Section {
                     ForEach(Array(settings.rings.enumerated()), id: \.element.id) { index, ring in
                         VStack(alignment: .leading, spacing: 7) {
                             HStack {
-                                Circle().fill(MetricColor.color(index, base: account.provider.color)).frame(width: 6, height: 6)
+                                Circle().fill(MetricColor.color(index, base: account.color)).frame(width: 6, height: 6)
                                 Text(account.readings(settings: settings)[index].title).font(.subheadline)
                             }
                             Picker("Amounts", selection: direction(for: ring)) {
@@ -137,14 +150,22 @@ struct DisplaySettingsView: View {
                 Section("Available metrics") {
                     ForEach(availableMetrics) { metric in metricToggle(metric.window, kind: metric.kind) }
                 }
-                Section { Button("Reset display settings") { settings = AccountDisplay(rings: Array((account.snapshot?.windows ?? []).prefix(2)).map { RingDefinition(windowID: $0.id) }) } }
+                Section("Colour") {
+                    ColorPicker("Account colour", selection: colorBinding, supportsOpacity: false)
+                    Button("Use provider colour") { colorHex = nil }
+                }
+                Section { Button("Reset display settings") { settings = account.defaultDisplay; colorHex = nil } }
             }.scrollContentBackground(.hidden).background(Theme.background)
                 .navigationTitle("Display").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Save") { var copy = account; copy.display = settings; store.update(copy); dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) { Button("Save") { var copy = account; copy.display = settings; copy.colorHex = colorHex; store.update(copy); dismiss() } }
                 }
         }
+    }
+    @State private var colorHex: UInt32?
+    private var colorBinding: Binding<Color> {
+        Binding(get: { colorHex.map { Color(hex: $0) } ?? account.provider.color }, set: { colorHex = $0.hexRGB })
     }
     private struct AvailableMetric: Identifiable {
         var window: UsageWindow

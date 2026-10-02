@@ -1,13 +1,15 @@
-Build 4
+Build 5
 
-Remaining usage is now the default. Configure up to four usage/time rings per account, including weekly time remaining or elapsed. Each ring can use its own amount direction.
+Fixed Grok showing unknown remaining usage when the API omits its zero-valued percentage field. Missing or invalid values still remain unknown.
 
-Compact mode shows the same metrics as horizontal bars and stays enabled across launches. Search, provider filters and account sorting are available above the account list. Cards include last updated times.
+Fixed missing App Group capabilities in the signed TestFlight package, which prevented widgets from reading saved accounts. Uploads now verify the actual app and widget signatures.
 
-Widgets now share account selection code with the app and use an atomic summary cache. Choose a single account or a combination of accounts, compact bars or rings, metrics, amount direction and sorting. The accounts widget supports small, medium and large sizes.
+Added an Account rows widget: up to six accounts in a medium widget or twelve in a large widget, selectable row counts, account selection, metrics and sorting. Tap an account row to open its page.
 
-Pull down to refresh accounts or an individual account. Usage history charts retain up to 90 days of successful readings on this device. The app checks every five minutes while open; background updates depend on iOS. Widgets use cached usage and do not keep the app running.
+Weekly time is enabled by default. Compact mode uses vertically stacked bars with labels above and percentages on the right. Controls and cards take less space. Updated timestamps change by the minute.
 
-Removed account icons, promotional copy, Up next, Nearly full, the widget guide and sample-account preview. Settings includes concise privacy facts, a source-code link and GitHub problem reports with an optional debug bundle that excludes credentials and account identities.
+Provider logos are back, using provider colours by default. Override colours in an account’s Display settings. The tab bar is hidden on account and settings detail pages.
 
-Existing account connections are preserved. Please check Edit Widget → Account selection on your iPhone, multiple-account selections and display settings after updating.
+Codex banked reset counts and available expiry dates are shown on account pages. Unreported reset information stays unavailable.
+
+Debug bundles now include known usage field types, parsing decisions, request categories and anonymous account labels. They exclude credentials, identities, names and raw provider responses. Export remains optional and nothing is sent automatically.

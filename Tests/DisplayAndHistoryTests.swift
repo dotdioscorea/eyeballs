@@ -12,6 +12,48 @@ final class DisplayAndHistoryTests: XCTestCase {
         let decoded = try JSONDecoder().decode(AgentAccount.self, from: JSONSerialization.data(withJSONObject: object))
         XCTAssertNil(decoded.display); XCTAssertEqual(decoded.readings(at: now).first?.percent, 75)
         XCTAssertEqual(decoded.id, original.id); XCTAssertEqual(decoded.snapshot?.identity, "private-subject")
+        XCTAssertEqual(decoded.displaySettings.rings.map(\.kind), [.usage, .time])
+    }
+    func testUpdatedTextHasNoSecondsAndStableMinuteBoundaries() {
+        XCTAssertEqual(UpdatedText.relative(now, now: now.addingTimeInterval(59)), "Updated just now")
+        XCTAssertEqual(UpdatedText.relative(now, now: now.addingTimeInterval(60)), "Updated 1m ago")
+        XCTAssertEqual(UpdatedText.relative(now, now: now.addingTimeInterval(119)), "Updated 1m ago")
+    }
+    func testParsingDiagnosticsWhitelistFieldTypesWithoutResponseValues() throws {
+        let secret = "private-user-token@example.com"
+        let raw: [String: Any] = ["config": ["creditUsagePercent": secret, "currentPeriod": ["type": secret, "end": secret], "injected-" + secret: secret], "email": secret]
+        let diagnostic = UsageParsingDiagnostic.make(provider: .grok, raw: raw, snapshot: nil)
+        let encoded = String(decoding: try JSONEncoder().encode(diagnostic), as: UTF8.self)
+        XCTAssertFalse(encoded.contains(secret)); XCTAssertFalse(encoded.contains("email"))
+        XCTAssertEqual(diagnostic.fields[.creditUsagePercent], .string)
+        XCTAssertEqual(diagnostic.calculation, .unavailable)
+    }
+    @MainActor
+    func testExportedBundleExplainsGrokZeroAndCorrelatesAccountsWithoutIdentifiers() throws {
+        Diagnostics.clear(); defer { Diagnostics.clear() }
+        let raw: [String: Any] = ["config": ["isUnifiedBillingUser": true, "currentPeriod": ["type": "USAGE_PERIOD_TYPE_WEEKLY", "start": "2026-10-02T00:00:00Z", "end": "2026-10-09T00:00:00Z"]]]
+        let snapshot = try UsageParser.grok(raw)
+        let a = AgentAccount(provider: .grok, label: "Private account", snapshot: snapshot)
+        let b = AgentAccount(provider: .grok, snapshot: snapshot)
+        Diagnostics.$context.withValue(.init(provider: .grok, accountID: b.id)) {
+            Diagnostics.record(.usageParsed, parsing: .make(provider: .grok, raw: raw, snapshot: snapshot))
+        }
+        let bundle = Diagnostics.bundle(accounts: [a, b])
+        XCTAssertEqual(bundle.events.last?.connection, "account-2")
+        XCTAssertEqual(bundle.accounts[1].connection, "account-2")
+        let data = try Diagnostics.encode(bundle)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let events = try XCTUnwrap(object["events"] as? [[String: Any]])
+        let parsing = try XCTUnwrap(events.last?["parsing"] as? [String: Any])
+        let fields = try XCTUnwrap(parsing["fields"] as? [String: String])
+        XCTAssertEqual(fields["creditUsagePercent"], "missing")
+        XCTAssertEqual(fields["isUnifiedBillingUser"], "boolean")
+        XCTAssertEqual(parsing["calculation"] as? String, "protoZero")
+        XCTAssertEqual(parsing["readings"] as? [String], ["zeroUsed"])
+        let encoded = String(decoding: data, as: UTF8.self)
+        for secret in [a.id.uuidString, b.id.uuidString, a.label] { XCTAssertFalse(encoded.contains(secret)) }
+        let restored = try JSONDecoder().decode(UsageParsingDiagnostic.self, from: JSONEncoder().encode(bundle.events.last!.parsing!))
+        XCTAssertEqual(restored.fields[.creditUsagePercent], .missing)
     }
     func testPerRingDirectionsAndTimeUseProviderDuration() {
         var a = account()

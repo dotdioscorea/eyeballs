@@ -27,11 +27,11 @@ struct PrivacyView: View {
                 Text("Removing an account deletes its local tokens and saved data.")
             }
             Section {
-                Text("Diagnostic events record sign-in stages, error categories and HTTP status codes for up to seven days. They exclude credentials and account identities. Nothing is sent automatically.")
+                Text("Diagnostic events record sign-in stages, error categories, HTTP status codes and known usage field types for up to seven days. They exclude credentials and account identities. Nothing is sent automatically.")
                 Button(cleared ? "Diagnostics cleared" : "Clear diagnostics") { Diagnostics.clear(); cleared = true }.disabled(cleared)
             }
         }.font(.subheadline).scrollContentBackground(.hidden).background(Theme.background)
-            .navigationTitle("Privacy & storage").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Privacy & storage").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
     }
 }
 struct ProblemReportView: View {
@@ -61,7 +61,7 @@ struct ProblemReportView: View {
                 Button("Open GitHub issue") { openIssue() }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } footer: { Text("GitHub issues are public. Review your report before submitting.") }
         }.scrollContentBackground(.hidden).background(Theme.background)
-            .navigationTitle("Report a problem").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Report a problem").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
             .onChange(of: includeDebug) { _, enabled in if enabled { prepareDebug() } }
     }
     private func prepareDebug() {

@@ -8,6 +8,7 @@ struct UsageEntry: TimelineEntry {
     var amount: WidgetAmount = .account
     var metrics: WidgetMetrics = .account
     var layout: WidgetLayout = .bars
+    var rows: WidgetRows = .automatic
     func readings(_ account: AgentAccount) -> [MetricReading] { account.readings(at: date, settings: metrics.settings(for: account, amount: amount)) }
     static var placeholder: UsageEntry {
         let now = Date.now
@@ -46,7 +47,17 @@ struct OverviewTimeline: AppIntentTimelineProvider {
         if let choices = configuration.accounts, !choices.isEmpty {
             selected = choices.compactMap { choice in accounts.first { $0.id == UUID(uuidString: choice.id) } }
         } else { selected = accounts.filter(\.favorite) }
-        return UsageEntry(date: .now, accounts: configuration.sort.sorted(selected), amount: configuration.amount, metrics: configuration.metrics, layout: configuration.layout)
+        return UsageEntry(date: .now, accounts: configuration.sort.sorted(selected), amount: configuration.amount, metrics: configuration.metrics, layout: configuration.layout, rows: configuration.rows)
+    }
+}
+struct RowsTimeline: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> UsageEntry { .placeholder }
+    func snapshot(for configuration: RowsIntent, in context: Context) async -> UsageEntry { entry(configuration) }
+    func timeline(for configuration: RowsIntent, in context: Context) async -> Timeline<UsageEntry> { entry(configuration).timeline }
+    private func entry(_ configuration: RowsIntent) -> UsageEntry {
+        let accounts = WidgetCache.read()
+        let selected = configuration.accounts.flatMap { $0.isEmpty ? nil : $0 }?.compactMap { choice in accounts.first { $0.id == UUID(uuidString: choice.id) } } ?? accounts.filter(\.favorite)
+        return UsageEntry(date: .now, accounts: configuration.sort.sorted(selected), amount: configuration.amount, metrics: configuration.metrics, rows: configuration.rows)
     }
 }
 struct AccountWidgetView: View {
@@ -59,17 +70,17 @@ struct AccountWidgetView: View {
                 if family == .accessoryCircular {
                     if let percent = readings.first?.percent {
                         Gauge(value: percent / 100) { Text(readings.first?.caption ?? "") } currentValueLabel: { Text("\(Int(percent.rounded()))") }
-                            .gaugeStyle(.accessoryCircular).tint(account.provider.color)
+                            .gaugeStyle(.accessoryCircular).tint(account.color)
                     } else { Text("—").accessibilityLabel("Usage unavailable") }
                 } else if family == .accessoryRectangular {
                     VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text("\(readings.first?.title ?? account.provider.name) · \(readings.first?.value ?? "—") \(readings.first?.caption ?? "")").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack { Text(account.title).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); if family == .systemMedium { Text(account.provider.name).font(.caption2).foregroundStyle(.secondary) } }
+                        HStack { ProviderLogo(provider: account.provider, color: account.color, size: 16); Text(account.title).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); if family == .systemMedium { Text(account.provider.name).font(.caption2).foregroundStyle(.secondary) } }
                         HStack(spacing: 16) {
-                            if !readings.isEmpty { UsageRing(readings: readings, color: account.provider.color, size: family == .systemSmall ? 75 : 92, lineWidth: readings.count > 2 ? 4 : 6) }
+                            if !readings.isEmpty { UsageRing(readings: readings, color: account.color, size: family == .systemSmall ? 75 : 92, lineWidth: readings.count > 2 ? 4 : 6) }
                             else { Text(account.snapshot?.creditBalance ?? "No metrics selected").font(.caption).foregroundStyle(.secondary) }
-                            if family == .systemMedium { MetricLegend(readings: readings, color: account.provider.color) }
+                            if family == .systemMedium { MetricLegend(readings: readings, color: account.color) }
                         }.frame(maxWidth: .infinity)
                         Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
                     }
@@ -84,14 +95,15 @@ struct OverviewWidgetView: View {
     @Environment(\.widgetFamily) private var family
     private var limit: Int {
         if entry.layout == .rings { return family == .systemSmall ? 1 : family == .systemMedium ? 3 : 6 }
-        return family == .systemSmall ? 2 : family == .systemMedium ? 4 : 10
+        let capacity = family == .systemSmall ? 3 : family == .systemMedium ? 6 : 12
+        return min(capacity, entry.rows.count ?? capacity)
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: entry.layout == .bars ? 5 : 8) {
             HStack { Text("eyeballs").font(.system(size: 11, weight: .semibold, design: .rounded)); Spacer(); if entry.accounts.count > limit { Text("+\(entry.accounts.count - limit)").font(.system(size: 9)).foregroundStyle(.secondary) } }
             if entry.accounts.isEmpty { WidgetEmptyView() }
             else if entry.layout == .bars {
-                VStack(spacing: family == .systemLarge ? 5 : 4) {
+                VStack(spacing: 3) {
                     ForEach(entry.accounts.prefix(limit)) { account in
                         Link(destination: accountURL(account)) { CompactWidgetRow(account: account, readings: entry.readings(account), date: entry.date, small: family == .systemSmall) }
                     }
@@ -102,8 +114,8 @@ struct OverviewWidgetView: View {
                     ForEach(entry.accounts.prefix(limit)) { account in
                         Link(destination: accountURL(account)) {
                             VStack(spacing: 6) {
-                                if !entry.readings(account).isEmpty { UsageRing(readings: entry.readings(account), color: account.provider.color, size: family == .systemSmall ? 76 : 62, lineWidth: entry.readings(account).count > 2 ? 3 : 5) }
-                                Text(account.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
+                                if !entry.readings(account).isEmpty { UsageRing(readings: entry.readings(account), color: account.color, size: family == .systemSmall ? 76 : 62, lineWidth: entry.readings(account).count > 2 ? 3 : 5) }
+                                HStack(spacing: 3) { ProviderLogo(provider: account.provider, color: account.color, size: 12); Text(account.title).font(.system(size: 10, weight: .medium)).lineLimit(1) }
                                 Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
                             }
                         }
@@ -121,24 +133,24 @@ struct CompactWidgetRow: View {
     var body: some View {
         Group {
             if small {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     name
                     bars
-                    Text(widgetStatus(account, at: date, readings: readings)).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
                 }
             } else {
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(account.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
-                        Text(account.needsLogin ? "Reconnect" : account.snapshot?.isStale(at: date) == true ? "Stale" : account.provider.name).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
+                HStack(spacing: 7) {
+                    HStack(spacing: 4) {
+                        ProviderLogo(provider: account.provider, color: account.color, size: 12)
+                        Text(account.title).font(.system(size: 10, weight: .semibold)).lineLimit(1)
                     }.frame(width: 86, alignment: .leading)
                     bars
-                }
+                }.frame(minHeight: 17)
             }
         }.accessibilityElement(children: .combine)
     }
     private var name: some View {
         HStack {
+            ProviderLogo(provider: account.provider, color: account.color, size: 12)
             Text(account.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
             Spacer(minLength: 2)
             Text(account.needsLogin ? "Reconnect" : account.provider.name).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
@@ -155,13 +167,13 @@ struct CompactWidgetRow: View {
                                 Text(shortTitle(reading)).lineLimit(1)
                                 Spacer(minLength: 0)
                                 Text(reading.value).monospacedDigit().fixedSize()
-                            }.font(.system(size: 8)).foregroundStyle(.secondary)
+                            }.font(.system(size: 8)).foregroundStyle(account.needsLogin ? .orange : account.snapshot?.isStale(at: date) == true ? .orange.opacity(0.8) : .secondary)
                             GeometryReader { geometry in
                                 ZStack(alignment: .leading) {
-                                    Capsule().fill(MetricColor.color(index, base: account.provider.color).opacity(0.15))
-                                    if let percent = reading.percent { Capsule().fill(MetricColor.color(index, base: account.provider.color)).frame(width: geometry.size.width * percent / 100) }
+                                    Capsule().fill(MetricColor.color(index, base: account.color).opacity(0.15))
+                                    if let percent = reading.percent { Capsule().fill(MetricColor.color(index, base: account.color)).frame(width: geometry.size.width * percent / 100) }
                                 }
-                            }.frame(height: 4)
+                            }.frame(height: 3)
                         }
                     }
                 }
@@ -170,7 +182,7 @@ struct CompactWidgetRow: View {
     }
     private func shortTitle(_ reading: MetricReading) -> String {
         let period = reading.window?.duration == 18000 ? "5h" : reading.window?.title.localizedCaseInsensitiveContains("weekly") == true ? "Week" : reading.window?.title ?? "—"
-        return "\(period) \(reading.caption)"
+        return reading.definition.kind == .time ? "Time" : period
     }
 }
 struct WidgetEmptyView: View {
@@ -185,7 +197,13 @@ private func widgetStatus(_ account: AgentAccount, at date: Date, readings: [Met
 }
 @main
 struct EyeballsWidgets: WidgetBundle {
-    var body: some Widget { AccountWidget(); OverviewWidget() }
+    var body: some Widget { AccountWidget(); AccountRowsWidget(); OverviewWidget() }
+}
+struct AccountRowsWidget: Widget {
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(kind: "EyeballsRows", intent: RowsIntent.self, provider: RowsTimeline()) { OverviewWidgetView(entry: $0) }.configurationDisplayName("Account rows").description("Up to six accounts in a medium widget or twelve in a large widget. Tap a row to open its account.")
+            .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    }
 }
 struct AccountWidget: Widget {
     var body: some WidgetConfiguration {

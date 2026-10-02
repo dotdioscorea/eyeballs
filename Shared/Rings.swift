@@ -42,9 +42,9 @@ struct MetricBars: View {
     var color: Color
     var dense = false
     var body: some View {
-        VStack(alignment: .leading, spacing: dense ? 5 : 13) {
+        VStack(alignment: .leading, spacing: dense ? 4 : 13) {
             ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
-                VStack(spacing: dense ? 3 : 6) {
+                VStack(spacing: dense ? 2 : 6) {
                     HStack {
                         Text(reading.title).lineLimit(1)
                         Spacer(minLength: 4)
@@ -57,7 +57,7 @@ struct MetricBars: View {
                                 Capsule().fill(MetricColor.color(index, base: color)).frame(width: geometry.size.width * percent / 100)
                             }
                         }
-                    }.frame(height: dense ? 4 : 6).accessibilityHidden(true)
+                    }.frame(height: dense ? 3 : 6).accessibilityHidden(true)
                 }
             }
         }

@@ -48,7 +48,15 @@ struct MetricReading: Identifiable, Equatable {
 }
 extension AgentAccount {
     var displaySettings: AccountDisplay {
-        display ?? AccountDisplay(rings: Array((snapshot?.windows ?? []).prefix(2)).map { RingDefinition(windowID: $0.id) })
+        display ?? defaultDisplay
+    }
+    var defaultDisplay: AccountDisplay {
+        let windows = snapshot?.windows ?? []
+        var rings = Array(windows.prefix(2)).map { RingDefinition(windowID: $0.id) }
+        if let weekly = window(for: .weekly), weekly.duration != nil, weekly.resetsAt != nil {
+            rings.append(RingDefinition(windowID: weekly.id, kind: .time))
+        }
+        return AccountDisplay(rings: rings)
     }
     func readings(at date: Date = .now, settings: AccountDisplay? = nil) -> [MetricReading] {
         let settings = settings ?? displaySettings
@@ -66,6 +74,13 @@ extension AgentAccount {
         case .session: return windows.first { $0.duration.map { $0 > 0 && $0 <= 21600 } == true }
         case .weekly: return windows.first { $0.duration.map { abs($0 - 604800) < 60 } == true || $0.title.localizedCaseInsensitiveContains("weekly") }
         }
+    }
+}
+
+enum UpdatedText {
+    static func relative(_ updated: Date, now: Date = .now) -> String {
+        let minutes = Int(max(0, now.timeIntervalSince(updated)) / 60)
+        return minutes == 0 ? "Updated just now" : "Updated \(minutes)m ago"
     }
 }
 enum UsagePeriod { case session, weekly }

@@ -34,7 +34,7 @@ enum ProviderHTTP {
         let (data, response) = try await session.data(for: request)
         try Task.checkCancellation()
         guard let response = response as? HTTPURLResponse, data.count < 1_000_000 else { throw UsageError.invalidResponse }
-        Diagnostics.record(.http, status: response.statusCode)
+        Diagnostics.record(.http, status: response.statusCode, endpoint: .identify(request.url))
         return (data, response)
     }
     static func json(_ request: URLRequest, unauthorizedError: UsageError = .signedOut) async throws -> Any {
@@ -91,12 +91,28 @@ struct UsageClient {
         return request
     }
     static func fetch(account: AgentAccount, credential: AccountCredential) async throws -> UsageSnapshot {
+        try await Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
+            try await fetchSnapshot(account: account, credential: credential)
+        }
+    }
+    private static func fetchSnapshot(account: AgentAccount, credential: AccountCredential) async throws -> UsageSnapshot {
         let raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: .usageAccessDenied)
+        var parsed: UsageSnapshot?
+        defer { Diagnostics.record(.usageParsed, provider: account.provider, parsing: .make(provider: account.provider, raw: raw, snapshot: parsed)) }
         var snapshot: UsageSnapshot
         switch account.provider {
         case .codex: snapshot = try UsageParser.codex(raw)
         case .claude: snapshot = try UsageParser.claude(raw)
         case .grok: snapshot = try UsageParser.grok(raw)
+        }
+        parsed = snapshot
+        if account.provider == .codex {
+            var resetRequest = try request(provider: .codex, credential: credential)
+            resetRequest.url = URL(string: "https://chatgpt.com/backend-api/wham/rate-limit-reset-credits")!
+            if let details = try? await ProviderHTTP.json(resetRequest), let resets = UsageParser.codexResets(details) {
+                snapshot.bankedResets = resets
+            }
+            try Task.checkCancellation()
         }
         if account.provider == .codex, let reported = snapshot.identity, let selected = credential.accountID, reported != selected { throw UsageError.wrongAccount }
         snapshot.identity = credential.registrationIdentity
@@ -139,7 +155,18 @@ enum UsageParser {
         let credits = object["credits"] as? [String: Any]
         let balance = credits?["balance"]
         let creditBalance = (balance as? String) ?? percent(balance).map { String($0) }
-        return UsageSnapshot(windows: windows, plan: (object["plan_type"] as? String)?.capitalized, identity: object["account_id"] as? String, creditBalance: creditBalance)
+        let count = percent((object["rate_limit_reset_credits"] as? [String: Any])?["available_count"]).map { Int(min($0, 10000)) }
+        let resets = count.map { $0 > 0 ? [BankedReset(id: "summary", title: "Usage reset", count: $0)] : [] }
+        return UsageSnapshot(windows: windows, plan: (object["plan_type"] as? String)?.capitalized, identity: object["account_id"] as? String, creditBalance: creditBalance, bankedResets: resets)
+    }
+    static func codexResets(_ raw: Any, now: Date = .now) -> [BankedReset]? {
+        guard let object = raw as? [String: Any], let credits = object["credits"] as? [[String: Any]] else { return nil }
+        return credits.enumerated().compactMap { index, credit in
+            guard credit["status"] as? String == "available" else { return nil }
+            let expiry = date(credit["expires_at"])
+            guard expiry.map({ $0 > now }) ?? true else { return nil }
+            return BankedReset(id: "banked-\(index)", title: String((credit["title"] as? String ?? "Usage reset").prefix(100)), expiresAt: expiry)
+        }.sorted { ($0.expiresAt ?? .distantFuture) < ($1.expiresAt ?? .distantFuture) }
     }
     static func claude(_ raw: Any) throws -> UsageSnapshot {
         guard let object = raw as? [String: Any], object["five_hour"] != nil || object["seven_day"] != nil || object["limits"] != nil else { throw UsageError.invalidResponse }
@@ -158,15 +185,34 @@ enum UsageParser {
         let start = quotaEnd != nil ? date(period?["start"]) : date(config["billingPeriodStart"])
         let duration = start.flatMap { start in end.flatMap { $0 > start ? $0.timeIntervalSince(start) : nil } }
         var used = percent(config["creditUsagePercent"])
-        if used == nil, let cap = percent((config["onDemandCap"] as? [String: Any])?["val"]), cap > 0,
-           let spent = percent((config["onDemandUsed"] as? [String: Any])?["val"]) { used = spent / cap * 100 }
+        // The unified credits endpoint uses proto3 JSON: an omitted scalar is
+        // zero, not unknown. Require the new schema discriminator so legacy or
+        // incomplete responses do not turn an unknown allowance into 100% left.
+        if used == nil, config["creditUsagePercent"] == nil,
+           config["isUnifiedBillingUser"] as? Bool == true,
+           ["USAGE_PERIOD_TYPE_WEEKLY", "USAGE_PERIOD_TYPE_MONTHLY"].contains(period?["type"] as? String ?? "") {
+            used = 0
+        }
+        if used == nil, let cap = cent(config["monthlyLimit"]), cap > 0,
+           let spent = cent(config["used"]) { used = spent / cap * 100 }
         guard used != nil || end != nil else { throw UsageError.invalidResponse }
         let title = duration.map { $0 >= 6 * 86400 && $0 <= 8 * 86400 ? "Weekly credits" : "Current credits" } ?? "Current credits"
         var windows = [UsageWindow(id: "credits", title: title, usedPercent: used, resetsAt: end, duration: duration)]
+        if let cap = cent(config["onDemandCap"]), cap > 0, let spent = cent(config["onDemandUsed"]) {
+            windows.append(UsageWindow(id: "on-demand", title: "On-demand", usedPercent: spent / cap * 100, resetsAt: date(config["billingPeriodEnd"])))
+        }
         for value in config["productUsage"] as? [[String: Any]] ?? [] {
             guard let product = value["product"] as? String, !product.isEmpty, let amount = percent(value["usagePercent"]) else { continue }
             windows.append(UsageWindow(id: "product-" + product, title: product, usedPercent: amount, resetsAt: end, duration: duration))
         }
-        return UsageSnapshot(windows: windows, plan: ((config["subscriptionTier"] ?? object["subscriptionTier"]) as? String)?.replacingOccurrences(of: "_", with: " ").capitalized, billingEndsAt: date(config["billingPeriodEnd"]))
+        let balance = cent(config["prepaidBalance"]).map { String(format: "$%.2f", $0 / 100) }
+        return UsageSnapshot(windows: windows, plan: ((config["subscriptionTier"] ?? object["subscriptionTier"]) as? String)?.replacingOccurrences(of: "_", with: " ").capitalized, creditBalance: balance, billingEndsAt: date(config["billingPeriodEnd"]))
+    }
+    static func cent(_ raw: Any?) -> Double? {
+        guard let object = raw as? [String: Any] else { return nil }
+        // A present, empty Cent object represents proto3 zero. An absent object
+        // remains unknown. The protocol can encode int64 as a decimal string.
+        guard let raw = object["val"] else { return object.isEmpty ? 0 : nil }
+        return percent(raw) ?? (raw as? String).flatMap(Double.init).flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
     }
 }

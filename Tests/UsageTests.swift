@@ -37,12 +37,49 @@ final class UsageTests: XCTestCase {
         let missingStart = try UsageParser.grok(["config": ["creditUsagePercent": 23, "currentPeriod": ["end": "2026-10-08T00:00:00Z"], "billingPeriodStart": "2026-09-15T00:00:00Z"]])
         XCTAssertNil(missingStart.windows[0].duration)
     }
-    func testGrokOnDemandFallbackAndUnknownPercent() throws {
-        let value = try UsageParser.grok(["config": ["onDemandCap": ["val": 200], "onDemandUsed": ["val": 50]]])
-        XCTAssertEqual(value.windows[0].safePercent, 25)
+    func testGrokOnDemandBudgetIsSeparateFromIncludedUsage() throws {
+        let value = try UsageParser.grok(["config": ["monthlyLimit": ["val": 400], "used": ["val": 40], "onDemandCap": ["val": 200], "onDemandUsed": ["val": 50]]])
+        XCTAssertEqual(value.windows[0].safePercent, 10)
+        XCTAssertEqual(value.windows[1].safePercent, 25)
         let unknown = try UsageParser.grok(["config": ["currentPeriod": ["end": "2026-10-08T00:00:00Z"]]])
         XCTAssertNil(unknown.windows[0].safePercent)
         XCTAssertThrowsError(try UsageParser.grok(["config": [:]]))
+    }
+    func testLiveGrokProtoZeroShapeReportsFullRemainingQuota() throws {
+        let raw: [String: Any] = ["config": ["currentPeriod": ["type": "USAGE_PERIOD_TYPE_WEEKLY", "start": "2026-10-02T14:53:18.095343+00:00", "end": "2026-10-09T14:53:18.095343+00:00"], "isUnifiedBillingUser": true, "onDemandCap": ["val": 0], "onDemandUsed": ["val": 0], "prepaidBalance": ["val": 0]]]
+        let value = try UsageParser.grok(raw)
+        XCTAssertEqual(value.windows[0].safePercent, 0)
+        XCTAssertEqual(value.windows[0].duration, 604800)
+        let account = AgentAccount(provider: .grok, snapshot: value)
+        XCTAssertEqual(account.readings().first?.percent, 100)
+        let diagnostic = UsageParsingDiagnostic.make(provider: .grok, raw: raw, snapshot: value)
+        XCTAssertEqual(diagnostic.fields[.creditUsagePercent], .missing)
+        XCTAssertEqual(diagnostic.fields[.isUnifiedBillingUser], .boolean)
+        XCTAssertEqual(diagnostic.calculation, .protoZero)
+        XCTAssertEqual(diagnostic.readings, [.zeroUsed])
+    }
+    func testGrokNullPercentageDoesNotImplyZeroAndLegacyCentsCanOmitZero() throws {
+        let value = try UsageParser.grok(["config": ["creditUsagePercent": NSNull(), "isUnifiedBillingUser": true, "currentPeriod": ["type": "USAGE_PERIOD_TYPE_WEEKLY", "end": "2026-10-09T14:53:18Z"]]])
+        XCTAssertNil(value.windows[0].safePercent)
+        let legacy = try UsageParser.grok(["config": ["monthlyLimit": ["val": "200"], "used": [:]]])
+        XCTAssertEqual(legacy.windows[0].safePercent, 0)
+        XCTAssertNil(UsageParser.cent(nil))
+    }
+    func testCodexBankedResetsKeepOnlyAvailableUnexpiredCredits() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let rows: [[String: Any]] = [
+            ["id": "private-credit-1", "title": "Weekly reset", "status": "available", "expires_at": now.addingTimeInterval(3600).timeIntervalSince1970],
+            ["id": "private-credit-2", "status": "available"],
+            ["status": "redeemed", "expires_at": now.addingTimeInterval(3600).timeIntervalSince1970],
+            ["status": "available", "expires_at": now.addingTimeInterval(-1).timeIntervalSince1970]
+        ]
+        let credits = try XCTUnwrap(UsageParser.codexResets(["credits": rows], now: now))
+        XCTAssertEqual(credits.count, 2); XCTAssertEqual(credits.first?.expiresAt, now.addingTimeInterval(3600))
+        XCTAssertNil(credits.last?.expiresAt)
+        XCTAssertFalse(String(decoding: try JSONEncoder().encode(credits), as: UTF8.self).contains("private-credit"))
+        XCTAssertNil(UsageParser.codexResets([:]))
+        let summary = try UsageParser.codex(["rate_limit": [:], "rate_limit_reset_credits": ["available_count": 3]])
+        XCTAssertEqual(summary.bankedResets?.first?.count, 3)
     }
     func testResetMarksStaleWithoutInventingZero() {
         let now = Date(timeIntervalSince1970: 1790931600)
