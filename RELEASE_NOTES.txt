@@ -1,4 +1,8 @@
-Build 6
+Build 7
+
+Added GitHub Copilot sign-in through GitHub’s device authorization flow. Copy the one-time code, open GitHub and authorize the connection. The app requests read-only profile access and rejects repository scopes. A completed authorization and live identity/usage check passed with a new minimal-scope token.
+
+Widget summaries now skip unsupported or malformed individual entries while retaining valid accounts. Failed sign-ins before saving an account also retain an anonymous correlation label in optional debug exports.
 
 Added Google sign-in for Gemini CLI and Code Assist model quotas. Each Google account has separate Keychain credentials, settings and history. This reads CLI/Code Assist quotas, not the Gemini chat website allowance. Google must supply a Code Assist project for the account. Sign-in presentation, cancellation and parser boundaries were tested in the simulator; please test completed sign-in with your existing Google account.
 
