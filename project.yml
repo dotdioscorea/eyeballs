@@ -1,0 +1,91 @@
+name: Eyeballs
+options:
+  bundleIdPrefix: com.dotdioscorea
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    DEVELOPMENT_TEAM: SCH97XTQGY
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+targets:
+  Eyeballs:
+    type: application
+    platform: iOS
+    sources: [App/Eyeballs, Shared]
+    entitlements:
+      path: App/Eyeballs/Eyeballs.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.dotdioscorea.eyeballs]
+    info:
+      path: App/Eyeballs/Info.plist
+      properties:
+        CFBundleDisplayName: Eyeballs
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        ITSAppUsesNonExemptEncryption: false
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.dotdioscorea.eyeballs.refresh]
+        CFBundleURLTypes:
+          - CFBundleURLSchemes: [eyeballs]
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dotdioscorea.eyeballs
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - target: EyeballsWidgets
+        embed: true
+  EyeballsWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [App/EyeballsWidgets, Shared]
+    entitlements:
+      path: App/EyeballsWidgets/EyeballsWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.dotdioscorea.eyeballs]
+    info:
+      path: App/EyeballsWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Eyeballs
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dotdioscorea.eyeballs.widgets
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+  EyeballsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies: [{target: Eyeballs}]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.dotdioscorea.eyeballs.tests
+  EyeballsUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies: [{target: Eyeballs}]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.dotdioscorea.eyeballs.uitests
+schemes:
+  Eyeballs:
+    build:
+      targets:
+        Eyeballs: all
+    test:
+      targets: [EyeballsTests, EyeballsUITests]
+    archive:
+      config: Release

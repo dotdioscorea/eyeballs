@@ -1,0 +1,727 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0693CB2F497C68C7DCE33727 /* AuthenticationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE3CCDC959AEFB204D546C7 /* AuthenticationTests.swift */; };
+		0BB1A11BA6A2F7904A85E162 /* EyeballsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3193C2CE03CF0CA3BBECC747 /* EyeballsApp.swift */; };
+		148AFA9CB7E9CCD8712244C6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91BB496ACAC09C661690C30 /* SettingsView.swift */; };
+		38742D24F93F30DBE07EFA12 /* CredentialVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */; };
+		43A2EFF0A099DE77554A3AF7 /* OpenAIAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */; };
+		470782475E04E8FA44C090D0 /* ResetTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCAA20E5EF38C1598F6E06A9 /* ResetTimelineView.swift */; };
+		51F894819DFCDFCB48AEB7BF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586D2A36DAC6AD2D0EC7C502 /* Theme.swift */; };
+		75065CCED2E79E97CF944FDE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */; };
+		825BFE17C9A718E42CF4B1DF /* CredentialVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6C216786AFDAD32A68746E /* CredentialVault.swift */; };
+		857C28387CCF689043E67253 /* Rings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6A5FE6D05A77A7AD24B /* Rings.swift */; };
+		8860B7922A6C370D2D056FB5 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D64A389A37C2185E8AD904D /* SignInView.swift */; };
+		8CC863EDBAE99264FC054C95 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 79AECE995479EE0B545151E2 /* PrivacyInfo.xcprivacy */; };
+		8CE21BB583CF1E3525F09680 /* Rings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6A5FE6D05A77A7AD24B /* Rings.swift */; };
+		91B31B26197F4D7EADB74682 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65929DC8B984D88BE27D375E /* Models.swift */; };
+		9C708E093CEA00589B210085 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65929DC8B984D88BE27D375E /* Models.swift */; };
+		A48D20DAA386AAB1A142BFC2 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56F04F43CF1D3627795B32C /* AccountStore.swift */; };
+		AEC98F93B644A0F5BF18A6C6 /* EyeballsWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB7C96965668FA84945135BD /* EyeballsWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B17BAB9B0B9961BC2195B4C2 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */; };
+		C353FE54EF29D9B82B4F7990 /* UsageClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */; };
+		C8D7A94755290C40C6B9FA5B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 79AECE995479EE0B545151E2 /* PrivacyInfo.xcprivacy */; };
+		CE49F0EEDB016B674455D259 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C333F79FBBB68B524059B7 /* DashboardView.swift */; };
+		CF2A98DA37A20459358F48E5 /* UsageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B0CADB0B5A3485C1468D6FA /* UsageTests.swift */; };
+		D5B1D5CCE8C975AAB6375936 /* EyeballsWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9063130896E61880DFDF5DAC /* EyeballsWidgets.swift */; };
+		EF56B745C7CC542B3E6207F5 /* AccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */; };
+		F569CD1E2B6F54098B3D96E4 /* EyeballsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0568FF4A40E5DD98C07AC800 /* EyeballsUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1767554E0CBBD1EBD1E1F974 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A6ED1464BF68DF781171410D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 63B1882C0E9FCE6A746221AF;
+			remoteInfo = EyeballsWidgets;
+		};
+		422F6E4A95FB3F821246FBD8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A6ED1464BF68DF781171410D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C2695C24B8A4BEDF107DA7E0;
+			remoteInfo = Eyeballs;
+		};
+		4DFB595CDAC3E506650842DF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A6ED1464BF68DF781171410D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C2695C24B8A4BEDF107DA7E0;
+			remoteInfo = Eyeballs;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6BD8167BC6E63B14B9D555EE /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AEC98F93B644A0F5BF18A6C6 /* EyeballsWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0286561A7270BF75941657F9 /* EyeballsUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EyeballsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0568FF4A40E5DD98C07AC800 /* EyeballsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EyeballsUITests.swift; sourceTree = "<group>"; };
+		1B0CADB0B5A3485C1468D6FA /* UsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTests.swift; sourceTree = "<group>"; };
+		1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
+		22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageClient.swift; sourceTree = "<group>"; };
+		2D64A389A37C2185E8AD904D /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		3193C2CE03CF0CA3BBECC747 /* EyeballsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EyeballsApp.swift; sourceTree = "<group>"; };
+		4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIAuth.swift; sourceTree = "<group>"; };
+		586D2A36DAC6AD2D0EC7C502 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		65929DC8B984D88BE27D375E /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVaultTests.swift; sourceTree = "<group>"; };
+		68755C5703A2B46DF936B456 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		74C333F79FBBB68B524059B7 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		79AECE995479EE0B545151E2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		889F928CEE66024DD743D87A /* EyeballsWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EyeballsWidgets.entitlements; sourceTree = "<group>"; };
+		9063130896E61880DFDF5DAC /* EyeballsWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EyeballsWidgets.swift; sourceTree = "<group>"; };
+		92A860BE684EB2FAFF9006C6 /* Eyeballs.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Eyeballs.entitlements; sourceTree = "<group>"; };
+		9AE3CCDC959AEFB204D546C7 /* AuthenticationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationTests.swift; sourceTree = "<group>"; };
+		A2D0AA46499D2C54A0134F61 /* Eyeballs.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Eyeballs.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB6C216786AFDAD32A68746E /* CredentialVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVault.swift; sourceTree = "<group>"; };
+		B2D6D6A5FE6D05A77A7AD24B /* Rings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rings.swift; sourceTree = "<group>"; };
+		B597A58B390FDC870026C7AF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		BB7C96965668FA84945135BD /* EyeballsWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = EyeballsWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C21A76FF5FCC0F3666156941 /* EyeballsTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EyeballsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
+		F56F04F43CF1D3627795B32C /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
+		F91BB496ACAC09C661690C30 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		FCAA20E5EF38C1598F6E06A9 /* ResetTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetTimelineView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0C34C19B52C1DE1F5640A283 /* EyeballsWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				889F928CEE66024DD743D87A /* EyeballsWidgets.entitlements */,
+				9063130896E61880DFDF5DAC /* EyeballsWidgets.swift */,
+				68755C5703A2B46DF936B456 /* Info.plist */,
+			);
+			name = EyeballsWidgets;
+			path = App/EyeballsWidgets;
+			sourceTree = "<group>";
+		};
+		0D5F6D00CED3B274119B4856 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				65929DC8B984D88BE27D375E /* Models.swift */,
+				79AECE995479EE0B545151E2 /* PrivacyInfo.xcprivacy */,
+				B2D6D6A5FE6D05A77A7AD24B /* Rings.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		127A374C3C6B3CD56E1E093E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A2D0AA46499D2C54A0134F61 /* Eyeballs.app */,
+				C21A76FF5FCC0F3666156941 /* EyeballsTests.xctest */,
+				0286561A7270BF75941657F9 /* EyeballsUITests.xctest */,
+				BB7C96965668FA84945135BD /* EyeballsWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3307EDC4D3BFA835BD5AD5F4 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */,
+				9AE3CCDC959AEFB204D546C7 /* AuthenticationTests.swift */,
+				671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */,
+				1B0CADB0B5A3485C1468D6FA /* UsageTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		3D8FCDA9565F965D492A9ABC /* Eyeballs */ = {
+			isa = PBXGroup;
+			children = (
+				E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */,
+				F56F04F43CF1D3627795B32C /* AccountStore.swift */,
+				4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */,
+				AB6C216786AFDAD32A68746E /* CredentialVault.swift */,
+				74C333F79FBBB68B524059B7 /* DashboardView.swift */,
+				92A860BE684EB2FAFF9006C6 /* Eyeballs.entitlements */,
+				3193C2CE03CF0CA3BBECC747 /* EyeballsApp.swift */,
+				B597A58B390FDC870026C7AF /* Info.plist */,
+				575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */,
+				FCAA20E5EF38C1598F6E06A9 /* ResetTimelineView.swift */,
+				F91BB496ACAC09C661690C30 /* SettingsView.swift */,
+				2D64A389A37C2185E8AD904D /* SignInView.swift */,
+				586D2A36DAC6AD2D0EC7C502 /* Theme.swift */,
+				22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */,
+			);
+			name = Eyeballs;
+			path = App/Eyeballs;
+			sourceTree = "<group>";
+		};
+		5373D195DA5B1A3F42E81DEF /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				0568FF4A40E5DD98C07AC800 /* EyeballsUITests.swift */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		8C4D0A573128F66E738C7E72 = {
+			isa = PBXGroup;
+			children = (
+				3D8FCDA9565F965D492A9ABC /* Eyeballs */,
+				0C34C19B52C1DE1F5640A283 /* EyeballsWidgets */,
+				0D5F6D00CED3B274119B4856 /* Shared */,
+				3307EDC4D3BFA835BD5AD5F4 /* Tests */,
+				5373D195DA5B1A3F42E81DEF /* UITests */,
+				127A374C3C6B3CD56E1E093E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		564EF184EA9862C5A8DD8C89 /* EyeballsUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1F72F03AA4A2F94E33157D9B /* Build configuration list for PBXNativeTarget "EyeballsUITests" */;
+			buildPhases = (
+				604FBF5F9A823C42E28EF9C5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				25F309D2265671CF10D1C1AC /* PBXTargetDependency */,
+			);
+			name = EyeballsUITests;
+			packageProductDependencies = (
+			);
+			productName = EyeballsUITests;
+			productReference = 0286561A7270BF75941657F9 /* EyeballsUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		63B1882C0E9FCE6A746221AF /* EyeballsWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B2211849D7E92D817D2F1D6F /* Build configuration list for PBXNativeTarget "EyeballsWidgets" */;
+			buildPhases = (
+				81FC2EBE6EE5BD1D30E485A2 /* Sources */,
+				517E34386A6C20ABC63F6311 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = EyeballsWidgets;
+			packageProductDependencies = (
+			);
+			productName = EyeballsWidgets;
+			productReference = BB7C96965668FA84945135BD /* EyeballsWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		C2695C24B8A4BEDF107DA7E0 /* Eyeballs */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E79CCAA29FEB9AF845793C93 /* Build configuration list for PBXNativeTarget "Eyeballs" */;
+			buildPhases = (
+				155E0BC121D71C1A43F0C73F /* Sources */,
+				35C8B9CA0A6EB0E76ECDE2B2 /* Resources */,
+				6BD8167BC6E63B14B9D555EE /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				1B2415B4B5975BED03945756 /* PBXTargetDependency */,
+			);
+			name = Eyeballs;
+			packageProductDependencies = (
+			);
+			productName = Eyeballs;
+			productReference = A2D0AA46499D2C54A0134F61 /* Eyeballs.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E1822CB970D70E64C230E079 /* EyeballsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B2C348AF3F3ED799691C2C87 /* Build configuration list for PBXNativeTarget "EyeballsTests" */;
+			buildPhases = (
+				BF70FBA7755772D2C08485CB /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				73253BE54D8346D391CE0596 /* PBXTargetDependency */,
+			);
+			name = EyeballsTests;
+			packageProductDependencies = (
+			);
+			productName = EyeballsTests;
+			productReference = C21A76FF5FCC0F3666156941 /* EyeballsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A6ED1464BF68DF781171410D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					564EF184EA9862C5A8DD8C89 = {
+						DevelopmentTeam = SCH97XTQGY;
+						ProvisioningStyle = Automatic;
+						TestTargetID = C2695C24B8A4BEDF107DA7E0;
+					};
+					63B1882C0E9FCE6A746221AF = {
+						DevelopmentTeam = SCH97XTQGY;
+						ProvisioningStyle = Automatic;
+					};
+					C2695C24B8A4BEDF107DA7E0 = {
+						DevelopmentTeam = SCH97XTQGY;
+						ProvisioningStyle = Automatic;
+					};
+					E1822CB970D70E64C230E079 = {
+						DevelopmentTeam = SCH97XTQGY;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 4E2E1452209C7D3EB55F0A6A /* Build configuration list for PBXProject "Eyeballs" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 8C4D0A573128F66E738C7E72;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 127A374C3C6B3CD56E1E093E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C2695C24B8A4BEDF107DA7E0 /* Eyeballs */,
+				E1822CB970D70E64C230E079 /* EyeballsTests */,
+				564EF184EA9862C5A8DD8C89 /* EyeballsUITests */,
+				63B1882C0E9FCE6A746221AF /* EyeballsWidgets */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		35C8B9CA0A6EB0E76ECDE2B2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				75065CCED2E79E97CF944FDE /* Assets.xcassets in Resources */,
+				8CC863EDBAE99264FC054C95 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		517E34386A6C20ABC63F6311 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C8D7A94755290C40C6B9FA5B /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		155E0BC121D71C1A43F0C73F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B17BAB9B0B9961BC2195B4C2 /* AccountDetailView.swift in Sources */,
+				A48D20DAA386AAB1A142BFC2 /* AccountStore.swift in Sources */,
+				825BFE17C9A718E42CF4B1DF /* CredentialVault.swift in Sources */,
+				CE49F0EEDB016B674455D259 /* DashboardView.swift in Sources */,
+				0BB1A11BA6A2F7904A85E162 /* EyeballsApp.swift in Sources */,
+				91B31B26197F4D7EADB74682 /* Models.swift in Sources */,
+				43A2EFF0A099DE77554A3AF7 /* OpenAIAuth.swift in Sources */,
+				470782475E04E8FA44C090D0 /* ResetTimelineView.swift in Sources */,
+				8CE21BB583CF1E3525F09680 /* Rings.swift in Sources */,
+				148AFA9CB7E9CCD8712244C6 /* SettingsView.swift in Sources */,
+				8860B7922A6C370D2D056FB5 /* SignInView.swift in Sources */,
+				51F894819DFCDFCB48AEB7BF /* Theme.swift in Sources */,
+				C353FE54EF29D9B82B4F7990 /* UsageClient.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		604FBF5F9A823C42E28EF9C5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F569CD1E2B6F54098B3D96E4 /* EyeballsUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		81FC2EBE6EE5BD1D30E485A2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D5B1D5CCE8C975AAB6375936 /* EyeballsWidgets.swift in Sources */,
+				9C708E093CEA00589B210085 /* Models.swift in Sources */,
+				857C28387CCF689043E67253 /* Rings.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF70FBA7755772D2C08485CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EF56B745C7CC542B3E6207F5 /* AccountStoreTests.swift in Sources */,
+				0693CB2F497C68C7DCE33727 /* AuthenticationTests.swift in Sources */,
+				38742D24F93F30DBE07EFA12 /* CredentialVaultTests.swift in Sources */,
+				CF2A98DA37A20459358F48E5 /* UsageTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		1B2415B4B5975BED03945756 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 63B1882C0E9FCE6A746221AF /* EyeballsWidgets */;
+			targetProxy = 1767554E0CBBD1EBD1E1F974 /* PBXContainerItemProxy */;
+		};
+		25F309D2265671CF10D1C1AC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C2695C24B8A4BEDF107DA7E0 /* Eyeballs */;
+			targetProxy = 422F6E4A95FB3F821246FBD8 /* PBXContainerItemProxy */;
+		};
+		73253BE54D8346D391CE0596 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C2695C24B8A4BEDF107DA7E0 /* Eyeballs */;
+			targetProxy = 4DFB595CDAC3E506650842DF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		05E8B35DC32DCBD2F8E4A394 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Eyeballs;
+			};
+			name = Release;
+		};
+		207FFC3197E17767C954895B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = SCH97XTQGY;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		3CE22C6A1BD3FB687FD794C0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = App/EyeballsWidgets/EyeballsWidgets.entitlements;
+				INFOPLIST_FILE = App/EyeballsWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs.widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		55A9FA133DE79272CD462397 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Eyeballs/Eyeballs.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Eyeballs/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		58E5FC7F2AEDF73E4EFF544C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Eyeballs.app/Eyeballs";
+			};
+			name = Debug;
+		};
+		5EDCF52D9AD97994FBE8074F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = App/EyeballsWidgets/EyeballsWidgets.entitlements;
+				INFOPLIST_FILE = App/EyeballsWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs.widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7A62925AB668E981E698CC66 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Eyeballs.app/Eyeballs";
+			};
+			name = Release;
+		};
+		9DA8C88244C22D1376AAAF84 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/Eyeballs/Eyeballs.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Eyeballs/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB320C71BC20A0D018EE6305 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = SCH97XTQGY;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		CF5FA68F5697C39149534D64 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.dotdioscorea.eyeballs.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Eyeballs;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1F72F03AA4A2F94E33157D9B /* Build configuration list for PBXNativeTarget "EyeballsUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF5FA68F5697C39149534D64 /* Debug */,
+				05E8B35DC32DCBD2F8E4A394 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		4E2E1452209C7D3EB55F0A6A /* Build configuration list for PBXProject "Eyeballs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				207FFC3197E17767C954895B /* Debug */,
+				CB320C71BC20A0D018EE6305 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B2211849D7E92D817D2F1D6F /* Build configuration list for PBXNativeTarget "EyeballsWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3CE22C6A1BD3FB687FD794C0 /* Debug */,
+				5EDCF52D9AD97994FBE8074F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B2C348AF3F3ED799691C2C87 /* Build configuration list for PBXNativeTarget "EyeballsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				58E5FC7F2AEDF73E4EFF544C /* Debug */,
+				7A62925AB668E981E698CC66 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E79CCAA29FEB9AF845793C93 /* Build configuration list for PBXNativeTarget "Eyeballs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9DA8C88244C22D1376AAAF84 /* Debug */,
+				55A9FA133DE79272CD462397 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A6ED1464BF68DF781171410D /* Project object */;
+}
