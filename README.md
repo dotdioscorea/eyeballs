@@ -12,7 +12,7 @@ An iPhone app for monitoring multiple Codex, Claude, Grok and Gemini CLI account
 - Pull-to-refresh, timestamps, reset reminders and provider billing information where available.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (5)** is available for internal testing, built from commit `3128a4c` and tagged `testflight/1.0-5`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3. Build 5 corrects Grok's zero-usage parsing and verifies shared App Group capabilities on the actual cloud-signed app and widget before upload. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (6)** is available for internal testing, built from commit `33f2771` and tagged `testflight/1.0-6`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3. Build 5 corrects Grok's zero-usage parsing and verifies shared App Group capabilities on the actual cloud-signed app and widget before upload. Build 6 adds Google sign-in for existing Gemini CLI/Code Assist accounts, with 58 unit tests and a native Google presentation/cancellation test passing. Completed live Gemini authorization remains for the owner's manual test. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
 
 ## Provider connections
 
