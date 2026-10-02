@@ -10,7 +10,7 @@ An iPhone app for monitoring multiple Codex, Claude and Grok accounts. Each conn
 - Pull-to-refresh, timestamps, reset reminders and provider billing information where available.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-The owner confirmed fresh Codex, Claude and Grok sign-ins in TestFlight **1.0 (3)**. The dashboard, widget and history changes are being prepared on `feature/configurable-dashboard-widgets`, with a PR into `main` before release. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (4)** is available for internal testing, built from commit `45231b9` and tagged `testflight/1.0-4`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3; provider authorization logic is unchanged in build 4. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
 
 ## Provider connections
 
