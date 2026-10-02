@@ -2,7 +2,7 @@
 
 A native iPhone dashboard for multiple AI accounts, with usage rings, reset times, workstream labels and WidgetKit widgets. Multiple accounts from **the same provider** are independent connections, with separate credentials, refresh state and widget IDs.
 
-Development build **1.0 (2)** was uploaded to TestFlight on 2 October 2026 and is available in the private Aaron group. The owner confirmed fresh Codex and Claude connections worked in that build. Build **1.0 (3)** removes an unsupported Grok OAuth scope that blocked authentication-code issuance; its fresh login → billing check remains pending. See [testing notes](RELEASE_NOTES.txt). Use **Take a look around** to try the dashboard with labelled sample accounts.
+Development build **1.0 (3)** was uploaded to TestFlight on 2 October 2026 and is available in the private Aaron group. It removes an unsupported Grok OAuth scope that blocked authentication-code issuance and uses normal system sign-in by default, with a separate-account option. The owner confirmed fresh Codex and Claude connections worked in build 2; Grok's completed fresh login → billing check remains pending. See [testing notes](RELEASE_NOTES.txt). Use **Take a look around** to try the dashboard with labelled sample accounts.
 
 ## Provider integration status
 
@@ -65,6 +65,6 @@ ASC_API_KEY_ID=<key-id> ASC_API_ISSUER_ID=<issuer-id> bash scripts/upload-testfl
 .venv/bin/python scripts/apple-connect.py build-status --build <build-number>
 ```
 
-The export is restricted to internal TestFlight testing. Upload success alone is not tester availability: verify `processing_state` is `VALID`, `internal_testing_state` is `IN_BETA_TESTING`, and the intended tester is assigned. Uploaded app sources are tagged `testflight/1.0-1` and `testflight/1.0-2`.
+The export is restricted to internal TestFlight testing. Upload success alone is not tester availability: verify `processing_state` is `VALID`, `internal_testing_state` is `IN_BETA_TESTING`, and the intended tester is assigned. Uploaded app sources are tagged `testflight/1.0-1`, `testflight/1.0-2` and `testflight/1.0-3` (source commit `7985edb`). Build 3 was verified as `VALID` and `IN_BETA_TESTING`, with one internal tester assigned.
 
 Never commit API keys, session tokens, provisioning profiles, archives, local release configuration or real account screenshots. The icon is reproducible with `xcrun swift scripts/generate-icon.swift` and uses native geometric drawing.
