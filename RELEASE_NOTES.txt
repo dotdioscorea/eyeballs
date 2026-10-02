@@ -1,4 +1,6 @@
-Build 5
+Build 6
+
+Added Google sign-in for Gemini CLI and Code Assist model quotas. Each Google account has separate Keychain credentials, settings and history. This reads CLI/Code Assist quotas, not the Gemini chat website allowance. Google must supply a Code Assist project for the account. Sign-in presentation, cancellation and parser boundaries were tested in the simulator; please test completed sign-in with your existing Google account.
 
 Fixed Grok showing unknown remaining usage when the API omits its zero-valued percentage field. Missing or invalid values still remain unknown.
 
