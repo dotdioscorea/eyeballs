@@ -1,0 +1,9 @@
+Eyeballs 1.0 (1) — first development build
+
+Start with “Take a look around” on the welcome screen to try the usage rings, multiple accounts per provider, account details, reset timeline and settings with clearly labelled sample accounts. You can also enter preview from Settings.
+
+Please try navigation, layout, readability and the home-screen widget sizes. Widgets use saved account readings; preview data does not populate widgets.
+
+Provider connections are unfinished in this build. Codex opens the native system sign-in flow, but a fresh app login and live quota refresh have not been verified end to end. Claude and Grok connections are not available yet. This build does not yet replace your usage notepad.
+
+Saved connections use separate Keychain records, including multiple accounts from the same provider. Sample accounts never overwrite saved connections.

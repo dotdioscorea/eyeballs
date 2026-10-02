@@ -2,7 +2,7 @@
 
 A native iPhone dashboard for multiple AI accounts, with usage rings, reset times, workstream labels and WidgetKit widgets. Multiple accounts from **the same provider** are independent connections, with separate credentials, refresh state and widget IDs.
 
-This is a development build. It has **not** been uploaded to TestFlight. The native UI, secure storage and direct API readers are implemented; provider login coverage is incomplete.
+Development build **1.0 (1)** was uploaded to TestFlight on 2 October 2026 and is available for internal testing. The owner was invited to the private Aaron group. The native UI, secure storage and direct API readers are implemented; provider login coverage is incomplete. Use **Take a look around** on the welcome screen to try the dashboard with labelled sample accounts. See [testing notes](RELEASE_NOTES.txt).
 
 ## Provider integration status
 
@@ -12,7 +12,7 @@ This is a development build. It has **not** been uploaded to TestFlight. The nat
 | Claude | Bearer-authenticated `GET https://api.anthropic.com/api/oauth/usage`; live CLI-credential probe returned HTTP 200 | Disabled: Anthropic explicitly disallows third-party Claude.ai sign-in and collecting subscription credentials. Requires an approved integration. |
 | Grok | Bearer-authenticated `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` | Disabled until an approved app client is available. The existing local CLI token returned HTTP 401; no successful live response or fresh app login has been verified. |
 
-An API reader working with an existing CLI token does **not** establish that the same reader works with credentials issued to an independent mobile app. OpenAI's Sign in with ChatGPT documentation primarily describes identity and plan-funded inference; it does not document permission to read the private Codex quota endpoint. That compatibility is a release blocker, not an assumed capability.
+An API reader working with an existing CLI token does **not** establish that the same reader works with credentials issued to an independent mobile app. OpenAI's Sign in with ChatGPT documentation primarily describes identity and plan-funded inference; it does not document permission to read the private Codex quota endpoint. This remains an integration requirement before the app can serve as a working usage tracker. Development builds can still be distributed for native UI and device testing, with these limitations stated clearly.
 
 References: [OpenAI registration and sign-in](https://developers.openai.com/siwc/token-sharing-open-source/sign-in), [OpenAI accounts and sessions](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions), [Codex app-server account APIs](https://learn.chatgpt.com/docs/app-server#auth-endpoints), [Claude credential rules](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use), [Grok Build authentication](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/02-authentication.md).
 
@@ -49,16 +49,22 @@ Each connection has a UUID-keyed Keychain record with `AfterFirstUnlockThisDevic
 
 The OAuth prototype uses the system authentication session with fresh state, nonce and PKCE for every attempt, a loopback listener bound only to `127.0.0.1`, RS256 signature verification and issuer/audience/expiry/nonce checks. A returning login must match the selected connection's identity. API requests reject redirects and use ephemeral URL sessions without cookie storage or caching. Rotating refresh tokens are saved before reading usage, and stale in-flight reads cannot resurrect deleted or reconnected accounts.
 
-## Apple release preparation
+## TestFlight releases
 
-Bundle IDs: `com.dotdioscorea.eyeballs` and `com.dotdioscorea.eyeballs.widgets`. App group: `group.com.dotdioscorea.eyeballs`. The Apple API key stays outside Git. Store optional local key configuration in ignored `.release/apple.json` with `key_id`, `issuer_id` and `key_path`; `scripts/apple-connect.py` can list apps or register these two bundle IDs with App Groups capability. The app group and App Store Connect app record must also be created on Apple's website.
+App Store Connect record: **6818509879**, store name **Eyeballs: AI Usage**. Bundle IDs: `com.dotdioscorea.eyeballs` and `com.dotdioscorea.eyeballs.widgets`. App group: `group.com.dotdioscorea.eyeballs`, registered and assigned to both targets. The private internal group automatically distributes uploaded builds. The app and extension are signed by Xcode during export using the existing Apple API key.
 
-Once provider authentication has been verified and registration is complete:
+The Apple API key stays outside Git. Store optional local key configuration in ignored `.release/apple.json` with `key_id`, `issuer_id` and `key_path`; `scripts/apple-connect.py` can list apps, register bundle IDs, check a build's processing/testing state and update its TestFlight notes without logging credentials or tester email addresses.
+
+To upload another development build, use a unique increasing build number:
 
 ```sh
 APPLE_TEAM_ID=<team-id> IOS_BUILD_NUMBER=<unique-build-number> bash scripts/archive.sh
 APPLE_TEAM_ID=<team-id> ASC_API_KEY_PATH=<existing-p8-file> \
 ASC_API_KEY_ID=<key-id> ASC_API_ISSUER_ID=<issuer-id> bash scripts/upload-testflight.sh
+.venv/bin/python scripts/apple-connect.py set-test-notes --build <build-number>
+.venv/bin/python scripts/apple-connect.py build-status --build <build-number>
 ```
+
+The export is restricted to internal TestFlight testing. Upload success alone is not tester availability: verify `processing_state` is `VALID`, `internal_testing_state` is `IN_BETA_TESTING`, and the intended tester is assigned. Source for the first uploaded app build is tagged `testflight/1.0-1`.
 
 Never commit API keys, session tokens, provisioning profiles, archives, local release configuration or real account screenshots. The icon is reproducible with `xcrun swift scripts/generate-icon.swift` and uses native geometric drawing.
