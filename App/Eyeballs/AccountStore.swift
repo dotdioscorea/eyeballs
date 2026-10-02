@@ -12,13 +12,15 @@ final class AccountStore: ObservableObject {
     private var cooldowns: [UUID: Date] = [:]
     private var revisions: [UUID: Int] = [:]
     private let location: URL
+    private let integratesWithSystem: Bool
     private let vault: any CredentialStorage
     private let fetcher: (AgentAccount, AccountCredential) async throws -> UsageSnapshot
     private let renewer: (AccountCredential) async throws -> AccountCredential
-    init(location: URL? = nil, vault: any CredentialStorage = CredentialVault(),
+    init(location: URL? = nil, vault: any CredentialStorage = CredentialVault(), integratesWithSystem: Bool = true,
          fetcher: @escaping (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { try await UsageClient.fetch(account: $0, credential: $1) },
          renewer: @escaping (AccountCredential) async throws -> AccountCredential = { try await OpenAIAuth.refresh($0) }) {
         self.location = location ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Eyeballs/accounts.json")
+        self.integratesWithSystem = integratesWithSystem
         self.vault = vault; self.fetcher = fetcher; self.renewer = renewer
         if let data = try? Data(contentsOf: self.location) {
             do { accounts = try JSONDecoder().decode([AgentAccount].self, from: data) }
@@ -70,7 +72,7 @@ final class AccountStore: ObservableObject {
         revisions[id, default: 0] += 1
         accounts.removeAll { $0.id == id }
         cooldowns[id] = nil
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: notificationIDs(id))
+        if integratesWithSystem { UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: notificationIDs(id)) }
         persist()
     }
     func refreshAll() async {
@@ -102,6 +104,7 @@ final class AccountStore: ObservableObject {
         persist()
     }
     func enableNotifications(_ enabled: Bool) async {
+        guard integratesWithSystem else { return }
         if enabled {
             do {
                 let accepted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
@@ -117,7 +120,7 @@ final class AccountStore: ObservableObject {
     }
     private func notificationIDs(_ id: UUID) -> [String] { (0..<12).map { "reset-\(id)-\($0)" } }
     private func scheduleNotifications() async {
-        guard !isDemo, notificationsEnabled else { return }
+        guard integratesWithSystem, !isDemo, notificationsEnabled else { return }
         let center = UNUserNotificationCenter.current()
         // Bound the total to iOS's pending-notification limit, choosing the nearest resets.
         center.removeAllPendingNotificationRequests()
@@ -141,9 +144,11 @@ final class AccountStore: ObservableObject {
         do {
             try FileManager.default.createDirectory(at: location.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(accounts).write(to: location, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-            WidgetCache.write(accounts)
-            WidgetCenter.shared.reloadAllTimelines()
-            Task { await scheduleNotifications() }
+            if integratesWithSystem {
+                WidgetCache.write(accounts)
+                WidgetCenter.shared.reloadAllTimelines()
+                Task { await scheduleNotifications() }
+            }
         } catch { self.error = "Your changes could not be saved. Please try again." }
     }
 }

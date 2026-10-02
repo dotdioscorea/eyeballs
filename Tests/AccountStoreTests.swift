@@ -15,7 +15,7 @@ final class AccountStoreTests: XCTestCase {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     }
     override func tearDown() { try? FileManager.default.removeItem(at: directory) }
-    func store(vault: MemoryVault) -> AccountStore { AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault) }
+    func store(vault: MemoryVault) -> AccountStore { AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false) }
 
     func testTwoCodexAccountsWithSameEmailStaySeparateAfterRestartAndRemoval() throws {
         let vault = MemoryVault(); let store = store(vault: vault)
@@ -67,7 +67,7 @@ final class AccountStoreTests: XCTestCase {
     }
     func testOneExpiredAccountDoesNotInvalidateTheOther() async throws {
         let vault = MemoryVault()
-        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, fetcher: { account, credential in
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { account, credential in
             if credential.subject == "subject-a" { throw UsageError.signedOut }
             var snapshot = account.snapshot!; snapshot.windows[0].usedPercent = 79; return snapshot
         })
@@ -85,7 +85,7 @@ final class AccountStoreTests: XCTestCase {
         let vault = MemoryVault()
         var continuation: CheckedContinuation<UsageSnapshot, Never>?
         let entered = expectation(description: "Request started")
-        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, fetcher: { _, _ in
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, _ in
             await withCheckedContinuation { value in continuation = value; entered.fulfill() }
         })
         let credential = Fixture.credential("a"); let account = Fixture.account(credential)
@@ -110,5 +110,15 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(vault.values, [account.id: credential])
         store.endDemo()
         XCTAssertEqual(store.accounts, [account])
+    }
+    func testFixtureStoresDoNotReplaceDeviceWidgetData() throws {
+        let original = WidgetCache.read()
+        let vault = MemoryVault(); let store = store(vault: vault)
+        let credential = Fixture.credential("isolated-widget-test")
+        let account = Fixture.account(credential)
+        try store.connect(account, credential: credential)
+        XCTAssertEqual(WidgetCache.read(), original)
+        try store.remove(account.id)
+        XCTAssertEqual(WidgetCache.read(), original)
     }
 }
