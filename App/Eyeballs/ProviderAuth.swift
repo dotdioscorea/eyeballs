@@ -18,7 +18,9 @@ enum ProviderAuth {
         switch provider {
         case .codex: return "openid profile email offline_access"
         case .claude: return "user:profile"
-        case .grok: return "openid profile email offline_access grok-cli:access api:access billing:read"
+        // The Grok public client authorizes billing through its CLI proxy scopes.
+        // It does not allow a separate billing:read scope.
+        case .grok: return "openid profile email offline_access grok-cli:access api:access"
         }
     }
     static func exchange(callback: URL, attempt: OAuthAttempt) async throws -> AccountCredential {

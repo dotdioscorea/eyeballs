@@ -1,9 +1,9 @@
-Eyeballs 1.0 (2) — provider sign-in update
+Eyeballs 1.0 (3) — easier sign-in and Grok fix
 
-Codex now uses its native CLI-compatible account login, fixing the grant mismatch in build 1. Usage access errors no longer incorrectly say your connection has expired. Saved accounts try one token refresh before reporting an access failure.
+Removes the unsupported billing:read OAuth scope that caused xAI to reject authentication-code issuance. Grok now requests only identity and CLI proxy scopes supported by its public client. The direct usage/billing endpoint remains the same.
 
-Claude and Grok now have native system-browser sign-in flows instead of unavailable placeholders. Each provider supports separate personal/work account connections with isolated Keychain records. Claude requests profile access. Grok verifies personal/team identity and uses its direct billing API.
+Continue now uses the normal iOS authentication session, allowing existing browser sign-ins to be reused where the provider permits. Use another account starts a separate login when needed. Saved accounts still have independent Keychain credentials.
 
-Automated checks cover account isolation, persistence, cancellation, signatures, callback security and refresh recovery. Completed fresh browser login → live usage remains unverified until account authentication is completed; existing CLI-session API probes are separate from that check.
+The owner confirmed fresh Codex and Claude connections worked in TestFlight build 2. Grok's completed fresh login → live billing check remains pending. Automated checks cover the allowed scope contract, account isolation, persistence, cancellation, signatures, callback security and refresh recovery.
 
-Please update from build 1, then connect an account. Save connection is enabled only after its live usage request succeeds. Widgets show saved readings; preview data never populates widgets.
+Update to build 3, then try connecting Grok again. Save connection is enabled only after its live usage request succeeds. Widgets show saved readings; preview data never populates widgets.

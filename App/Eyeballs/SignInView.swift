@@ -14,7 +14,7 @@ final class SignInModel: ObservableObject {
          fetcher: @escaping (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { try await UsageClient.fetch(account: $0, credential: $1) }) {
         self.signer = signer; self.fetcher = fetcher
     }
-    func start(account: AgentAccount, previous: AccountCredential?) {
+    func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false) {
         guard !working else { return }
         working = true; message = nil; credential = nil; snapshot = nil
         task = Task {
@@ -22,7 +22,7 @@ final class SignInModel: ObservableObject {
             do {
                 let connection: AccountCredential
                 if let signer { connection = try await signer(previous) }
-                else { connection = try await browser.signIn(provider: account.provider, previous: previous) }
+                else { connection = try await browser.signIn(provider: account.provider, previous: previous, usePrivateSession: usePrivateSession) }
                 try Task.checkCancellation()
                 credential = connection
                 // A verified identity does not prove quota access. Check the API before saving.
@@ -81,6 +81,12 @@ struct SignInView: View {
                         } label: {
                             HStack { if model.working { ProgressView() }; Text(model.working ? "Connecting…" : "Continue with \(account.provider == .codex ? "ChatGPT" : account.provider.name)") }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(model.working)
+                        Button(account.snapshot == nil ? "Use another account" : "Choose a different sign-in") {
+                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true) }
+                            catch { model.message = error.localizedDescription }
+                        }.font(.subheadline.weight(.medium)).tint(Theme.accent)
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .disabled(model.working).accessibilityIdentifier("choose-another-login")
                         Label("Credentials protected by iPhone Keychain", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary)
                     }
                     if let message = model.message {

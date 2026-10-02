@@ -262,11 +262,11 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
     private var timeout: Task<Void, Never>?
     private let queue = DispatchQueue(label: "Eyeballs.loopback-auth")
 
-    func signIn(provider: Provider = .codex, previous: AccountCredential?) async throws -> AccountCredential {
+    func signIn(provider: Provider = .codex, previous: AccountCredential?, usePrivateSession: Bool = false) async throws -> AccountCredential {
         let callback = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
                 pending = continuation
-                do { try start(provider: provider, previous: previous) } catch { finish(.failure(error)) }
+                do { try start(provider: provider, previous: previous, usePrivateSession: usePrivateSession) } catch { finish(.failure(error)) }
             }
         } onCancel: { Task { @MainActor in self.cancel() } }
         guard let attempt else { throw AuthError.invalidCallback }
@@ -274,7 +274,7 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
         return try await ProviderAuth.exchange(callback: callback, attempt: attempt)
     }
     func cancel() { finish(.failure(AuthError.cancelled)) }
-    private func start(provider: Provider, previous: AccountCredential?) throws {
+    private func start(provider: Provider, previous: AccountCredential?, usePrivateSession: Bool) throws {
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
         let listener = try NWListener(using: parameters)
@@ -294,8 +294,9 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
                         let session = ASWebAuthenticationSession(url: attempt.authorizationURL, callbackURLScheme: nil) { [weak self] _, _ in
                             Task { @MainActor in self?.finish(.failure(AuthError.cancelled)) }
                         }
-                        // A new account always has a separate system-browser authentication session.
-                        session.prefersEphemeralWebBrowserSession = true
+                        // Reuse system sign-in cookies by default. A separate login is
+                        // available when the user explicitly chooses another account.
+                        session.prefersEphemeralWebBrowserSession = usePrivateSession
                         session.presentationContextProvider = self
                         self.session = session
                         guard session.start() else { self.finish(.failure(AuthError.unavailable)); return }

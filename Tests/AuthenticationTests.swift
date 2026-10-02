@@ -103,6 +103,13 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertEqual(credential.clientID, OpenAIAuth.codexClientID)
     }
     func testClaudeAndGrokUseSeparateNativeClientsAndLimitedScopes() throws {
+        // Pin the provider contracts independently of the URL builder. Grok's
+        // public-client allowlist is defined by xai-grok-login/src/config.rs;
+        // billing:read is not allowed and prevents authentication-code issuance.
+        let expectedScopes: [Provider: String] = [
+            .claude: "user:profile",
+            .grok: "openid profile email offline_access grok-cli:access api:access"
+        ]
         for provider in [Provider.claude, .grok] {
             let attempt = try OAuthAttempt(redirectURI: URL(string: "http://127.0.0.1:54321/callback")!, hostID: "fixture", provider: provider)
             let url = attempt.authorizationURL
@@ -111,7 +118,7 @@ final class AuthenticationTests: XCTestCase {
             XCTAssertEqual(value("client_id"), ProviderAuth.clientID(provider))
             XCTAssertEqual(value("code_challenge_method"), "S256")
             XCTAssertEqual(value("state"), attempt.state)
-            XCTAssertEqual(value("scope"), ProviderAuth.scopes(provider))
+            XCTAssertEqual(value("scope"), expectedScopes[provider])
             XCTAssertFalse(value("scope")!.contains("inference"))
             XCTAssertFalse(value("scope")!.contains("write"))
             XCTAssertEqual(url.host, provider == .claude ? "claude.com" : "auth.x.ai")
