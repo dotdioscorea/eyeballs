@@ -13,7 +13,9 @@
 		148AFA9CB7E9CCD8712244C6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91BB496ACAC09C661690C30 /* SettingsView.swift */; };
 		1ED79E8BD244F71E3C03A910 /* WidgetCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4C42AB581D58EB654E496C /* WidgetCache.swift */; };
 		25DB3C929330C33219C14A47 /* AccountDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B6E314C46A3C70FFC088BA /* AccountDisplay.swift */; };
+		2F7376ACC2D49B95FE05FBDA /* CopilotBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442EC851C13AC561AF132D8D /* CopilotBrowser.swift */; };
 		38742D24F93F30DBE07EFA12 /* CredentialVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */; };
+		38F74B9EB8C562C6DF7FFAE4 /* CopilotAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = E88869C5AFC93BA7FDBB7E05 /* CopilotAuth.swift */; };
 		3AEF1B963EC1883CDD28BA19 /* ProviderAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DE281900BE28A9DF2AEEE232 /* ProviderAssets.xcassets */; };
 		3D2C6A7E9E9A9602289E99BE /* ProviderAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DE281900BE28A9DF2AEEE232 /* ProviderAssets.xcassets */; };
 		43A2EFF0A099DE77554A3AF7 /* OpenAIAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */; };
@@ -104,6 +106,7 @@
 		237FA47F8F46B8FD3A98C502 /* ProviderAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAuth.swift; sourceTree = "<group>"; };
 		2D64A389A37C2185E8AD904D /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		3193C2CE03CF0CA3BBECC747 /* EyeballsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EyeballsApp.swift; sourceTree = "<group>"; };
+		442EC851C13AC561AF132D8D /* CopilotBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopilotBrowser.swift; sourceTree = "<group>"; };
 		4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		575D01D03E23A49EDB1FD86F /* OpenAIAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAIAuth.swift; sourceTree = "<group>"; };
 		586D2A36DAC6AD2D0EC7C502 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -127,6 +130,7 @@
 		C21A76FF5FCC0F3666156941 /* EyeballsTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EyeballsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DE281900BE28A9DF2AEEE232 /* ProviderAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = ProviderAssets.xcassets; sourceTree = "<group>"; };
 		E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
+		E88869C5AFC93BA7FDBB7E05 /* CopilotAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopilotAuth.swift; sourceTree = "<group>"; };
 		F56F04F43CF1D3627795B32C /* AccountStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStore.swift; sourceTree = "<group>"; };
 		F91BB496ACAC09C661690C30 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		FAEB5F6AFC79AD6D417A033F /* GeminiAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiAuth.swift; sourceTree = "<group>"; };
@@ -190,6 +194,8 @@
 				E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */,
 				F56F04F43CF1D3627795B32C /* AccountStore.swift */,
 				4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */,
+				E88869C5AFC93BA7FDBB7E05 /* CopilotAuth.swift */,
+				442EC851C13AC561AF132D8D /* CopilotBrowser.swift */,
 				AB6C216786AFDAD32A68746E /* CredentialVault.swift */,
 				74C333F79FBBB68B524059B7 /* DashboardView.swift */,
 				B3306B7B51777233C9826251 /* Diagnostics.swift */,
@@ -388,6 +394,8 @@
 				B17BAB9B0B9961BC2195B4C2 /* AccountDetailView.swift in Sources */,
 				46ECBE83B6165FFC0BC72494 /* AccountDisplay.swift in Sources */,
 				A48D20DAA386AAB1A142BFC2 /* AccountStore.swift in Sources */,
+				38F74B9EB8C562C6DF7FFAE4 /* CopilotAuth.swift in Sources */,
+				2F7376ACC2D49B95FE05FBDA /* CopilotBrowser.swift in Sources */,
 				825BFE17C9A718E42CF4B1DF /* CredentialVault.swift in Sources */,
 				CE49F0EEDB016B674455D259 /* DashboardView.swift in Sources */,
 				A5535733E6EA70F5844208A8 /* Diagnostics.swift in Sources */,

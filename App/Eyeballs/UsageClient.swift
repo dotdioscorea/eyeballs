@@ -74,6 +74,9 @@ struct UsageClient {
         case .gemini:
             expectedIssuer = GeminiAuth.issuer
             endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+        case .copilot:
+            expectedIssuer = CopilotAuth.issuer
+            endpoint = "https://api.github.com/copilot_internal/user"
         case .grok:
             expectedIssuer = "https://auth.x.ai"
             endpoint = "https://cli-chat-proxy.grok.com/v1/billing?format=credits"
@@ -115,6 +118,7 @@ struct UsageClient {
         case .claude: snapshot = try UsageParser.claude(raw)
         case .grok: snapshot = try UsageParser.grok(raw)
         case .gemini: snapshot = try UsageParser.gemini(raw); snapshot.plan = tier?["name"] as? String ?? tier?["id"] as? String
+        case .copilot: snapshot = try UsageParser.copilot(raw)
         }
         parsed = snapshot
         if account.provider == .codex {
@@ -245,6 +249,40 @@ enum UsageParser {
             return UsageWindow(id: id, title: model + (token.isEmpty ? "" : " · " + token), usedPercent: used, resetsAt: date(bucket["resetTime"]))
         }
         return UsageSnapshot(windows: windows)
+    }
+    // Microsoft's chatEntitlementService consumes the same quota snapshots.
+    // Unlimited categories and categories without allocation are not finite rings.
+    static func copilot(_ raw: Any) throws -> UsageSnapshot {
+        guard let object = raw as? [String: Any], object["quota_snapshots"] != nil || object["monthly_quotas"] != nil else { throw UsageError.invalidResponse }
+        func number(_ value: Any?) -> Double? {
+            percent(value) ?? (value as? String).flatMap(Double.init).flatMap { $0.isFinite && $0 >= 0 ? $0 : nil }
+        }
+        func resetDate(_ value: Any?) -> Date? {
+            if let parsed = date(value) { return parsed }
+            guard let value = value as? String, value.range(of: "^\\d{4}-\\d{2}-\\d{2}$", options: .regularExpression) != nil else { return nil }
+            let formatter = DateFormatter(); formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.calendar = Calendar(identifier: .gregorian); formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            formatter.dateFormat = "yyyy-MM-dd"; formatter.isLenient = false
+            return formatter.date(from: value)
+        }
+        let reset = resetDate(object["quota_reset_date_utc"]) ?? resetDate(object["quota_reset_date"]) ?? resetDate(object["limited_user_reset_date"])
+        let snapshots = object["quota_snapshots"] as? [String: [String: Any]] ?? [:]
+        let allocations = object["monthly_quotas"] as? [String: Any] ?? [:]
+        let legacy = object["limited_user_quotas"] as? [String: Any] ?? [:]
+        var windows: [UsageWindow] = []
+        for (id, label) in [("premium_interactions", object["token_based_billing"] as? Bool == true ? "AI credits" : "Premium requests"), ("chat", "Chat"), ("completions", "Completions")] {
+            if let quota = snapshots[id] {
+                guard quota["unlimited"] as? Bool != true, number(quota["entitlement"]) != 0 else { continue }
+                var used: Double?
+                if let remaining = percent(quota["percent_remaining"]), remaining <= 100 { used = 100 - remaining }
+                else if quota["percent_remaining"] == nil, let total = number(quota["entitlement"]), total > 0,
+                        let left = number(quota["quota_remaining"]) { used = max(0, 100 - left / total * 100) }
+                windows.append(UsageWindow(id: id, title: label, usedPercent: used, resetsAt: date(quota["quota_reset_at"]) ?? reset))
+            } else if let total = number(allocations[id]), total > 0, let left = number(legacy[id]) {
+                windows.append(UsageWindow(id: id, title: label, usedPercent: max(0, 100 - left / total * 100), resetsAt: reset))
+            }
+        }
+        return UsageSnapshot(windows: windows, plan: object["copilot_plan"] as? String, billingEndsAt: reset)
     }
     static func cent(_ raw: Any?) -> Double? {
         guard let object = raw as? [String: Any] else { return nil }

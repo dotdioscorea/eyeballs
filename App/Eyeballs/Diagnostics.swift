@@ -17,13 +17,14 @@ enum DiagnosticFailure: String, Codable {
         return .other
     }
 }
-enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedResets, identityKeys, other
+enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedResets, identityKeys, deviceAuthorization, other
     static func identify(_ url: URL?) -> Self {
         guard let url else { return .other }
         switch url.path {
-        case "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token": return .token
-        case "/api/oauth/profile", "/oauth2/v2/userinfo": return .identity
-        case "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing": return .usage
+        case "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
+        case "/login/device/code": return .deviceAuthorization
+        case "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
+        case "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
         case "/backend-api/wham/rate-limit-reset-credits": return .bankedResets
         case "/.well-known/jwks.json": return .identityKeys
         default: return .other
@@ -105,6 +106,9 @@ struct UsageParsingDiagnostic: Codable {
             fields[.quotaBuckets] = type(object["buckets"])
             let bucket = (object["buckets"] as? [[String: Any]])?.first ?? [:]
             fields[.remainingFraction] = type(bucket["remainingFraction"]); fields[.remainingAmount] = type(bucket["remainingAmount"]); fields[.quotaResetTime] = type(bucket["resetTime"])
+        case .copilot:
+            fields[.quotaSnapshots] = type(object["quota_snapshots"])
+            fields[.quotaResetTime] = type(object["quota_reset_date_utc"])
         case .claude:
             fields[.fiveHour] = type(object["five_hour"]); fields[.sevenDay] = type(object["seven_day"])
         }
@@ -167,8 +171,16 @@ enum Diagnostics {
     static func clear() { lock.lock(); defer { lock.unlock() }; try? FileManager.default.removeItem(at: location) }
     @MainActor
     static func bundle(accounts: [AgentAccount], now: Date = .now) -> DebugBundle {
-        let aliases = Dictionary(uniqueKeysWithValues: accounts.enumerated().map { ($0.element.id.uuidString, "account-\($0.offset + 1)") })
-        let safeEvents = events().map { event in
+        var aliases = Dictionary(uniqueKeysWithValues: accounts.enumerated().map { ($0.element.id.uuidString, "account-\($0.offset + 1)") })
+        let recordedEvents = events()
+        var unlistedCount = 0
+        for event in recordedEvents {
+            if let connection = event.connection, aliases[connection] == nil {
+                unlistedCount += 1
+                aliases[connection] = "connection-\(unlistedCount)"
+            }
+        }
+        let safeEvents = recordedEvents.map { event in
             var copy = event
             copy.connection = event.connection.flatMap { aliases[$0] }
             return copy
