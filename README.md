@@ -12,7 +12,7 @@ An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Co
 - Pull-to-refresh, timestamps, configurable reset/expiry/unused-allowance reminders and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (8)** is available for internal testing, built from commit `3330563` and tagged `testflight/1.0-8`. It adds Cursor, square tiles, saved drag order, reset events and reminders, line charts, heatmaps and account comparisons. The first external beta review is waiting for Apple; tester notifications are enabled after approval. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (9)** is available for internal testing, built from commit `3f12424` and tagged `testflight/1.0-9`. It adds an isolated Settings → Demo mode and a privacy-policy link. Build 8 remains queued for its first external beta review; tester notifications are enabled after approval. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
 
 ## Provider connections
 
@@ -37,11 +37,13 @@ Cline's SDK WorkOS device flow, native token registration and authenticated cred
 
 The provider branch previously passed 79 unit tests. All five updated Cline tests now pass against the live response's expiry format and balance units. The simulator loaded Cline's system sign-in page and cancelled without saving a connection; a completed native iPhone sign-in remains a separate manual check. Cline is not included in TestFlight build 9.
 
-These are personal-use integrations with provider-controlled interfaces. Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
+These integrations use provider-controlled interfaces. Distribution permission is separate from technical access; see the [current permission investigation](docs/provider-integration-permissions-2026-10-02.md). Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
 
 Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts), [GitHub device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow), [VS Code GitHub authentication client](https://github.com/microsoft/vscode/tree/main/extensions/github-authentication), [Cursor CLI authentication](https://cursor.com/docs/cli/reference/authentication).
 
 ## Storage and updates
+
+The [privacy policy](https://dotdioscorea.github.io/eyeballs/) covers provider requests, local storage, widgets, optional reports and deletion. Its canonical source is [docs/privacy.html](docs/privacy.html).
 
 UUID-keyed tokens use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history, events and widget summary.
 
@@ -67,7 +69,11 @@ export SIMULATOR_ID=<iPhone-simulator-UUID>
 scripts/check.sh -parallel-testing-enabled NO
 ```
 
-Simulator builds use local signing (`CODE_SIGN_IDENTITY=-`) so Keychain is available. `--ui-fixture` provides anonymous internal fixtures in a separate metadata directory in Debug builds. System widget tests use `--widget-fixture` to seed a disposable simulator’s normal account store, so a system-launched intent can resolve the same accounts; teardown clears only these labelled fixture records. Neither fixture has credentials, and both flags are absent from Release builds. There is no public preview mode.
+Simulator builds use local signing (`CODE_SIGN_IDENTITY=-`) so Keychain is available. `--ui-fixture` provides anonymous internal fixtures in a separate metadata directory in Debug builds. System widget tests use `--widget-fixture` to seed a disposable simulator’s normal account store, so a system-launched intent can resolve the same accounts; teardown clears only these labelled fixture records. Neither fixture has credentials, and both flags are absent from Release builds.
+
+Settings → Demo is a release feature in build 9. It uses separate sample metadata, history, events, dashboard preferences and widget summaries, with no credentials or provider calls. Exit demo restores real connections and widget summaries. See [reviewer testing](docs/app-review-testing.md) for its scope and Apple’s access requirements.
+
+Build 9 passed 77 unit tests and two distinct native UI checks covering persisted compact settings/debug export and Demo launch, tiles, history, events, reset simulation, relaunch and exit. The exact uploaded IPA passed signature and App Group verification; Apple reports it valid and in internal beta testing. Demo reviewer instructions are prepared for build 9 and have not been applied to build 8.
 
 Build 5 passed **56 unit tests and three distinct UI checks** on iOS 18.3.1 before packaging. UI checks verified account-picker selection in the Home Screen editor; persistent compact mode, display configuration and debug export; and a six-account widget retaining its rows after app termination, with a row tap opening the correct account and hiding the tab bar. The Grok parser was checked against a live billing response. Signed distribution app and widget entitlements were verified on the exact uploaded IPA.
 

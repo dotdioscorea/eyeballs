@@ -69,7 +69,12 @@ struct SignInView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    if let snapshot = model.snapshot, let credential = model.credential {
+                    if store.isDemo {
+                        Text("Demo · Sample account").font(.subheadline)
+                        TextField("Account name", text: $name).accessibilityIdentifier("new-account-name")
+                        Button("Add sample account") { store.addDemoAccount(provider: account.provider, name: name); dismiss() }.buttonStyle(PrimaryButtonStyle())
+                        Text("Exit Demo to sign in to a provider.").font(.caption).foregroundStyle(.secondary)
+                    } else if let snapshot = model.snapshot, let credential = model.credential {
                         HStack(spacing: 20) {
                             UsageRing(readings: AgentAccount(provider: account.provider, snapshot: snapshot).readings(), color: account.provider.color, size: 100)
                             VStack(alignment: .leading, spacing: 8) {

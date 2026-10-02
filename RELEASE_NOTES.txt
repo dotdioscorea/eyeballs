@@ -1,6 +1,2 @@
-• Add Cursor sign-in and usage.
-• Add square tiles and saved drag ordering.
-• Show weekly usage in ring centres.
-• Add reset events, banked detection dates and configurable reminders.
-• Add line charts, heatmaps and account comparisons.
-• Offer debug reports when provider responses cannot be read.
+• Add Demo in Settings with separate sample accounts, history, events and widgets.
+• Add a link to the published privacy policy.

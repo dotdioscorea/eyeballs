@@ -1,8 +1,7 @@
 #if DEBUG
 import Foundation
 
-// Internal simulator/UI-test fixtures. No preview mode or sample-account entry
-// exists in the shipping app, and these accounts never have credentials.
+// Internal simulator/UI-test fixtures, separate from the shipping Demo mode.
 enum SimulatorFixtures {
     static var widgetEnabled: Bool { ProcessInfo.processInfo.arguments.contains("--widget-fixture") }
     static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled }
