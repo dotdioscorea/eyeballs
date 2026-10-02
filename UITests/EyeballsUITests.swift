@@ -42,13 +42,13 @@ final class EyeballsUITests: XCTestCase {
         let prompt = app.alerts.firstMatch
         if prompt.waitForExistence(timeout: 5), prompt.buttons["Continue"].exists { prompt.buttons["Continue"].tap() }
         let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
-        XCTAssertTrue(service.buttons["Close"].waitForExistence(timeout: 10))
+        XCTAssertTrue(service.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "Close", "Cancel")).firstMatch.waitForExistence(timeout: 10))
         XCTAssertTrue((service.buttons["URL"].value as? String)?.contains("auth.openai.com") == true)
         XCTAssertTrue(service.textFields["Email address"].waitForExistence(timeout: 10))
         let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         screenshot.name = "System authentication — no credentials entered"
         screenshot.lifetime = .keepAlways; add(screenshot)
-        service.buttons["Close"].tap()
+        service.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "Close", "Cancel")).firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["connect-first"].waitForExistence(timeout: 5))
@@ -63,14 +63,14 @@ final class EyeballsUITests: XCTestCase {
             let prompt = app.alerts.firstMatch
             if prompt.waitForExistence(timeout: 3), prompt.buttons["Continue"].exists { prompt.buttons["Continue"].tap() }
             let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
-            XCTAssertTrue(service.buttons["Close"].waitForExistence(timeout: 15))
+            XCTAssertTrue(service.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "Close", "Cancel")).firstMatch.waitForExistence(timeout: 15))
             let address = service.buttons["URL"].value as? String ?? ""
             XCTAssertTrue(provider == "Claude" ? address.contains("claude.") : address.contains("x.ai"), address)
             XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 15))
             let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             screenshot.name = provider + " provider login — no credentials entered"
             screenshot.lifetime = .keepAlways; add(screenshot)
-            service.buttons["Close"].tap()
+            service.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "Close", "Cancel")).firstMatch.tap()
             XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
             app.buttons["Cancel"].tap()
         }

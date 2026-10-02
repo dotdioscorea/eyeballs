@@ -2,7 +2,7 @@
 
 A native iPhone dashboard for multiple AI accounts, with usage rings, reset times, workstream labels and WidgetKit widgets. Multiple accounts from **the same provider** are independent connections, with separate credentials, refresh state and widget IDs.
 
-Development build **1.0 (1)** was uploaded to TestFlight on 2 October 2026 and is available for internal testing. The owner was invited to the private Aaron group. The native UI, secure storage and direct API readers are implemented; provider login coverage is incomplete. Use **Take a look around** on the welcome screen to try the dashboard with labelled sample accounts. See [testing notes](RELEASE_NOTES.txt).
+Development build **1.0 (2)** was uploaded to TestFlight on 2 October 2026 and is available in the private Aaron group. It replaces build 1's Codex login flow and enables native Claude and Grok sign-in. Completed fresh sign-in → live usage verification is still pending account authentication. See [testing notes](RELEASE_NOTES.txt). Use **Take a look around** to try the dashboard with labelled sample accounts.
 
 ## Provider integration status
 
@@ -31,7 +31,7 @@ bash scripts/check.sh
 
 Simulator builds must be signed locally (`CODE_SIGN_IDENTITY=-`). Unsigned simulator builds can display UI but Keychain operations fail with OSStatus -34018.
 
-Tests cover two same-provider accounts with the same email, persistence, reconnection identity checks, removal during an in-flight refresh, independent expiry, actual Keychain record isolation, OAuth callback/PKCE checks, real RSA and P-256 signature verification, bounded token renewal after access denial, unsaved failed sign-ins, unknown quota handling, quota-versus-billing periods and native UI navigation. UI presentation tests do not claim real account authorization.
+The provider update passed **35 unit tests and four distinct UI checks** on the local iOS 26.5 simulator. Checks cover two accounts per provider with the same email, persistence, reconnect identity, removal during an in-flight refresh, independent expiry, actual Keychain isolation, OAuth callback/PKCE/CORS checks, real RSA and P-256 signatures, bounded renewal after access denial, unsaved failed sign-ins, unknown quotas, quota-versus-billing periods, provider browser presentation/cancellation and native navigation. A browser-close selector was corrected after matching both the native Cancel control and Claude's web dialog. The corrected presentation check then passed. These checks do not claim completed real account authorisation.
 
 For optional read-only connectivity probes against existing local CLI sessions:
 
@@ -65,6 +65,6 @@ ASC_API_KEY_ID=<key-id> ASC_API_ISSUER_ID=<issuer-id> bash scripts/upload-testfl
 .venv/bin/python scripts/apple-connect.py build-status --build <build-number>
 ```
 
-The export is restricted to internal TestFlight testing. Upload success alone is not tester availability: verify `processing_state` is `VALID`, `internal_testing_state` is `IN_BETA_TESTING`, and the intended tester is assigned. Source for the first uploaded app build is tagged `testflight/1.0-1`.
+The export is restricted to internal TestFlight testing. Upload success alone is not tester availability: verify `processing_state` is `VALID`, `internal_testing_state` is `IN_BETA_TESTING`, and the intended tester is assigned. Uploaded app sources are tagged `testflight/1.0-1` and `testflight/1.0-2`.
 
 Never commit API keys, session tokens, provisioning profiles, archives, local release configuration or real account screenshots. The icon is reproducible with `xcrun swift scripts/generate-icon.swift` and uses native geometric drawing.
