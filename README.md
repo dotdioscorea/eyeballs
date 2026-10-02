@@ -14,7 +14,7 @@ An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Co
 - Pull-to-refresh, timestamps, configurable reset/expiry/unused-allowance reminders and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (9)** is available for internal testing, built from commit `3f12424` and tagged `testflight/1.0-9`. It adds an isolated Settings → Demo mode and a privacy-policy link. Build 8 remains queued for its first external beta review; tester notifications are enabled after approval. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (10)** is available for internal testing, built from commit `809481d` and tagged `testflight/1.0-10`. It introduces the Requota name, improves charts and widgets, adds recent burn-rate estimates and Cline balances, and preserves display choices through plan changes. Build 8 remains queued for its first external beta review; tester notifications are enabled after approval. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt), with [build 10 validation](docs/testflight-build-10.json).
 
 ## Provider connections
 
@@ -38,7 +38,7 @@ Cursor reports included, Auto and named-model usage percentages and the reported
 
 Cline uses the SDK's WorkOS device flow, native token registration and authenticated credit-balance endpoint. A free account completed browser authorization; registration, identity, balance, refresh and renewed identity/balance requests returned HTTP 200 with the same identity. The balance conversion was checked against Cline's dashboard and [credit controller](https://github.com/cline/cline/blob/main/apps/vscode/src/core/controller/account/getUserCredits.ts)/[display formatter](https://github.com/cline/cline/blob/main/apps/vscode/webview-ui/src/utils/format.ts): a REST balance of 500,000 is 0.5000 displayed credits. The app preserves zero and does not invent percentage quotas or reset dates.
 
-Five Cline tests cover the live response's expiry format and balance units. The simulator loaded Cline's system sign-in page and cancelled without saving a connection; a completed native iPhone sign-in remains a separate manual check. Cline is not included in TestFlight build 9.
+Five Cline tests cover the live response's expiry format and balance units. The simulator loaded Cline's system sign-in page and cancelled without saving a connection; a completed native iPhone sign-in remains a separate manual check. Cline is included in TestFlight build 10.
 
 These integrations use provider-controlled interfaces. Distribution permission is separate from technical access; see the [current permission investigation](docs/provider-integration-permissions-2026-10-02.md). Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
 
@@ -66,7 +66,7 @@ Events retain up to 90 days, capped at 2,000 records. Early resets and banked re
 
 Diagnostics retain at most 100 local events for seven days. They record typed stages, providers, request categories, HTTP status codes, error categories and types of known usage fields. Parsing records identify the calculation used and classify readings as zero, partial, full or missing. Local connection UUIDs are replaced with bundle-local anonymous labels when exported, so multiple accounts and unsaved failed sign-ins can be distinguished. Debug exports also contain app/iOS versions and availability counts. They exclude tokens, passwords, OAuth state, HTTP bodies, URLs, account IDs, names, emails, workstreams and notes. Nothing is uploaded automatically; users review and attach the JSON file to a public GitHub issue themselves.
 
-Build 8 adds Cursor, tiles and drag order, reset events and notification rules, line charts and heatmaps, comparisons and parsing-failure reports. 74 unit tests and two distinct native UI checks passed, covering persisted compact settings/debug export and square tiles, drag-order persistence, comparison lines and heatmap navigation. The exact uploaded IPA passed signature and App Group verification; Apple reports it valid and in internal beta testing.
+Build 10 passed **102 unit tests and seven distinct native UI checks**, including four-ring 100% displays, system widget configuration and persistence, fixed-domain chart selection, event details, calendar alignment, comparison charts and Demo restoration. Opus 5.5 reviewed the native app and widget screenshots. The exact uploaded IPA passed signature and App Group verification; Apple reports it valid and in internal beta testing.
 
 ## Development
 
