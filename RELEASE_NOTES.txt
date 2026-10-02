@@ -1,21 +1,8 @@
 Build 7
 
-Added GitHub Copilot sign-in through GitHub’s device authorization flow. Copy the one-time code, open GitHub and authorize the connection. The app requests read-only profile access and rejects repository scopes. A completed authorization and live identity/usage check passed with a new minimal-scope token.
-
-Widget summaries now skip unsupported or malformed individual entries while retaining valid accounts. Failed sign-ins before saving an account also retain an anonymous correlation label in optional debug exports.
-
-Added Google sign-in for Gemini CLI and Code Assist model quotas. Each Google account has separate Keychain credentials, settings and history. This reads CLI/Code Assist quotas, not the Gemini chat website allowance. Google must supply a Code Assist project for the account. Sign-in presentation, cancellation and parser boundaries were tested in the simulator; please test completed sign-in with your existing Google account.
-
-Fixed Grok showing unknown remaining usage when the API omits its zero-valued percentage field. Missing or invalid values still remain unknown.
-
-Fixed missing App Group capabilities in the signed TestFlight package, which prevented widgets from reading saved accounts. Uploads now verify the actual app and widget signatures.
-
-Added an Account rows widget: up to six accounts in a medium widget or twelve in a large widget, selectable row counts, account selection, metrics and sorting. Tap an account row to open its page.
-
-Weekly time is enabled by default. Compact mode uses vertically stacked bars with labels above and percentages on the right. Controls and cards take less space. Updated timestamps change by the minute.
-
-Provider logos are back, using provider colours by default. Override colours in an account’s Display settings. The tab bar is hidden on account and settings detail pages.
-
-Codex banked reset counts and available expiry dates are shown on account pages. Unreported reset information stays unavailable.
-
-Debug bundles now include known usage field types, parsing decisions, request categories and anonymous account labels. They exclude credentials, identities, names and raw provider responses. Export remains optional and nothing is sent automatically.
+• Added GitHub Copilot sign-in and quota monitoring.
+• Added Gemini CLI / Code Assist sign-in. Please test with your existing Google account.
+• Fixed Grok zero-usage parsing and signed widget App Group access.
+• Added dense account-row widgets and account links.
+• Added default weekly time, stacked compact bars, provider logos and colour settings.
+• Added Codex banked reset details and improved optional debug bundles.
