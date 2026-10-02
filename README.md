@@ -12,7 +12,7 @@ An iPhone app for monitoring multiple Codex, Claude and Grok accounts. Each conn
 - Pull-to-refresh, timestamps, reset reminders and provider billing information where available.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (4)** is available for internal testing, built from commit `45231b9` and tagged `testflight/1.0-4`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3; provider authorization logic is unchanged in build 4. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (5)** is available for internal testing, built from commit `3128a4c` and tagged `testflight/1.0-5`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3. Build 5 corrects Grok's zero-usage parsing and verifies shared App Group capabilities on the actual cloud-signed app and widget before upload. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
 
 ## Provider connections
 
@@ -52,7 +52,7 @@ scripts/check.sh -parallel-testing-enabled NO
 
 Simulator builds use local signing (`CODE_SIGN_IDENTITY=-`) so Keychain is available. `--ui-fixture` provides anonymous internal fixtures in a separate metadata directory in Debug builds. System widget tests use `--widget-fixture` to seed a disposable simulator’s normal account store, so a system-launched intent can resolve the same accounts; teardown clears only these labelled fixture records. Neither fixture has credentials, and both flags are absent from Release builds. There is no public preview mode.
 
-The feature passed **49 unit tests and four distinct UI checks** on iOS 18.3.1 before packaging. UI checks verified account-picker selection in the Home Screen editor, a two-account widget with a layout change, persistent compact mode/display configuration/debug export, and all provider connection screens/cancellation.
+Build 5 passed **56 unit tests and three distinct UI checks** on iOS 18.3.1 before packaging. UI checks verified account-picker selection in the Home Screen editor; persistent compact mode, display configuration and debug export; and a six-account widget retaining its rows after app termination, with a row tap opening the correct account and hiding the tab bar. The Grok parser was checked against a live billing response. Signed distribution app and widget entitlements were verified on the exact uploaded IPA.
 
 Tests cover account isolation, identity verification, token rotation, OAuth callbacks, parser boundaries, existing-account migration, remaining/time metrics, sorting, widget cache privacy, entity resolution, history gaps/retention and debug-bundle exclusions. UI checks exercise provider-browser presentation and cancellation, display configuration, persistent compact mode and system widget selection. A browser-presentation test is distinct from a completed real account authorization.
 
