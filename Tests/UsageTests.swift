@@ -96,6 +96,23 @@ final class UsageTests: XCTestCase {
         let malformed = try UsageParser.gemini(["buckets": [["modelId": "boolean", "remainingFraction": true]]])
         XCTAssertNil(malformed.windows.first?.safePercent)
     }
+    func testCopilotLiveTokenBillingShapeSkipsUnlimitedQuotasAndPreservesRemaining() throws {
+        let raw: [String: Any] = ["copilot_plan": "individual", "token_based_billing": true, "quota_reset_date_utc": "2026-11-01T00:00:00.000Z", "quota_snapshots": [
+            "chat": ["unlimited": true, "entitlement": 0, "percent_remaining": 100],
+            "completions": ["unlimited": true, "entitlement": 0, "percent_remaining": 100],
+            "premium_interactions": ["unlimited": false, "entitlement": 1500, "percent_remaining": 16.8, "quota_remaining": 252.3, "quota_reset_at": 0]
+        ]]
+        let value = try UsageParser.copilot(raw)
+        XCTAssertEqual(value.windows.count, 1); XCTAssertEqual(value.windows[0].title, "AI credits")
+        XCTAssertEqual(value.windows[0].usedPercent!, 83.2, accuracy: 0.0001)
+        XCTAssertEqual(value.windows[0].resetsAt, UsageParser.date("2026-11-01T00:00:00Z"))
+        let legacy = try UsageParser.copilot(["quota_reset_date": "2026-11-01", "monthly_quotas": ["chat": 50, "completions": 2000], "limited_user_quotas": ["chat": 35, "completions": 1000]])
+        XCTAssertEqual(legacy.windows.map(\.safePercent), [30, 50])
+        XCTAssertEqual(legacy.windows.first?.resetsAt, UsageParser.date("2026-11-01T00:00:00Z"))
+        let invalid = try UsageParser.copilot(["quota_snapshots": ["chat": ["percent_remaining": NSNull(), "entitlement": 10, "quota_remaining": 10]]])
+        XCTAssertNil(invalid.windows.first?.safePercent)
+        XCTAssertThrowsError(try UsageParser.copilot([:]))
+    }
     func testResetMarksStaleWithoutInventingZero() {
         let now = Date(timeIntervalSince1970: 1790931600)
         let window = UsageWindow(id: "window", title: "Window", usedPercent: 97, resetsAt: now.addingTimeInterval(-1), duration: 18000)

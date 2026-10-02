@@ -20,12 +20,23 @@ enum WidgetCache {
         if let location, let values = read(from: location) { return values }
         // Existing widgets can read their previous cache until the app next opens.
         guard let data = UserDefaults(suiteName: group)?.data(forKey: key) else { return [] }
-        return sanitized((try? JSONDecoder().decode([AgentAccount].self, from: data)) ?? [])
+        return decode(data) ?? []
     }
     static func read(from location: URL) -> [AgentAccount]? {
         guard let size = try? location.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 5_000_000,
-              let data = try? Data(contentsOf: location),
-              let accounts = try? JSONDecoder().decode([AgentAccount].self, from: data) else { return nil }
+              let data = try? Data(contentsOf: location) else { return nil }
+        return decode(data)
+    }
+    private static func decode(_ data: Data) -> [AgentAccount]? {
+        guard data.count < 5_000_000,
+              let entries = try? JSONSerialization.jsonObject(with: data) as? [Any] else { return nil }
+        let decoder = JSONDecoder()
+        // A future provider or one malformed summary must not hide every other
+        // saved account while iOS replaces an older widget process.
+        let accounts = entries.compactMap { entry -> AgentAccount? in
+            guard JSONSerialization.isValidJSONObject(entry), let data = try? JSONSerialization.data(withJSONObject: entry) else { return nil }
+            return try? decoder.decode(AgentAccount.self, from: data)
+        }
         return sanitized(accounts)
     }
     static func write(_ accounts: [AgentAccount]) {

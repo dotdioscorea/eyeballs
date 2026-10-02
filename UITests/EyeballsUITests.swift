@@ -140,6 +140,19 @@ final class EyeballsUITests: XCTestCase {
         cancel.tap()
         XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
     }
+    func testCopilotPresentsGitHubSystemVerificationAndCancelsWithoutSaving() {
+        let app = XCUIApplication(); app.launch()
+        app.buttons["connect-first"].tap(); app.buttons["connect-copilot"].tap()
+        app.buttons["Continue with Copilot"].tap()
+        XCTAssertTrue(app.staticTexts["github-verification-code"].waitForExistence(timeout: 25))
+        app.buttons["open-github-verification"].tap(); allowSystemSignIn()
+        let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+        XCTAssertTrue(service.buttons["Cancel"].waitForExistence(timeout: 15))
+        XCTAssertTrue((service.buttons["URL"].value as? String)?.contains("github.com") == true)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "GitHub device sign-in — no grant accepted"; shot.lifetime = .keepAlways; add(shot)
+        service.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+    }
     func testWidgetAccountPickerStaysOpenAndSelectsAccount() {
         let app = XCUIApplication(); app.launchArguments = ["--widget-fixture"]; app.launch()
         XCTAssertTrue(app.buttons["compact-mode"].waitForExistence(timeout: 10))

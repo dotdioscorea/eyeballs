@@ -1,6 +1,6 @@
 # Eyeballs
 
-An iPhone app for monitoring multiple Codex, Claude, Grok and Gemini CLI accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
+An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI and GitHub Copilot accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
 - Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
@@ -12,11 +12,11 @@ An iPhone app for monitoring multiple Codex, Claude, Grok and Gemini CLI account
 - Pull-to-refresh, timestamps, reset reminders and provider billing information where available.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (4)** is available for internal testing, built from commit `45231b9` and tagged `testflight/1.0-4`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3; provider authorization logic is unchanged in build 4. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (6)** is available for internal testing, built from commit `33f2771` and tagged `testflight/1.0-6`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3. Build 5 corrects Grok's zero-usage parsing and verifies shared App Group capabilities on the actual cloud-signed app and widget before upload. Build 6 adds Google sign-in for existing Gemini CLI/Code Assist accounts, with 58 unit tests and a native Google presentation/cancellation test passing. Completed live Gemini authorization remains for the owner's manual test. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
 
 ## Provider connections
 
-Sign-in uses `ASWebAuthenticationSession`, OAuth with PKCE, and the providers’ public native CLI clients. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
+Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
 
 | Provider | Usage endpoint | Identity |
 | --- | --- | --- |
@@ -24,24 +24,27 @@ Sign-in uses `ASWebAuthenticationSession`, OAuth with PKCE, and the providers’
 | Claude | `api.anthropic.com/api/oauth/usage` | Authenticated profile API |
 | Grok | `cli-chat-proxy.grok.com/v1/billing?format=credits` | Signed ES256 identity and access-token principal |
 | Gemini CLI | `cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota` | Authenticated Google user-info API |
+| GitHub Copilot | `api.github.com/copilot_internal/user` | Authenticated GitHub user API |
 
 Gemini reports Gemini CLI and Code Assist model quota buckets. It does not report the Gemini chat website's message allowance. Google must supply an existing Code Assist project for the account; the app does not create a Google account or enroll it into a new service. Unknown quota durations stay unknown. Google's system sign-in presentation and cancellation and the quota parser have been tested; a completed live Gemini authorization remains for the owner to test with their existing account.
 
+Copilot requests only `read:user` and rejects credentials with repository scopes. It reports finite quota buckets and provider reset dates, skipping unlimited allowances. A completed device authorization returned a new `read:user` token; authenticated identity and usage requests both returned HTTP 200. The quota parser was checked against a live response; 63 unit tests and the native device-code presentation/cancellation check passed. The completed protocol authorization and simulator presentation are separate checks. Copilot is on the additional-providers branch and is not included in TestFlight build 6.
+
 These are personal-use integrations with provider-controlled interfaces. Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
 
-Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts).
+Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts), [GitHub device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow), [VS Code GitHub authentication client](https://github.com/microsoft/vscode/tree/main/extensions/github-authentication).
 
 ## Storage and updates
 
 UUID-keyed tokens use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history and widget summary.
 
-Widgets read an atomic App Group summary file. They receive names, workstreams, display preferences and cached usage, without emails, identities, notes or credentials. Entities and queries are compiled into both the app and widget extension so system configuration can resolve accounts in either process.
+Widgets read an atomic App Group summary file. They receive names, workstreams, display preferences and cached usage, without emails, identities, notes or credentials. Unreadable account metadata preserves the last usable cache; unsupported or malformed individual summary entries are skipped without hiding other valid accounts. Entities and queries are compiled into both the app and widget extension so system configuration can resolve accounts in either process.
 
 Usage is fetched when the app opens, every five minutes while it is active, on pull-to-refresh, and during background app refresh when iOS allows it. Widgets show cached readings; timestamp entries update their time rings. A widget does not keep the app running or guarantee extra provider fetches. [Apple controls widget update budgets](https://developer.apple.com/documentation/widgetkit/keeping-a-widget-up-to-date/) and background execution.
 
 History records successful provider readings, retains up to 90 days and is capped at 12,000 samples per account. Charts split resets, unknown readings and gaps over two hours. Widget timelines never create history samples.
 
-Diagnostics retain at most 100 local events for seven days. They record typed stages, providers, request categories, HTTP status codes, error categories and types of known usage fields. Parsing records identify the calculation used and classify readings as zero, partial, full or missing. Local connection UUIDs are replaced with bundle-local anonymous labels when exported, so multiple accounts can be distinguished. Debug exports also contain app/iOS versions and availability counts. They exclude tokens, passwords, OAuth state, HTTP bodies, URLs, account IDs, names, emails, workstreams and notes. Nothing is uploaded automatically; users review and attach the JSON file to a public GitHub issue themselves.
+Diagnostics retain at most 100 local events for seven days. They record typed stages, providers, request categories, HTTP status codes, error categories and types of known usage fields. Parsing records identify the calculation used and classify readings as zero, partial, full or missing. Local connection UUIDs are replaced with bundle-local anonymous labels when exported, so multiple accounts and unsaved failed sign-ins can be distinguished. Debug exports also contain app/iOS versions and availability counts. They exclude tokens, passwords, OAuth state, HTTP bodies, URLs, account IDs, names, emails, workstreams and notes. Nothing is uploaded automatically; users review and attach the JSON file to a public GitHub issue themselves.
 
 ## Development
 
@@ -55,7 +58,7 @@ scripts/check.sh -parallel-testing-enabled NO
 
 Simulator builds use local signing (`CODE_SIGN_IDENTITY=-`) so Keychain is available. `--ui-fixture` provides anonymous internal fixtures in a separate metadata directory in Debug builds. System widget tests use `--widget-fixture` to seed a disposable simulator’s normal account store, so a system-launched intent can resolve the same accounts; teardown clears only these labelled fixture records. Neither fixture has credentials, and both flags are absent from Release builds. There is no public preview mode.
 
-The feature passed **49 unit tests and four distinct UI checks** on iOS 18.3.1 before packaging. UI checks verified account-picker selection in the Home Screen editor, a two-account widget with a layout change, persistent compact mode/display configuration/debug export, and all provider connection screens/cancellation.
+Build 5 passed **56 unit tests and three distinct UI checks** on iOS 18.3.1 before packaging. UI checks verified account-picker selection in the Home Screen editor; persistent compact mode, display configuration and debug export; and a six-account widget retaining its rows after app termination, with a row tap opening the correct account and hiding the tab bar. The Grok parser was checked against a live billing response. Signed distribution app and widget entitlements were verified on the exact uploaded IPA.
 
 Tests cover account isolation, identity verification, token rotation, OAuth callbacks, parser boundaries, existing-account migration, remaining/time metrics, sorting, widget cache privacy, entity resolution, history gaps/retention and debug-bundle exclusions. UI checks exercise provider-browser presentation and cancellation, display configuration, persistent compact mode and system widget selection. A browser-presentation test is distinct from a completed real account authorization.
 

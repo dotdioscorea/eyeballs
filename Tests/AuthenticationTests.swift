@@ -1,11 +1,36 @@
 import CryptoKit
 import Security
 import XCTest
-import CryptoKit
 @testable import Eyeballs
 
 final class AuthenticationTests: XCTestCase {
     let callback = URL(string: "http://127.0.0.1:1455/auth/callback")!
+    func testCopilotDeviceFlowRejectsForeignVerificationURLsAndInvalidPrincipals() throws {
+        var raw: [String: Any] = ["device_code": "private-device-code", "user_code": "ABCD-EFGH", "verification_uri": "https://github.com/login/device", "expires_in": 900, "interval": 5]
+        let verification = try CopilotAuth.Verification.decode(raw)
+        XCTAssertEqual(verification.interval, 5)
+        for url in ["http://github.com/login/device", "https://github.com.evil.test/login/device", "https://github.com/login/device?secret=value", "https://user@github.com/login/device"] {
+            raw["verification_uri"] = url; XCTAssertThrowsError(try CopilotAuth.Verification.decode(raw))
+        }
+        XCTAssertEqual(try CopilotAuth.identity(["id": 123, "login": "fixture"]), "123")
+        XCTAssertThrowsError(try CopilotAuth.identity(["id": true, "login": "fixture"]))
+        XCTAssertThrowsError(try CopilotAuth.identity(["id": 123.5, "login": "fixture"]))
+        XCTAssertThrowsError(try CopilotAuth.pollResult(["error": "access_denied"]))
+        XCTAssertThrowsError(try CopilotAuth.pollResult(["error": "expired_token"]))
+        if case .pending = try CopilotAuth.pollResult(["error": "authorization_pending"]) { } else { XCTFail("Expected pending") }
+        if case .slowDown = try CopilotAuth.pollResult(["error": "slow_down"]) { } else { XCTFail("Expected slower polling") }
+        let request = CopilotAuth.formRequest("https://github.com/login/oauth/access_token", fields: ["device_code": "private-device-code"])
+        XCTAssertFalse(request.url!.absoluteString.contains("private-device-code"))
+        XCTAssertTrue(String(decoding: request.httpBody!, as: UTF8.self).contains("private-device-code"))
+    }
+    func testCopilotNeverAcceptsUnreportedOrRepositoryScopes() async {
+        for scope in [nil, "repo", "read:user,repo"] as [String?] {
+            var raw = ["access_token": "fixture-access", "token_type": "bearer"]
+            raw["scope"] = scope
+            do { _ = try await CopilotAuth.credential(raw, previous: nil); XCTFail("Unsafe scope was accepted") }
+            catch { }
+        }
+    }
     func testGeminiUsesGoogleNativeOAuthWithPKCEAndVerifiedIdentity() throws {
         XCTAssertThrowsError(try GeminiAuth.quotaProject([:]))
         XCTAssertThrowsError(try GeminiAuth.quotaProject(["cloudaicompanionProject": NSNull()]))

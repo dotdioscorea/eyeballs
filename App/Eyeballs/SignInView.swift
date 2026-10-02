@@ -6,7 +6,9 @@ final class SignInModel: ObservableObject {
     @Published var message: String?
     @Published var credential: AccountCredential?
     @Published var snapshot: UsageSnapshot?
+    @Published var verificationCode: String?
     private let browser = OAuthBrowser()
+    private let copilotBrowser = CopilotBrowser()
     private let signer: ((AccountCredential?) async throws -> AccountCredential)?
     private let fetcher: (AgentAccount, AccountCredential) async throws -> UsageSnapshot
     private var task: Task<Void, Never>?
@@ -16,16 +18,19 @@ final class SignInModel: ObservableObject {
     }
     func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false) {
         guard !working else { return }
-        working = true; message = nil; credential = nil; snapshot = nil
+        working = true; message = nil; credential = nil; snapshot = nil; verificationCode = nil
         Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
             Diagnostics.record(.signInStarted, privateSession: usePrivateSession)
         }
         task = Task {
           await Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
-            defer { working = false }
+            defer { working = false; verificationCode = nil }
             do {
                 let connection: AccountCredential
                 if let signer { connection = try await signer(previous) }
+                else if account.provider == .copilot {
+                    connection = try await copilotBrowser.signIn(previous: previous, privateSession: usePrivateSession) { [weak self] code in self?.verificationCode = code }
+                }
                 else { connection = try await browser.signIn(provider: account.provider, previous: previous, usePrivateSession: usePrivateSession) }
                 try Task.checkCancellation()
                 credential = connection
@@ -39,7 +44,8 @@ final class SignInModel: ObservableObject {
           }
         }
     }
-    func cancel() { task?.cancel(); task = nil; browser.cancel() }
+    func openGitHub() { copilotBrowser.open() }
+    func cancel() { task?.cancel(); task = nil; browser.cancel(); copilotBrowser.cancel(); verificationCode = nil }
 }
 
 struct SignInView: View {
@@ -81,6 +87,14 @@ struct SignInView: View {
                             Text("Sign in with \(account.provider == .codex ? "ChatGPT" : account.provider.name).").font(.subheadline).foregroundStyle(.secondary)
                         }
                         if account.provider == .gemini { Text("Shows Gemini CLI and Code Assist quotas.").font(.caption).foregroundStyle(.secondary) }
+                        if let code = model.verificationCode {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("GitHub requires a one-time code.").font(.subheadline)
+                                Text(code).font(.title2.monospaced().weight(.semibold)).accessibilityIdentifier("github-verification-code")
+                                Button("Copy code and open GitHub") { model.openGitHub() }
+                                    .buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("open-github-verification")
+                            }.panel()
+                        }
                         if account.snapshot != nil {
                             Text("Reconnect only this account. Choose Add account to connect a different one.").font(.subheadline).foregroundStyle(.secondary).panel()
                         }

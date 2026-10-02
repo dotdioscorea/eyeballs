@@ -55,6 +55,29 @@ final class DisplayAndHistoryTests: XCTestCase {
         let restored = try JSONDecoder().decode(UsageParsingDiagnostic.self, from: JSONEncoder().encode(bundle.events.last!.parsing!))
         XCTAssertEqual(restored.fields[.creditUsagePercent], .missing)
     }
+    @MainActor
+    func testFailedUnsavedSignInKeepsAnAnonymousCorrelationInDebugExport() throws {
+        Diagnostics.clear(); defer { Diagnostics.clear() }
+        let attempt = UUID()
+        Diagnostics.$context.withValue(.init(provider: .copilot, accountID: attempt)) {
+            Diagnostics.record(.signInStarted)
+            Diagnostics.record(.signInFailed, failure: .permission)
+        }
+        let bundle = Diagnostics.bundle(accounts: [])
+        XCTAssertEqual(bundle.events.map(\.connection), ["connection-1", "connection-1"])
+        XCTAssertFalse(String(decoding: try Diagnostics.encode(bundle), as: UTF8.self).contains(attempt.uuidString))
+    }
+    func testFutureOrMalformedWidgetSummaryCannotHideValidAccounts() throws {
+        let known = account()
+        var future = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(known)) as? [String: Any])
+        future["provider"] = "future-provider"
+        let valid = try JSONSerialization.jsonObject(with: JSONEncoder().encode(known))
+        let data = try JSONSerialization.data(withJSONObject: [future, NSNull(), valid])
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: path) }
+        try data.write(to: path)
+        XCTAssertEqual(WidgetCache.read(from: path)?.map(\.id), [known.id])
+    }
     func testPerRingDirectionsAndTimeUseProviderDuration() {
         var a = account()
         a.display = AccountDisplay(direction: .remaining, rings: [RingDefinition(windowID: "week"), RingDefinition(windowID: "week", kind: .time, direction: .used)])
