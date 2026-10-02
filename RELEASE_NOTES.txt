@@ -1,9 +1,13 @@
-Eyeballs 1.0 (3) — easier sign-in and Grok fix
+Build 4
 
-Removes the unsupported billing:read OAuth scope that caused xAI to reject authentication-code issuance. Grok now requests only identity and CLI proxy scopes supported by its public client. The direct usage/billing endpoint remains the same.
+Remaining usage is now the default. Configure up to four usage/time rings per account, including weekly time remaining or elapsed. Each ring can use its own amount direction.
 
-Continue now uses the normal iOS authentication session, allowing existing browser sign-ins to be reused where the provider permits. Use another account starts a separate login when needed. Saved accounts still have independent Keychain credentials.
+Compact mode shows the same metrics as horizontal bars and stays enabled across launches. Search, provider filters and account sorting are available above the account list. Cards include last updated times.
 
-The owner confirmed fresh Codex and Claude connections worked in TestFlight build 2. Grok's completed fresh login → live billing check remains pending. Automated checks cover the allowed scope contract, account isolation, persistence, cancellation, signatures, callback security and refresh recovery.
+Widgets now share account selection code with the app and use an atomic summary cache. Choose a single account or a combination of accounts, compact bars or rings, metrics, amount direction and sorting. The accounts widget supports small, medium and large sizes.
 
-Update to build 3, then try connecting Grok again. Save connection is enabled only after its live usage request succeeds. Widgets show saved readings; preview data never populates widgets.
+Pull down to refresh accounts or an individual account. Usage history charts retain up to 90 days of successful readings on this device. The app checks every five minutes while open; background updates depend on iOS. Widgets use cached usage and do not keep the app running.
+
+Removed account icons, promotional copy, Up next, Nearly full, the widget guide and sample-account preview. Settings includes concise privacy facts, a source-code link and GitHub problem reports with an optional debug bundle that excludes credentials and account identities.
+
+Existing account connections are preserved. Please check Edit Widget → Account selection on your iPhone, multiple-account selections and display settings after updating.

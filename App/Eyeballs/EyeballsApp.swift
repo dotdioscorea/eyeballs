@@ -30,10 +30,15 @@ struct EyeballsApp: App {
     var body: some Scene {
         WindowGroup {
             RootView().environmentObject(delegate.store).preferredColorScheme(.dark).tint(Theme.accent)
-                .task { await delegate.store.refreshAll() }
+                .task(id: phase) {
+                    guard phase == .active else { return }
+                    while !Task.isCancelled {
+                        await delegate.store.refreshAll()
+                        do { try await Task.sleep(for: .seconds(300)) } catch { break }
+                    }
+                }
                 .onChange(of: phase) { _, value in
                     if value == .background { AppDelegate.scheduleRefresh() }
-                    if value == .active { Task { await delegate.store.refreshAll() } }
                 }
         }
     }

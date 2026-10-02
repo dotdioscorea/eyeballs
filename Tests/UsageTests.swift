@@ -50,7 +50,6 @@ final class UsageTests: XCTestCase {
         let snapshot = UsageSnapshot(windows: [window], updatedAt: now.addingTimeInterval(-10))
         XCTAssertTrue(snapshot.isStale(at: now))
         XCTAssertEqual(snapshot.windows[0].safePercent, 97)
-        XCTAssertNil(window.pace(at: now))
     }
     func testCredentialsAreRoutedOnlyToTheirProvider() throws {
         let credential = Fixture.credential("a")

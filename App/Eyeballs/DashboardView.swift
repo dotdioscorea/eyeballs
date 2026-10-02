@@ -12,7 +12,7 @@ struct RootView: View {
             NavigationStack { ResetTimelineView() }.tabItem { Label("Resets", systemImage: "clock.arrow.circlepath") }.tag(1)
             NavigationStack { SettingsView() }.tabItem { Label("Settings", systemImage: "slider.horizontal.3") }.tag(2)
         }
-        .alert("Something needs attention", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+        .alert("Error", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("OK") { store.error = nil }
         } message: { Text(store.error ?? "") }
         .onOpenURL { url in
@@ -25,130 +25,107 @@ struct RootView: View {
 
 struct DashboardView: View {
     @EnvironmentObject private var store: AccountStore
+    @AppStorage("dashboard-compact") private var compact = false
+    @AppStorage("dashboard-sort") private var sortValue = AccountSort.favorites.rawValue
     @State private var adding = false
     @State private var search = ""
     @State private var filter: Provider?
+    private var sort: AccountSort { AccountSort(rawValue: sortValue) ?? .favorites }
     private var displayed: [AgentAccount] {
-        store.accounts.filter { account in
+        sort.sorted(store.accounts.filter { account in
             (filter == nil || account.provider == filter) && (search.isEmpty || [account.title, account.provider.name, account.workstream].joined(separator: " ").localizedCaseInsensitiveContains(search))
-        }.sorted { lhs, rhs in lhs.favorite == rhs.favorite ? lhs.addedAt < rhs.addedAt : lhs.favorite }
+        })
     }
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    HStack(spacing: 10) { EyeballsMark(); Text("eyeballs").font(.system(size: 27, weight: .semibold, design: .rounded)).tracking(-1) }
-                    Spacer()
-                    Button { adding = true } label: { Image(systemName: "plus").font(.title3).frame(width: 44, height: 44).background(Theme.card, in: Circle()) }
-                        .accessibilityLabel("Add account").accessibilityIdentifier("add-account").disabled(store.isDemo)
-                }
-                if store.isDemo {
-                    HStack {
-                        Label("Preview · sample accounts", systemImage: "sparkles").font(.caption.weight(.medium))
-                        Spacer(); Button("Exit preview") { store.endDemo() }.font(.caption.weight(.semibold))
-                    }.padding(12).background(Theme.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                }
-                if store.accounts.isEmpty { welcome }
-                else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("A little clarity.").font(.system(size: 34, weight: .semibold)).tracking(-1)
-                        Text("Your AI accounts, all in sight.").font(.subheadline).foregroundStyle(.secondary)
-                    }
-                    if let next = store.accounts.compactMap({ account -> (AgentAccount, Date)? in account.nextReset.map { (account, $0) } }).min(by: { $0.1 < $1.1 }) {
-                        HStack(spacing: 14) {
-                            Image(systemName: "arrow.counterclockwise").foregroundStyle(Theme.accent).font(.title3)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("UP NEXT").font(.caption2.weight(.semibold)).tracking(1.7).foregroundStyle(.secondary)
-                                Text("\(next.0.provider.name) · \(next.0.title)").font(.subheadline.weight(.medium))
-                            }
-                            Spacer()
-                            TimelineView(.periodic(from: .now, by: 60)) { context in Text(ResetText.relative(next.1, now: context.date)).font(.title3.weight(.semibold)).monospacedDigit() }
-                        }.panel()
-                    }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            filterButton("All accounts", selected: filter == nil) { filter = nil }
-                            ForEach(Provider.allCases) { provider in filterButton(provider.name, selected: filter == provider) { filter = provider } }
-                        }
-                    }
-                    LazyVStack(spacing: 14) {
-                        ForEach(displayed) { account in
-                            NavigationLink(value: account.id) { AccountCard(account: account) }.buttonStyle(.plain).accessibilityIdentifier("account-\(account.title)")
-                        }
+            if store.accounts.isEmpty {
+                VStack(spacing: 22) {
+                    EyeballsMark(size: 100).padding(.top, 70)
+                    Text("No accounts").font(.title2.weight(.semibold))
+                    Button("Add account") { adding = true }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("connect-first")
+                }.padding(24).frame(maxWidth: 500).frame(maxWidth: .infinity)
+            } else {
+                LazyVStack(spacing: compact ? 8 : 14) {
+                    ForEach(displayed) { account in
+                        NavigationLink(value: account.id) { AccountCard(account: account, compact: compact) }
+                            .buttonStyle(.plain).accessibilityIdentifier("account-\(account.title)")
                     }
                     if displayed.isEmpty { ContentUnavailableView.search(text: search) }
-                    HStack(spacing: 6) {
-                        Image(systemName: "lock.shield"); Text("Credentials stay on this iPhone.")
-                    }.font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.top, 4)
-                }
-            }.padding(.horizontal, 22).padding(.top, 12).padding(.bottom, 28).frame(maxWidth: 620)
-                .frame(maxWidth: .infinity)
+                }.padding(.horizontal, 16).padding(.top, 10).padding(.bottom, 20).frame(maxWidth: 650).frame(maxWidth: .infinity)
+            }
         }
-        .background(Theme.background).toolbar(.hidden, for: .navigationBar)
+        .background(Theme.background).navigationTitle("Eyeballs").navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) {
+            Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Add account").accessibilityIdentifier("add-account")
+        } }
+        .safeAreaInset(edge: .top, spacing: 0) { if !store.accounts.isEmpty { controls } }
         .refreshable { await store.refreshAll() }
         .sheet(isPresented: $adding) { AddAccountView() }
     }
-    private func filterButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).font(.caption.weight(.medium)).padding(.horizontal, 14).padding(.vertical, 10).background(selected ? Theme.accent : Theme.card, in: Capsule()).foregroundStyle(selected ? Theme.background : .white.opacity(0.7)) }
-    }
-    private var welcome: some View {
-        VStack(spacing: 28) {
-            ZStack {
-                Circle().fill(Theme.accent.opacity(0.035)).frame(width: 270, height: 270)
-                UsageRing(windows: DemoAccounts.accounts[0].snapshot!.windows, color: Theme.accent, size: 194, lineWidth: 14, showsNumber: false).rotationEffect(.degrees(-15))
-                EyeballsMark(size: 96)
-            }.padding(.top, 36).accessibilityHidden(true)
-            VStack(spacing: 12) {
-                Text("Keep an eye\non your AI.").font(.system(size: 42, weight: .semibold)).tracking(-1.5).multilineTextAlignment(.center)
-                Text("Usage, resets and a little breathing room.\nAll your accounts in one quiet place.").font(.body).foregroundStyle(.secondary).multilineTextAlignment(.center).lineSpacing(4)
+    private var controls: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Button { compact.toggle() } label: {
+                    Label("Compact", systemImage: compact ? "checkmark.square.fill" : "square")
+                        .font(.subheadline).padding(.vertical, 5)
+                }.tint(Theme.accent).accessibilityValue(compact ? "On" : "Off").accessibilityIdentifier("compact-mode")
+                Spacer()
+                Menu {
+                    Picker("Sort accounts", selection: $sortValue) { ForEach(AccountSort.allCases) { Text($0.title).tag($0.rawValue) } }
+                } label: { Label(sort.title, systemImage: "arrow.up.arrow.down").font(.caption.weight(.medium)) }
+                    .accessibilityLabel("Sort accounts").accessibilityIdentifier("sort-accounts")
             }
-            VStack(spacing: 18) {
-                Button("Connect your first account") { adding = true }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("connect-first")
-                Button("Take a look around") { store.startDemo() }.font(.subheadline.weight(.medium)).foregroundStyle(.secondary).accessibilityIdentifier("preview")
-            }.padding(.top, 10)
-            Label("Private by design. No Eyeballs account needed.", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-        }.frame(maxWidth: .infinity)
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search accounts", text: $search).font(.subheadline).accessibilityIdentifier("search-accounts")
+                if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Clear search") }
+            }.padding(9).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    filterButton("All", selected: filter == nil) { filter = nil }
+                    ForEach(Provider.allCases) { provider in filterButton(provider.name, selected: filter == provider) { filter = provider } }
+                }
+            }
+        }.padding(.horizontal, 16).padding(.vertical, 10).background(Theme.background)
+    }
+    private func filterButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Text(title).font(.caption.weight(.medium)).padding(.horizontal, 13).padding(.vertical, 7).background(selected ? Theme.accent : Theme.card, in: Capsule()).foregroundStyle(selected ? Theme.background : .white.opacity(0.7)) }
     }
 }
 
 struct AccountCard: View {
     let account: AgentAccount
+    var compact = false
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            HStack(spacing: 10) {
-                ProviderMark(provider: account.provider, size: 32)
-                Text(account.provider.name).font(.subheadline.weight(.semibold))
-                if let plan = account.snapshot?.plan { Text(plan.capitalized).font(.caption2).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.vertical, 4).background(.white.opacity(0.05), in: Capsule()) }
-                Spacer()
-                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-            }
-            HStack(spacing: 22) {
-                UsageRing(windows: account.snapshot?.windows ?? [], color: account.provider.color, size: 98)
-                VStack(alignment: .leading, spacing: 7) {
-                    Text(account.title).font(.title3.weight(.semibold)).lineLimit(1)
-                    if !account.workstream.isEmpty { Text(account.workstream).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
-                    ForEach(Array((account.snapshot?.windows ?? []).prefix(2).enumerated()), id: \.offset) { index, window in
-                        HStack(spacing: 7) {
-                            Circle().fill(account.provider.color.opacity(index == 0 ? 1 : 0.45)).frame(width: 5, height: 5)
-                            Text(window.title).font(.caption).foregroundStyle(.secondary)
-                            Spacer(minLength: 2)
-                            Text(window.safePercent.map { "\(Int($0.rounded()))%" } ?? "—").font(.caption.weight(.medium)).monospacedDigit()
-                        }
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let readings = account.readings(at: context.date)
+            VStack(alignment: .leading, spacing: compact ? 8 : 15) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(account.title).font(compact ? .subheadline.weight(.semibold) : .title3.weight(.semibold)).lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+                if !account.workstream.isEmpty { Text(account.workstream).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                if compact { MetricBars(readings: readings, color: account.provider.color) }
+                else {
+                    HStack(spacing: 22) {
+                        UsageRing(readings: readings, color: account.provider.color, size: 100, lineWidth: readings.count > 2 ? 6 : 8)
+                        MetricLegend(readings: readings, color: account.provider.color)
                     }
                 }
-            }
-            HStack {
-                if account.needsLogin {
-                    Label("Reconnect to update", systemImage: "exclamationmark.circle").foregroundStyle(.orange)
-                } else if let snapshot = account.snapshot, snapshot.isStale() {
-                    Label(snapshot.windows.contains { $0.resetDue() } ? "Reset due · refresh" : "Reading needs an update", systemImage: "clock").foregroundStyle(.secondary)
-                } else if let reset = account.nextReset {
-                    TimelineView(.periodic(from: .now, by: 60)) { context in Label("Resets in \(ResetText.relative(reset, now: context.date))", systemImage: "arrow.counterclockwise") }.foregroundStyle(.secondary)
-                } else { Text("Reset time unavailable").foregroundStyle(.secondary) }
-                Spacer()
-                if let percent = account.snapshot?.windows.first?.safePercent, percent >= 90 { Text("Nearly full").foregroundStyle(account.provider.color) }
-            }.font(.caption)
-        }.panel()
+                if readings.isEmpty, let credits = account.snapshot?.creditBalance { Text("Credits: \(credits)").font(.subheadline) }
+                HStack(alignment: .top, spacing: 8) {
+                    if account.needsLogin { Text("Reconnect to update").foregroundStyle(.orange) }
+                    else if let reset = account.snapshot?.windows.compactMap(\.resetsAt).min() { Text(reset <= context.date ? "Reset due" : "Reset in \(ResetText.relative(reset, now: context.date))").foregroundStyle(.secondary) }
+                    Spacer(minLength: 0)
+                    if let snapshot = account.snapshot {
+                        Text("Updated \(snapshot.updatedAt, style: .relative) ago\(snapshot.isStale(at: context.date) ? " · stale" : "")").foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                    }
+                }.font(.caption2)
+            }.padding(compact ? 14 : 18).background(Theme.card, in: RoundedRectangle(cornerRadius: compact ? 14 : 22))
+                .overlay(RoundedRectangle(cornerRadius: compact ? 14 : 22).strokeBorder(Theme.border, lineWidth: 1))
+        }
     }
 }
 
@@ -159,28 +136,17 @@ struct AddAccountView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    Text("Bring your accounts\ninto view.").font(.system(size: 34, weight: .semibold)).tracking(-1).padding(.top, 20)
-                    Text("Add multiple accounts from the same provider. Give each connection a name and a workstream.").foregroundStyle(.secondary).font(.subheadline)
-                    VStack(spacing: 12) {
-                        ForEach(Provider.allCases) { provider in
-                            Button { selected = AgentAccount(provider: provider) } label: {
-                                HStack(spacing: 16) {
-                                    ProviderMark(provider: provider, size: 46)
-                                    VStack(alignment: .leading, spacing: 5) { Text(provider.name).font(.body.weight(.semibold)); Text("Continue with \(provider == .codex ? "ChatGPT" : provider.name)").font(.caption).foregroundStyle(.secondary) }
-                                    Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(.secondary)
-                                }.panel()
-                            }.buttonStyle(.plain).accessibilityIdentifier("connect-\(provider.rawValue)")
-                        }
+                VStack(spacing: 12) {
+                    ForEach(Provider.allCases) { provider in
+                        Button { selected = AgentAccount(provider: provider) } label: {
+                            HStack {
+                                Text(provider.name).font(.body.weight(.semibold))
+                                Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                            }.panel()
+                        }.buttonStyle(.plain).accessibilityIdentifier("connect-\(provider.rawValue)")
                     }
-                    VStack(alignment: .leading, spacing: 12) {
-                        Label("Your credentials stay yours", systemImage: "lock.shield").font(.subheadline.weight(.medium))
-                        Text("Sign-in opens the provider’s secure system-browser flow. Each connection has its own credentials in your iPhone’s Keychain. Removing one leaves your other connections intact.")
-                            .font(.caption).foregroundStyle(.secondary).lineSpacing(3)
-                    }.padding(.top, 6)
-                }.padding(24).frame(maxWidth: 600).frame(maxWidth: .infinity)
-            }.background(Theme.background)
-                .navigationTitle("Add account").navigationBarTitleDisplayMode(.inline)
+                }.padding(20).frame(maxWidth: 600).frame(maxWidth: .infinity)
+            }.background(Theme.background).navigationTitle("Add account").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
                 .sheet(item: $selected) { account in SignInView(account: account) }
                 .onChange(of: store.accounts.count) { old, new in if new > old { dismiss() } }

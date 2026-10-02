@@ -34,6 +34,7 @@ enum ProviderHTTP {
         let (data, response) = try await session.data(for: request)
         try Task.checkCancellation()
         guard let response = response as? HTTPURLResponse, data.count < 1_000_000 else { throw UsageError.invalidResponse }
+        Diagnostics.record(.http, status: response.statusCode)
         return (data, response)
     }
     static func json(_ request: URLRequest, unauthorizedError: UsageError = .signedOut) async throws -> Any {

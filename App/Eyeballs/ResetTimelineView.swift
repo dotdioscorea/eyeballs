@@ -16,9 +16,7 @@ struct ResetTimelineView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Text("A fresh start\nis coming.").font(.system(size: 34, weight: .semibold)).tracking(-1).padding(.top, 12)
-                Text("Upcoming resets across your accounts.").foregroundStyle(.secondary).font(.subheadline)
-                if events.isEmpty { ContentUnavailableView("Nothing on the clock", systemImage: "clock", description: Text("Connect an account to see its next resets here.")) }
+                if events.isEmpty { ContentUnavailableView("No reset times", systemImage: "clock", description: Text("Connect an account to see its next resets here.")) }
                 else {
                     VStack(spacing: 0) {
                         ForEach(events) { event in
@@ -32,13 +30,12 @@ struct ResetTimelineView: View {
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 6) {
                                     TimelineView(.periodic(from: .now, by: 60)) { context in Text(ResetText.relative(event.date, now: context.date)).font(.subheadline.weight(.semibold)).monospacedDigit().foregroundStyle(event.account.provider.color) }
-                                    Text(event.window.safePercent.map { "\(Int($0.rounded()))% used" } ?? "Usage unknown").font(.caption2).foregroundStyle(.secondary)
+                                    Text(MetricReading(definition: RingDefinition(windowID: event.window.id), window: event.window, direction: event.account.displaySettings.direction, date: .now).percent.map { "\(Int($0.rounded()))% \(event.account.displaySettings.direction == .remaining ? "left" : "used")" } ?? "Usage unknown").font(.caption2).foregroundStyle(.secondary)
                                 }
                             }
                         }
                     }.panel()
                 }
-                Text("Times come from the provider’s last reading. Open an account to confirm usage after a reset.").font(.caption).foregroundStyle(.secondary).lineSpacing(3)
             }.padding(24).frame(maxWidth: 600).frame(maxWidth: .infinity)
         }.background(Theme.background).navigationTitle("Resets").navigationBarTitleDisplayMode(.inline)
     }

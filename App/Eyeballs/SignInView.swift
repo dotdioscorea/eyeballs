@@ -17,6 +17,7 @@ final class SignInModel: ObservableObject {
     func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false) {
         guard !working else { return }
         working = true; message = nil; credential = nil; snapshot = nil
+        Diagnostics.record(.signInStarted, provider: account.provider, privateSession: usePrivateSession)
         task = Task {
             defer { working = false }
             do {
@@ -25,11 +26,13 @@ final class SignInModel: ObservableObject {
                 else { connection = try await browser.signIn(provider: account.provider, previous: previous, usePrivateSession: usePrivateSession) }
                 try Task.checkCancellation()
                 credential = connection
+                Diagnostics.record(.identityVerified, provider: account.provider)
                 // A verified identity does not prove quota access. Check the API before saving.
                 snapshot = try await fetcher(account, connection)
+                Diagnostics.record(.usageVerified, provider: account.provider)
                 try Task.checkCancellation()
             } catch is CancellationError { credential = nil; snapshot = nil }
-            catch { snapshot = nil; message = error.localizedDescription }
+            catch { snapshot = nil; message = error.localizedDescription; Diagnostics.record(.signInFailed, provider: account.provider, failure: .category(error)) }
         }
     }
     func cancel() { task?.cancel(); task = nil; browser.cancel() }
@@ -46,11 +49,9 @@ struct SignInView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    ProviderMark(provider: account.provider, size: 64).padding(.top, 24)
-                    Text("\(account.provider.name),\nin your sights.").font(.system(size: 36, weight: .semibold)).tracking(-1)
                     if let snapshot = model.snapshot, let credential = model.credential {
                         HStack(spacing: 20) {
-                            UsageRing(windows: snapshot.windows, color: account.provider.color, size: 100)
+                            UsageRing(readings: AgentAccount(provider: account.provider, snapshot: snapshot).readings(), color: account.provider.color, size: 100)
                             VStack(alignment: .leading, spacing: 8) {
                                 Label("Account verified", systemImage: "checkmark.seal.fill").foregroundStyle(Theme.accent)
                                 if let email = credential.email { Text(email).font(.subheadline).foregroundStyle(.secondary) }
@@ -71,7 +72,7 @@ struct SignInView: View {
                             catch { model.message = error.localizedDescription }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     } else {
-                        Text("Sign in securely with \(account.provider == .codex ? "ChatGPT" : account.provider.name). Each account has a separate connection, so you can add another personal or work account whenever you need.").font(.body).foregroundStyle(.secondary).lineSpacing(4).accessibilityIdentifier("independent-connections")
+                        Text("Sign in with \(account.provider == .codex ? "ChatGPT" : account.provider.name).").font(.subheadline).foregroundStyle(.secondary)
                         if account.snapshot != nil {
                             Text("Reconnect only this account. Choose Add account to connect a different one.").font(.subheadline).foregroundStyle(.secondary).panel()
                         }
@@ -87,7 +88,7 @@ struct SignInView: View {
                         }.font(.subheadline.weight(.medium)).tint(Theme.accent)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                             .disabled(model.working).accessibilityIdentifier("choose-another-login")
-                        Label("Credentials protected by iPhone Keychain", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary)
+                        Text("Credentials protected by iPhone Keychain").font(.caption).foregroundStyle(.secondary)
                     }
                     if let message = model.message {
                         Label(message, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.orange).panel()
