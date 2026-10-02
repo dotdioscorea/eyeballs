@@ -12,7 +12,7 @@ An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Co
 - Pull-to-refresh, timestamps, configurable reset/expiry/unused-allowance reminders and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (7)** is available for internal testing, built from commit `58d4bda` and tagged `testflight/1.0-7`. It includes Copilot in addition to the Grok, widget and display fixes in builds 5–6. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (8)** is available for internal testing, built from commit `3330563` and tagged `testflight/1.0-8`. It adds Cursor, square tiles, saved drag order, reset events and reminders, line charts, heatmaps and account comparisons. The first external beta review is waiting for Apple; tester notifications are enabled after approval. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
 
 ## Provider connections
 
@@ -31,7 +31,7 @@ Gemini reports Gemini CLI and Code Assist model quota buckets. It does not repor
 
 Copilot requests only `read:user` and rejects credentials with repository scopes. It reports finite quota buckets and provider reset dates, skipping unlimited allowances. A completed device authorization returned a new `read:user` token; authenticated identity and usage requests both returned HTTP 200. The quota parser was checked against a live response; 63 unit tests and the native device-code presentation/cancellation check passed. The completed protocol authorization and simulator presentation are separate checks. Copilot is included in TestFlight build 7.
 
-Cursor reports included, Auto and named-model usage percentages and the reported billing cycle. A free test account completed the native handshake; identity, usage and plan requests returned HTTP 200. The browser session expires after the provider’s reported token lifetime (currently 60 days) and requires sign-in again; the app does not create an API key. 65 unit tests and the native Cursor browser presentation/cancellation check passed. Cursor is not included in build 7.
+Cursor reports included, Auto and named-model usage percentages and the reported billing cycle. A free test account completed the native handshake; identity, usage and plan requests returned HTTP 200. The browser session expires after the provider’s reported token lifetime (currently 60 days) and requires sign-in again; the app does not create an API key. 65 unit tests and the native Cursor browser presentation/cancellation check passed. Cursor is included in build 8.
 
 Cline's SDK WorkOS device flow, native token registration and authenticated credit-balance parser are implemented on this provider branch. 79 unit tests passed, and the simulator loaded Cline's system sign-in page and cancelled without saving a connection. A completed live account authorization, token refresh and balance fetch remain unverified; Cline is not included in TestFlight build 8.
 
@@ -53,7 +53,7 @@ Events retain up to 90 days, capped at 2,000 records. Early resets and banked re
 
 Diagnostics retain at most 100 local events for seven days. They record typed stages, providers, request categories, HTTP status codes, error categories and types of known usage fields. Parsing records identify the calculation used and classify readings as zero, partial, full or missing. Local connection UUIDs are replaced with bundle-local anonymous labels when exported, so multiple accounts and unsaved failed sign-ins can be distinguished. Debug exports also contain app/iOS versions and availability counts. They exclude tokens, passwords, OAuth state, HTTP bodies, URLs, account IDs, names, emails, workstreams and notes. Nothing is uploaded automatically; users review and attach the JSON file to a public GitHub issue themselves.
 
-The next build adds Cursor, tiles and drag order, reset events and notification rules, line charts and heatmaps, comparisons and parsing-failure reports. 74 unit tests and two distinct native UI checks passed, covering persisted compact settings/debug export and square tiles, drag-order persistence, comparison lines and heatmap navigation. Release packaging is in progress.
+Build 8 adds Cursor, tiles and drag order, reset events and notification rules, line charts and heatmaps, comparisons and parsing-failure reports. 74 unit tests and two distinct native UI checks passed, covering persisted compact settings/debug export and square tiles, drag-order persistence, comparison lines and heatmap navigation. The exact uploaded IPA passed signature and App Group verification; Apple reports it valid and in internal beta testing.
 
 ## Development
 
