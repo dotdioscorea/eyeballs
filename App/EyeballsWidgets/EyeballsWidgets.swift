@@ -15,8 +15,10 @@ struct UsageEntry: TimelineEntry {
         return UsageEntry(date: now, accounts: [AgentAccount(provider: .codex, label: "Account", snapshot: UsageSnapshot(windows: windows))])
     }
     var timeline: Timeline<UsageEntry> {
-        // Frequent timestamp entries update time rings without moving provider usage.
-        let dates = (1...15).map { date.addingTimeInterval(Double($0) * 60) }
+        // Cover a full day so time rings and stale labels still advance when iOS
+        // delays the requested reload. Entries do not invent provider readings.
+        let minutes = Array(stride(from: 5, through: 60, by: 5)) + Array(stride(from: 90, through: 1440, by: 30))
+        let dates = minutes.map { date.addingTimeInterval(Double($0) * 60) }
         let entries = [self] + dates.map { timestamp in var entry = self; entry.date = timestamp; return entry }
         return Timeline(entries: entries, policy: .after(date.addingTimeInterval(15 * 60)))
     }
@@ -42,7 +44,7 @@ struct OverviewTimeline: AppIntentTimelineProvider {
         let accounts = WidgetCache.read()
         let selected: [AgentAccount]
         if let choices = configuration.accounts, !choices.isEmpty {
-            selected = choices.compactMap { choice in accounts.first { $0.id.uuidString == choice.id } }
+            selected = choices.compactMap { choice in accounts.first { $0.id == UUID(uuidString: choice.id) } }
         } else { selected = accounts.filter(\.favorite) }
         return UsageEntry(date: .now, accounts: configuration.sort.sorted(selected), amount: configuration.amount, metrics: configuration.metrics, layout: configuration.layout)
     }
@@ -60,20 +62,21 @@ struct AccountWidgetView: View {
                             .gaugeStyle(.accessoryCircular).tint(account.provider.color)
                     } else { Text("—").accessibilityLabel("Usage unavailable") }
                 } else if family == .accessoryRectangular {
-                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text("\(readings.first?.title ?? account.provider.name) · \(readings.first?.value ?? "—") \(readings.first?.caption ?? "")").font(.caption); Text(widgetStatus(account, at: entry.date)).font(.caption2) }
+                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text("\(readings.first?.title ?? account.provider.name) · \(readings.first?.value ?? "—") \(readings.first?.caption ?? "")").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack { Text(account.title).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); if family == .systemMedium { Text(account.provider.name).font(.caption2).foregroundStyle(.secondary) } }
                         HStack(spacing: 16) {
-                            UsageRing(readings: readings, color: account.provider.color, size: family == .systemSmall ? 75 : 92, lineWidth: readings.count > 2 ? 4 : 6)
+                            if !readings.isEmpty { UsageRing(readings: readings, color: account.provider.color, size: family == .systemSmall ? 75 : 92, lineWidth: readings.count > 2 ? 4 : 6) }
+                            else { Text(account.snapshot?.creditBalance ?? "No metrics selected").font(.caption).foregroundStyle(.secondary) }
                             if family == .systemMedium { MetricLegend(readings: readings, color: account.provider.color) }
                         }.frame(maxWidth: .infinity)
-                        Text(widgetStatus(account, at: entry.date)).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
+                        Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
             } else { WidgetEmptyView() }
         }.widgetURL(entry.accounts.first.map { accountURL($0) } ?? URL(string: "eyeballs://accounts")!)
-            .containerBackground(Color(hex: 0x1B1E1B), for: .widget)
+            .environment(\.colorScheme, .dark).containerBackground(Color(hex: 0x1B1E1B), for: .widget)
     }
 }
 struct OverviewWidgetView: View {
@@ -88,7 +91,7 @@ struct OverviewWidgetView: View {
             HStack { Text("eyeballs").font(.system(size: 11, weight: .semibold, design: .rounded)); Spacer(); if entry.accounts.count > limit { Text("+\(entry.accounts.count - limit)").font(.system(size: 9)).foregroundStyle(.secondary) } }
             if entry.accounts.isEmpty { WidgetEmptyView() }
             else if entry.layout == .bars {
-                VStack(spacing: family == .systemLarge ? 10 : 7) {
+                VStack(spacing: family == .systemLarge ? 5 : 4) {
                     ForEach(entry.accounts.prefix(limit)) { account in
                         Link(destination: accountURL(account)) { CompactWidgetRow(account: account, readings: entry.readings(account), date: entry.date, small: family == .systemSmall) }
                     }
@@ -99,15 +102,15 @@ struct OverviewWidgetView: View {
                     ForEach(entry.accounts.prefix(limit)) { account in
                         Link(destination: accountURL(account)) {
                             VStack(spacing: 6) {
-                                UsageRing(readings: entry.readings(account), color: account.provider.color, size: family == .systemSmall ? 76 : 62, lineWidth: entry.readings(account).count > 2 ? 3 : 5)
+                                if !entry.readings(account).isEmpty { UsageRing(readings: entry.readings(account), color: account.provider.color, size: family == .systemSmall ? 76 : 62, lineWidth: entry.readings(account).count > 2 ? 3 : 5) }
                                 Text(account.title).font(.system(size: 10, weight: .medium)).lineLimit(1)
-                                Text(widgetStatus(account, at: entry.date)).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
+                                Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
                             }
                         }
                     }
                 }.frame(maxHeight: .infinity, alignment: .center)
             }
-        }.widgetURL(URL(string: "eyeballs://accounts")!).containerBackground(Color(hex: 0x1B1E1B), for: .widget)
+        }.widgetURL(URL(string: "eyeballs://accounts")!).environment(\.colorScheme, .dark).containerBackground(Color(hex: 0x1B1E1B), for: .widget)
     }
 }
 struct CompactWidgetRow: View {
@@ -116,12 +119,33 @@ struct CompactWidgetRow: View {
     let date: Date
     var small: Bool
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(account.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
-                Spacer(minLength: 2)
-                Text(account.needsLogin ? "Reconnect" : account.provider.name).font(.system(size: 8)).foregroundStyle(account.needsLogin ? .orange : .secondary).lineLimit(1)
+        Group {
+            if small {
+                VStack(alignment: .leading, spacing: 4) {
+                    name
+                    bars
+                    Text(widgetStatus(account, at: date, readings: readings)).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
+                }
+            } else {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(account.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                        Text(account.needsLogin ? "Reconnect" : account.snapshot?.isStale(at: date) == true ? "Stale" : account.provider.name).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
+                    }.frame(width: 86, alignment: .leading)
+                    bars
+                }
             }
+        }.accessibilityElement(children: .combine)
+    }
+    private var name: some View {
+        HStack {
+            Text(account.title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+            Spacer(minLength: 2)
+            Text(account.needsLogin ? "Reconnect" : account.provider.name).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
+        }
+    }
+    private var bars: some View {
+        Group {
             if readings.isEmpty { Text(account.snapshot?.creditBalance ?? "No metrics selected").font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
             else {
                 HStack(spacing: 7) {
@@ -142,8 +166,7 @@ struct CompactWidgetRow: View {
                     }
                 }
             }
-            if small { Text(widgetStatus(account, at: date)).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1) }
-        }.accessibilityElement(children: .combine)
+        }
     }
     private func shortTitle(_ reading: MetricReading) -> String {
         let period = reading.window?.duration == 18000 ? "5h" : reading.window?.title.localizedCaseInsensitiveContains("weekly") == true ? "Week" : reading.window?.title ?? "—"
@@ -154,10 +177,10 @@ struct WidgetEmptyView: View {
     var body: some View { VStack(alignment: .leading, spacing: 8) { Text("No accounts").font(.headline); Text("Open Eyeballs to add an account.").font(.caption).foregroundStyle(.secondary) } }
 }
 private func accountURL(_ account: AgentAccount) -> URL { URL(string: "eyeballs://account/\(account.id)")! }
-private func widgetStatus(_ account: AgentAccount, at date: Date) -> String {
+private func widgetStatus(_ account: AgentAccount, at date: Date, readings: [MetricReading]) -> String {
     if account.needsLogin { return "Reconnect in Eyeballs" }
     if let snapshot = account.snapshot, snapshot.isStale(at: date) { return "Updated \(snapshot.updatedAt.formatted(date: .omitted, time: .shortened)) · stale" }
-    if let reset = account.snapshot?.windows.compactMap(\.resetsAt).min() { return "Reset in \(ResetText.relative(reset, now: date))" }
+    if let reset = account.displayedReset(for: readings) { return "Reset in \(ResetText.relative(reset, now: date))" }
     return account.snapshot.map { "Updated \($0.updatedAt.formatted(date: .omitted, time: .shortened))" } ?? "No reading"
 }
 @main

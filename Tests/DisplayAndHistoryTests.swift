@@ -55,6 +55,19 @@ final class DisplayAndHistoryTests: XCTestCase {
         let result = AccountQuery.resolve([b.id.uuidString.lowercased(), "deleted", a.id.uuidString, b.id.uuidString], accounts: [a, b])
         XCTAssertEqual(result.map(\.id), [b.id.uuidString, a.id.uuidString])
     }
+    func testResetLabelFollowsSelectedWindow() {
+        var a = account()
+        a.snapshot?.windows.insert(UsageWindow(id: "session", title: "5-hour", usedPercent: 10, resetsAt: now.addingTimeInterval(600), duration: 18000), at: 0)
+        a.display = AccountDisplay(rings: [RingDefinition(windowID: "week"), RingDefinition(windowID: "week", kind: .time)])
+        XCTAssertEqual(a.displayedReset(for: a.readings(at: now)), now.addingTimeInterval(302400))
+    }
+    func testAccountPickerReturnsAllSuggestionsForEmptySearch() {
+        var a = account(); a.label = "Personal"
+        var b = account(); b.label = "Work"
+        XCTAssertEqual(AccountQuery.matching("", accounts: [a, b]).count, 2)
+        XCTAssertEqual(AccountQuery.matching("  ", accounts: [a, b]).count, 2)
+        XCTAssertEqual(AccountQuery.matching("personal", accounts: [a, b]).map(\.id), [a.id.uuidString])
+    }
     func testWidgetWeeklyTimePresetAndAmountOverride() {
         let a = account()
         let settings = WidgetMetrics.weekAndTime.settings(for: a, amount: .remaining)

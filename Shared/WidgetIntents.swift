@@ -18,9 +18,15 @@ struct AccountQuery: EntityStringQuery {
     }
     func suggestedEntities() async throws -> [AccountEntity] { Self.values(WidgetCache.read()) }
     func entities(matching string: String) async throws -> [AccountEntity] {
-        Self.values(WidgetCache.read()).filter { "\($0.title) \($0.provider)".localizedCaseInsensitiveContains(string) }
+        Self.matching(string, accounts: WidgetCache.read())
     }
     func defaultResult() async -> AccountEntity? { Self.values(WidgetCache.read()).first }
+    static func matching(_ string: String, accounts: [AgentAccount]) -> [AccountEntity] {
+        let search = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        let values = self.values(accounts)
+        // The system search picker can ask for an empty query on first display.
+        return search.isEmpty ? values : values.filter { "\($0.title) \($0.provider)".localizedCaseInsensitiveContains(search) }
+    }
     static func values(_ accounts: [AgentAccount]) -> [AccountEntity] {
         AccountSort.name.sorted(accounts).map { AccountEntity(id: $0.id.uuidString, title: $0.title, provider: $0.provider.name) }
     }

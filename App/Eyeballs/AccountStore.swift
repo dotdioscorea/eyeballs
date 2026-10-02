@@ -22,7 +22,7 @@ final class AccountStore: ObservableObject {
          renewer: @escaping (AccountCredential) async throws -> AccountCredential = { try await ProviderAuth.refresh($0) }) {
         var selectedLocation = location
         #if DEBUG
-        if location == nil, SimulatorFixtures.enabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("EyeballsUITest/accounts.json") }
+        if location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("EyeballsUITest/accounts.json") }
         #endif
         self.location = selectedLocation ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Eyeballs/accounts.json")
         self.historyStore = UsageHistoryStore(directory: self.location.deletingLastPathComponent().appendingPathComponent("history"))
@@ -33,7 +33,10 @@ final class AccountStore: ObservableObject {
             catch { self.error = "Your saved accounts could not be read. Your secure sessions have been kept." }
         }
         #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--clear-widget-fixture"), !accounts.isEmpty,
+           accounts.allSatisfy({ $0.snapshot?.source == "UI Test Fixture" }) { accounts = []; persist() }
         if SimulatorFixtures.enabled, accounts.isEmpty { accounts = SimulatorFixtures.accounts() }
+        if SimulatorFixtures.widgetEnabled { persist() }
         #endif
         for account in accounts { histories[account.id] = historyStore.read(account.id); if let snapshot = account.snapshot { recordHistory(snapshot, id: account.id) } }
         if integratesWithSystem { publishWidgets() }
@@ -106,6 +109,9 @@ final class AccountStore: ObservableObject {
         if SimulatorFixtures.enabled { return }
         #endif
         guard !refreshing.contains(id), let account = accounts.first(where: { $0.id == id }), !account.needsLogin else { return }
+        #if DEBUG
+        if account.snapshot?.source == "UI Test Fixture" { return }
+        #endif
         if let cooldown = cooldowns[id], cooldown > .now { return }
         let revision = revisions[id, default: 0]
         refreshing.insert(id); defer { refreshing.remove(id) }

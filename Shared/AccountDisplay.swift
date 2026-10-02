@@ -57,6 +57,9 @@ extension AgentAccount {
                           direction: definition.direction ?? settings.direction, date: date)
         }
     }
+    func displayedReset(for readings: [MetricReading]) -> Date? {
+        readings.compactMap { $0.window?.resetsAt }.min() ?? snapshot?.windows.compactMap(\.resetsAt).min()
+    }
     func window(for period: UsagePeriod) -> UsageWindow? {
         let windows = snapshot?.windows ?? []
         switch period {

@@ -15,7 +15,7 @@ struct AccountDetailView: View {
                     VStack(spacing: 20) {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             VStack(spacing: 22) {
-                                UsageRing(readings: account.readings(at: context.date), color: account.provider.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13)
+                                if !account.readings().isEmpty { UsageRing(readings: account.readings(at: context.date), color: account.provider.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13) }
                                 Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary)
                                 MetricLegend(readings: account.readings(at: context.date), color: account.provider.color)
                             }.padding(.vertical, 16)
@@ -135,10 +135,7 @@ struct DisplaySettingsView: View {
                     }.onDelete { settings.rings.remove(atOffsets: $0) }.onMove { settings.rings.move(fromOffsets: $0, toOffset: $1) }
                 } header: { HStack { Text("Rings"); Spacer(); EditButton() } } footer: { Text("Up to four rings, outside to inside. Compact bars use the same metrics.") }
                 Section("Available metrics") {
-                    ForEach(account.snapshot?.windows ?? []) { window in
-                        metricToggle(window, kind: .usage)
-                        if window.duration != nil, window.resetsAt != nil { metricToggle(window, kind: .time) }
-                    }
+                    ForEach(availableMetrics) { metric in metricToggle(metric.window, kind: metric.kind) }
                 }
                 Section { Button("Reset display settings") { settings = AccountDisplay(rings: Array((account.snapshot?.windows ?? []).prefix(2)).map { RingDefinition(windowID: $0.id) }) } }
             }.scrollContentBackground(.hidden).background(Theme.background)
@@ -149,6 +146,16 @@ struct DisplaySettingsView: View {
                 }
         }
     }
+    private struct AvailableMetric: Identifiable {
+        var window: UsageWindow
+        var kind: MetricKind
+        var id: String { window.id + ":" + kind.rawValue }
+    }
+    private var availableMetrics: [AvailableMetric] {
+        (account.snapshot?.windows ?? []).flatMap { window in
+            [AvailableMetric(window: window, kind: .usage)] + (window.duration != nil && window.resetsAt != nil ? [AvailableMetric(window: window, kind: .time)] : [])
+        }
+    }
     private func direction(for ring: RingDefinition) -> Binding<AmountDirection?> {
         Binding(get: { settings.rings.first { $0.id == ring.id }?.direction }, set: { value in
             if let index = settings.rings.firstIndex(where: { $0.id == ring.id }) { settings.rings[index].direction = value }
@@ -157,9 +164,15 @@ struct DisplaySettingsView: View {
     private func metricToggle(_ window: UsageWindow, kind: MetricKind) -> some View {
         let ring = RingDefinition(windowID: window.id, kind: kind)
         let selected = settings.rings.contains { $0.id == ring.id }
-        return Toggle(window.title + (kind == .time ? " time" : " usage"), isOn: Binding(get: { selected }, set: { enabled in
-            if enabled, settings.rings.count < 4 { settings.rings.append(ring) }
-            else if !enabled { settings.rings.removeAll { $0.id == ring.id } }
-        })).disabled(!selected && settings.rings.count >= 4).accessibilityIdentifier("metric-\(ring.id)")
+        return Button {
+            if selected { settings.rings.removeAll { $0.id == ring.id } }
+            else if settings.rings.count < 4 { settings.rings.append(ring) }
+        } label: {
+            HStack {
+                Text(window.title + (kind == .time ? " time" : " usage")).foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: selected ? "checkmark.square.fill" : "square").foregroundStyle(selected ? Theme.accent : .secondary)
+            }.contentShape(Rectangle())
+        }.buttonStyle(.borderless).disabled(!selected && settings.rings.count >= 4).accessibilityValue(selected ? "On" : "Off").accessibilityIdentifier("metric-\(ring.id)")
     }
 }

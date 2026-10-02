@@ -74,7 +74,7 @@ enum Diagnostics {
                     widgetAccountCount: WidgetCache.read().count,
                     accounts: accounts.map { account in
                         DebugBundle.AccountStatus(provider: account.provider, needsLogin: account.needsLogin,
-                                                  readingAgeSeconds: account.snapshot.map { max(0, Int(now.timeIntervalSince($0.updatedAt))) },
+                                                  readingAgeSeconds: account.snapshot.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.updatedAt)))) },
                                                   windowCount: account.snapshot?.windows.count ?? 0,
                                                   configuredMetricCount: account.displaySettings.rings.count)
                     }, events: events())

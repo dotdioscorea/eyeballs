@@ -53,6 +53,7 @@ struct UsageHistoryView: View {
             Text("Usage history").font(.headline)
             Picker("History period", selection: $days) { Text("24h").tag(1); Text("7d").tag(7); Text("30d").tag(30); Text("90d").tag(90) }.pickerStyle(.segmented)
             if visible.isEmpty { Text("History starts with your next successful refresh.").font(.caption).foregroundStyle(.secondary) }
+            else if !visible.flatMap(\.windows).contains(where: { $0.safePercent != nil }) { Text("No usage percentages reported yet.").font(.caption).foregroundStyle(.secondary) }
             else {
                 Chart {
                     ForEach(windows) { window in

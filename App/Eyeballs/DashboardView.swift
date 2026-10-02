@@ -107,17 +107,25 @@ struct AccountCard: View {
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
                 if !account.workstream.isEmpty { Text(account.workstream).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
-                if compact { MetricBars(readings: readings, color: account.provider.color) }
+                if !readings.isEmpty {
+                if compact {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: readings.count == 1 ? 1 : 2), spacing: 8) {
+                        ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
+                            MetricBars(readings: [reading], color: MetricColor.color(index, base: account.provider.color), dense: true)
+                        }
+                    }
+                }
                 else {
                     HStack(spacing: 22) {
                         UsageRing(readings: readings, color: account.provider.color, size: 100, lineWidth: readings.count > 2 ? 6 : 8)
                         MetricLegend(readings: readings, color: account.provider.color)
                     }
                 }
+                }
                 if readings.isEmpty, let credits = account.snapshot?.creditBalance { Text("Credits: \(credits)").font(.subheadline) }
                 HStack(alignment: .top, spacing: 8) {
                     if account.needsLogin { Text("Reconnect to update").foregroundStyle(.orange) }
-                    else if let reset = account.snapshot?.windows.compactMap(\.resetsAt).min() { Text(reset <= context.date ? "Reset due" : "Reset in \(ResetText.relative(reset, now: context.date))").foregroundStyle(.secondary) }
+                    else if let reset = account.displayedReset(for: readings) { Text(reset <= context.date ? "Reset due" : "Reset in \(ResetText.relative(reset, now: context.date))").foregroundStyle(.secondary) }
                     Spacer(minLength: 0)
                     if let snapshot = account.snapshot {
                         Text("Updated \(snapshot.updatedAt, style: .relative) ago\(snapshot.isStale(at: context.date) ? " · stale" : "")").foregroundStyle(.secondary).multilineTextAlignment(.trailing)
