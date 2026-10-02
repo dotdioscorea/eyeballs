@@ -167,7 +167,7 @@ struct AddAccountView: View {
                             Button { selected = AgentAccount(provider: provider) } label: {
                                 HStack(spacing: 16) {
                                     ProviderMark(provider: provider, size: 46)
-                                    VStack(alignment: .leading, spacing: 5) { Text(provider.name).font(.body.weight(.semibold)); Text(provider == .codex ? "Continue with ChatGPT" : "Sign-in integration pending").font(.caption).foregroundStyle(.secondary) }
+                                    VStack(alignment: .leading, spacing: 5) { Text(provider.name).font(.body.weight(.semibold)); Text("Continue with \(provider == .codex ? "ChatGPT" : provider.name)").font(.caption).foregroundStyle(.secondary) }
                                     Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(.secondary)
                                 }.panel()
                             }.buttonStyle(.plain).accessibilityIdentifier("connect-\(provider.rawValue)")

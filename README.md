@@ -6,17 +6,17 @@ Development build **1.0 (1)** was uploaded to TestFlight on 2 October 2026 and i
 
 ## Provider integration status
 
-| Provider | Usage reader | Sign-in status |
+| Provider | Direct API reader | Native sign-in |
 | --- | --- | --- |
-| Codex | Bearer-authenticated `GET https://chatgpt.com/backend-api/wham/usage`; live CLI-credential probe returned HTTP 200 | Native system-browser OAuth/PKCE prototype using OpenAI's dynamic registration flow. A fresh app-issued login and its permission to read this private quota endpoint have not been verified end to end. |
-| Claude | Bearer-authenticated `GET https://api.anthropic.com/api/oauth/usage`; live CLI-credential probe returned HTTP 200 | Disabled: Anthropic explicitly disallows third-party Claude.ai sign-in and collecting subscription credentials. Requires an approved integration. |
-| Grok | Bearer-authenticated `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` | Disabled until an approved app client is available. The existing local CLI token returned HTTP 401; no successful live response or fresh app login has been verified. |
+| Codex | `GET https://chatgpt.com/backend-api/wham/usage`; existing CLI session returned HTTP 200 | Uses Codex's public native OAuth client, PKCE and verified OIDC identity. Replaces build 1's incompatible dynamic-registration grant. Fresh app login → quota verification is pending. |
+| Claude | `GET https://api.anthropic.com/api/oauth/usage`; existing CLI session returned HTTP 200. The profile API also returned HTTP 200. | Native CLI-compatible OAuth/PKCE with `user:profile` scope. Account and organisation UUIDs come from the authenticated profile API. Fresh app login → quota verification is pending. |
+| Grok | `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` | Native OAuth/PKCE with ES256 identity and access-token verification, personal/team isolation and the accounts site's CORS loopback callback. Existing CLI token is expired; fresh app login → billing verification is pending. |
 
-An API reader working with an existing CLI token does **not** establish that the same reader works with credentials issued to an independent mobile app. OpenAI's Sign in with ChatGPT documentation primarily describes identity and plan-funded inference; it does not document permission to read the private Codex quota endpoint. This remains an integration requirement before the app can serve as a working usage tracker. Development builds can still be distributed for native UI and device testing, with these limitations stated clearly.
+These are personal-use integrations using the providers' public native CLI clients and direct usage endpoints. A successful API probe with an existing CLI session or a browser-presentation test does **not** establish a completed fresh app login. The app verifies live usage before enabling Save connection. A denied usage request is reported as an access failure, rather than an expired login. Saved connections attempt one token refresh after access denial; only terminal refresh failures request another sign-in.
 
-References: [OpenAI registration and sign-in](https://developers.openai.com/siwc/token-sharing-open-source/sign-in), [OpenAI accounts and sessions](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions), [Codex app-server account APIs](https://learn.chatgpt.com/docs/app-server#auth-endpoints), [Claude credential rules](https://code.claude.com/docs/en/legal-and-compliance#authentication-and-credential-use), [Grok Build authentication](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/02-authentication.md).
+Protocol references: [OpenAI's Codex login implementation](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Codex app-server account APIs](https://learn.chatgpt.com/docs/app-server#auth-endpoints), the locally installed official Claude Code executable's OAuth configuration and [Claude authentication documentation](https://code.claude.com/docs/en/authentication), [Grok's public-client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok's OAuth protocol](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), and [Grok's billing API implementation](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs).
 
-No webpage scraping, embedded WebKit sign-in, cookie capture, desktop collector, token import UI or reuse of another app's public OAuth client ID is included. Missing provider values stay unknown; a predicted reset never invents a zero reading. Preview accounts are explicitly sample data and do not overwrite saved accounts or widget data.
+There is no webpage scraping, embedded WebKit login, cookie capture, desktop collector or token import UI. Each account starts a fresh ephemeral system-browser session and stores its own credentials in Keychain. Claude requests profile access; Grok omits conversation/workspace writes and billing writes. Missing usage values stay unknown; a predicted reset never invents a zero reading. Preview accounts are labelled sample data and do not overwrite saved accounts or widgets.
 
 ## Build and test
 
@@ -31,7 +31,7 @@ bash scripts/check.sh
 
 Simulator builds must be signed locally (`CODE_SIGN_IDENTITY=-`). Unsigned simulator builds can display UI but Keychain operations fail with OSStatus -34018.
 
-Tests cover two same-provider accounts with the same email, persistence, reconnection identity checks, removal during an in-flight refresh, independent expiry, actual Keychain record isolation, OAuth callback/PKCE checks, real RSA signature verification, unknown quota handling, quota-versus-billing periods and native UI navigation. UI presentation tests do not claim real account authorization.
+Tests cover two same-provider accounts with the same email, persistence, reconnection identity checks, removal during an in-flight refresh, independent expiry, actual Keychain record isolation, OAuth callback/PKCE checks, real RSA and P-256 signature verification, bounded token renewal after access denial, unsaved failed sign-ins, unknown quota handling, quota-versus-billing periods and native UI navigation. UI presentation tests do not claim real account authorization.
 
 For optional read-only connectivity probes against existing local CLI sessions:
 
@@ -47,7 +47,7 @@ The probe never refreshes or rewrites CLI credentials, copies them into the app,
 
 Each connection has a UUID-keyed Keychain record with `AfterFirstUnlockThisDeviceOnly` accessibility and iCloud synchronization disabled. Metadata and cached readings are saved in a protected Application Support file. Widgets receive labels, workstreams and cached readings through `group.com.dotdioscorea.eyeballs`; email, account identity, notes and all credentials are excluded. Widget and background updates are scheduled by iOS, so refresh times are not guaranteed.
 
-The OAuth prototype uses the system authentication session with fresh state, nonce and PKCE for every attempt, a loopback listener bound only to `127.0.0.1`, RS256 signature verification and issuer/audience/expiry/nonce checks. A returning login must match the selected connection's identity. API requests reject redirects and use ephemeral URL sessions without cookie storage or caching. Rotating refresh tokens are saved before reading usage, and stale in-flight reads cannot resurrect deleted or reconnected accounts.
+OAuth uses the system authentication session with fresh state and PKCE for every attempt and a loopback listener bound only to `127.0.0.1`. Codex and Grok validate signed OIDC identities, with issuer, audience, expiry and nonce checks. Codex pins RS256; Grok pins ES256 and also verifies its access-token principal. Claude verifies identity using its authenticated profile API. Grok callback CORS permits only `https://accounts.x.ai`; a preflight cannot consume a login. A returning login must match the selected connection's identity. API requests reject redirects and use ephemeral URL sessions without cookie storage or caching. Rotating refresh tokens are saved before reading usage, and stale in-flight reads cannot resurrect deleted or reconnected accounts.
 
 ## TestFlight releases
 

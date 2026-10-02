@@ -1,9 +1,9 @@
-Eyeballs 1.0 (1) — first development build
+Eyeballs 1.0 (2) — provider sign-in update
 
-Start with “Take a look around” on the welcome screen to try the usage rings, multiple accounts per provider, account details, reset timeline and settings with clearly labelled sample accounts. You can also enter preview from Settings.
+Codex now uses its native CLI-compatible account login, fixing the grant mismatch in build 1. Usage access errors no longer incorrectly say your connection has expired. Saved accounts try one token refresh before reporting an access failure.
 
-Please try navigation, layout, readability and the home-screen widget sizes. Widgets use saved account readings; preview data does not populate widgets.
+Claude and Grok now have native system-browser sign-in flows instead of unavailable placeholders. Each provider supports separate personal/work account connections with isolated Keychain records. Claude requests profile access. Grok verifies personal/team identity and uses its direct billing API.
 
-Provider connections are unfinished in this build. Codex opens the native system sign-in flow, but a fresh app login and live quota refresh have not been verified end to end. Claude and Grok connections are not available yet. This build does not yet replace your usage notepad.
+Automated checks cover account isolation, persistence, cancellation, signatures, callback security and refresh recovery. Completed fresh browser login → live usage remains unverified until account authentication is completed; existing CLI-session API probes are separate from that check.
 
-Saved connections use separate Keychain records, including multiple accounts from the same provider. Sample accounts never overwrite saved connections.
+Please update from build 1, then connect an account. Save connection is enabled only after its live usage request succeeds. Widgets show saved readings; preview data never populates widgets.

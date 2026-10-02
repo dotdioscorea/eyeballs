@@ -90,14 +90,7 @@ struct AccountDetailView: View {
                 .confirmationDialog("Remove \(account.title)?", isPresented: $removing, titleVisibility: .visible) {
                     Button("Remove connection", role: .destructive) {
                         do {
-                            let credential = store.isDemo ? nil : try store.savedCredential(for: id)
                             try store.remove(id); dismiss()
-                            if let credential {
-                                Task {
-                                    do { try await OpenAIAuth.revoke(credential) }
-                                    catch { store.error = "The connection was removed from this iPhone. Remote disconnection could not be confirmed; you can disconnect Eyeballs in ChatGPT Settings." }
-                                }
-                            }
                         } catch { store.error = error.localizedDescription }
                     }
                 } message: { Text("Only this connection’s credentials and usage will be cleared from this iPhone and your Eyeballs widgets.") }

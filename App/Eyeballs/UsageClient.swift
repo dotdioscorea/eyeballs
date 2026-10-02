@@ -2,10 +2,11 @@ import Foundation
 import CoreFoundation
 
 enum UsageError: LocalizedError {
-    case signedOut, unavailable, throttled(Date), invalidResponse, wrongAccount, unsupportedLogin
+    case signedOut, usageAccessDenied, unavailable, throttled(Date), invalidResponse, wrongAccount, unsupportedLogin
     var errorDescription: String? {
         switch self {
         case .signedOut: return "Your connection has expired. Sign in again to update usage."
+        case .usageAccessDenied: return "Sign-in completed, but the provider did not authorize usage access for this connection."
         case .unavailable: return "The provider isn’t sharing usage right now. Your last reading is still available."
         case .throttled(let date): return "The provider asked us to wait. Try again after \(date.formatted(date: .omitted, time: .shortened))."
         case .invalidResponse: return "The provider returned an unrecognized usage response. Your last reading has been kept."
@@ -35,9 +36,12 @@ enum ProviderHTTP {
         guard let response = response as? HTTPURLResponse, data.count < 1_000_000 else { throw UsageError.invalidResponse }
         return (data, response)
     }
-    static func json(_ request: URLRequest) async throws -> Any {
+    static func json(_ request: URLRequest, unauthorizedError: UsageError = .signedOut) async throws -> Any {
         let (data, response) = try await data(request)
-        if response.statusCode == 401 { throw UsageError.signedOut }
+        return try decodeJSON(data, response: response, unauthorizedError: unauthorizedError)
+    }
+    static func decodeJSON(_ data: Data, response: HTTPURLResponse, unauthorizedError: UsageError = .signedOut) throws -> Any {
+        if response.statusCode == 401 || response.statusCode == 403 { throw unauthorizedError }
         if response.statusCode == 429 {
             throw UsageError.throttled(retryDate(response.value(forHTTPHeaderField: "Retry-After")))
         }
@@ -74,15 +78,19 @@ struct UsageClient {
         var request = URLRequest(url: URL(string: endpoint)!)
         request.timeoutInterval = 20
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Eyeballs/0.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
         request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
         if provider == .codex, let id = credential.accountID { request.setValue(id, forHTTPHeaderField: "ChatGPT-Account-Id") }
         if provider == .claude { request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta") }
-        if provider == .grok { request.setValue("xai-grok-cli", forHTTPHeaderField: "x-xai-token-auth") }
+        if provider == .grok {
+            request.setValue("xai-grok-cli", forHTTPHeaderField: "x-xai-token-auth")
+            let teamID = credential.accountID?.hasPrefix("Team:") == true ? credential.accountID?.dropFirst(5).description : nil
+            request.setValue(teamID ?? credential.subject, forHTTPHeaderField: "x-userid")
+        }
         return request
     }
     static func fetch(account: AgentAccount, credential: AccountCredential) async throws -> UsageSnapshot {
-        let raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential))
+        let raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: .usageAccessDenied)
         var snapshot: UsageSnapshot
         switch account.provider {
         case .codex: snapshot = try UsageParser.codex(raw)

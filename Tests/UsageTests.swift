@@ -69,13 +69,22 @@ final class UsageTests: XCTestCase {
         XCTAssertEqual(ProviderHTTP.retryDate("Fri, 02 Oct 2026 11:00:00 GMT", now: now), Date(timeIntervalSince1970: 1790938800))
         XCTAssertEqual(ProviderHTTP.retryDate("invalid", now: now), now.addingTimeInterval(300))
     }
+    func testFreshUsageRejectionIsNotReportedAsExpiredLogin() throws {
+        let url = URL(string: "https://chatgpt.com/backend-api/wham/usage")!
+        for status in [401, 403] {
+            let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil)!
+            XCTAssertThrowsError(try ProviderHTTP.decodeJSON(Data("{}".utf8), response: response, unauthorizedError: .usageAccessDenied)) { error in
+                guard case UsageError.usageAccessDenied = error else { return XCTFail("A fresh grant rejection was treated as expired") }
+            }
+        }
+    }
 }
 
 enum Fixture {
     static func credential(_ name: String) -> AccountCredential {
-        AccountCredential(provider: .codex, issuer: "https://auth.openai.com", clientID: "oaiapp_fixture-" + name, subject: "subject-" + name, accountID: "account-" + name,
+        AccountCredential(provider: .codex, issuer: "https://auth.openai.com", clientID: OpenAIAuth.codexClientID, subject: "subject-" + name, accountID: "account-" + name,
                           hostID: "urn:uuid:fixture", accessToken: "fixture-" + name, refreshToken: "fixture-refresh-" + name, idToken: nil,
-                          scopes: ["chatgpt.tokens.use.direct"], expiresAt: .distantFuture, email: "same-email@example.com")
+                          scopes: ["openid", "profile", "email", "offline_access"], expiresAt: .distantFuture, email: "same-email@example.com")
     }
     static func account(_ credential: AccountCredential, label: String = "") -> AgentAccount {
         AgentAccount(provider: credential.provider, label: label, snapshot: UsageSnapshot(windows: [UsageWindow(id: "weekly", title: "Weekly", usedPercent: 25)], identity: credential.registrationIdentity))

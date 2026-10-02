@@ -1,11 +1,12 @@
 import CryptoKit
 import Security
 import XCTest
+import CryptoKit
 @testable import Eyeballs
 
 final class AuthenticationTests: XCTestCase {
     let callback = URL(string: "http://127.0.0.1:1455/auth/callback")!
-    func testNewAccountUsesItsOwnDynamicRegistrationAndPKCE() throws {
+    func testCodexLoginRequestsQuotaCompatibleNativeCredentialsAndPKCE() throws {
         let first = try OAuthAttempt(redirectURI: callback, hostID: "urn:uuid:phone")
         let second = try OAuthAttempt(redirectURI: callback, hostID: "urn:uuid:phone")
         XCTAssertNotEqual(first.state, second.state)
@@ -13,8 +14,12 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertNotEqual(first.verifier, second.verifier)
         let items = URLComponents(url: first.authorizationURL, resolvingAgainstBaseURL: false)!.queryItems!
         func value(_ name: String) -> String? { items.first { $0.name == name }?.value }
-        XCTAssertEqual(value("client_id"), "dynamic_agent_client")
-        XCTAssertEqual(value("agent_name_hint"), "Eyeballs")
+        XCTAssertEqual(first.authorizationURL.path, "/oauth/authorize")
+        XCTAssertEqual(value("client_id"), OpenAIAuth.codexClientID)
+        XCTAssertEqual(value("scope"), "openid profile email offline_access")
+        XCTAssertNil(value("resource"))
+        XCTAssertNil(value("agent_name_hint"))
+        XCTAssertEqual(value("originator"), "eyeballs")
         XCTAssertEqual(value("code_challenge_method"), "S256")
         XCTAssertEqual(value("code_challenge"), Data(SHA256.hash(data: Data(first.verifier.utf8))).base64URL)
         XCTAssertEqual(value("redirect_uri"), callback.absoluteString)
@@ -22,9 +27,10 @@ final class AuthenticationTests: XCTestCase {
     }
     func testForgedAndAmbiguousCallbacksAreRejected() throws {
         let attempt = try OAuthAttempt(redirectURI: callback, hostID: "urn:uuid:phone")
-        let valid = callback.absoluteString + "?state=\(attempt.state)&code=fixture-code&client_id=oaiapp_fixture"
-        XCTAssertEqual(try attempt.validateCallback(URL(string: valid)!).clientID, "oaiapp_fixture")
-        for forged in [valid.replacingOccurrences(of: attempt.state, with: "wrong-state"), valid + "&state=\(attempt.state)", valid + "&code=other", valid.replacingOccurrences(of: "127.0.0.1", with: "localhost"), valid.replacingOccurrences(of: "1455", with: "1456"), valid.replacingOccurrences(of: "/auth/callback", with: "/callback"), valid.replacingOccurrences(of: "oaiapp_fixture", with: "dynamic_agent_client")] {
+        let valid = callback.absoluteString + "?state=\(attempt.state)&code=fixture-code&client_id=\(OpenAIAuth.codexClientID)"
+        XCTAssertEqual(try attempt.validateCallback(URL(string: valid)!).clientID, OpenAIAuth.codexClientID)
+        XCTAssertEqual(try attempt.validateCallback(URL(string: callback.absoluteString + "?state=\(attempt.state)&code=fixture-code")!).clientID, OpenAIAuth.codexClientID)
+        for forged in [valid.replacingOccurrences(of: attempt.state, with: "wrong-state"), valid + "&state=\(attempt.state)", valid + "&code=other", valid.replacingOccurrences(of: "127.0.0.1", with: "localhost"), valid.replacingOccurrences(of: "1455", with: "1456"), valid.replacingOccurrences(of: "/auth/callback", with: "/callback"), valid.replacingOccurrences(of: OpenAIAuth.codexClientID, with: "oaiapp_other")] {
             XCTAssertThrowsError(try attempt.validateCallback(URL(string: forged)!))
         }
     }
@@ -86,5 +92,71 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertTrue(encoded.contains("%2B"))
         XCTAssertTrue(encoded.contains("%26"))
         XCTAssertTrue(encoded.contains("%0A"))
+    }
+    func testCodexTokenResponseWithoutExpiresInOrScopeUsesExpiryHint() throws {
+        let expiry = Date.now.addingTimeInterval(3600)
+        let payload = try JSONSerialization.data(withJSONObject: ["exp": expiry.timeIntervalSince1970, "scp": ["openid", "offline_access"]]).base64URL
+        let access = "e30." + payload + ".fixture-signature"
+        let credential = try OpenAIAuth.credential(["access_token": access, "refresh_token": "fixture-refresh"], previous: nil, clientID: OpenAIAuth.codexClientID, subject: "verified-by-caller", accountID: "workspace", hostID: "fixture", email: nil)
+        XCTAssertEqual(credential.expiresAt.timeIntervalSince1970, expiry.timeIntervalSince1970, accuracy: 0.001)
+        XCTAssertEqual(credential.scopes, ["openid", "offline_access"])
+        XCTAssertEqual(credential.clientID, OpenAIAuth.codexClientID)
+    }
+    func testClaudeAndGrokUseSeparateNativeClientsAndLimitedScopes() throws {
+        for provider in [Provider.claude, .grok] {
+            let attempt = try OAuthAttempt(redirectURI: URL(string: "http://127.0.0.1:54321/callback")!, hostID: "fixture", provider: provider)
+            let url = attempt.authorizationURL
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!
+            func value(_ name: String) -> String? { items.first { $0.name == name }?.value }
+            XCTAssertEqual(value("client_id"), ProviderAuth.clientID(provider))
+            XCTAssertEqual(value("code_challenge_method"), "S256")
+            XCTAssertEqual(value("state"), attempt.state)
+            XCTAssertEqual(value("scope"), ProviderAuth.scopes(provider))
+            XCTAssertFalse(value("scope")!.contains("inference"))
+            XCTAssertFalse(value("scope")!.contains("write"))
+            XCTAssertEqual(url.host, provider == .claude ? "claude.com" : "auth.x.ai")
+        }
+    }
+    func testClaudeIdentityRequiresAccountAndOrganizationIDs() throws {
+        let profile: [String: Any] = ["account": ["uuid": "a", "email": "same@example.test"], "organization": ["uuid": "org-a"]]
+        let identity = try ProviderAuth.claudeIdentity(profile)
+        XCTAssertEqual(identity.subject, "a"); XCTAssertEqual(identity.accountID, "org-a")
+        XCTAssertThrowsError(try ProviderAuth.claudeIdentity(["account": ["email": "same@example.test"]]))
+        XCTAssertThrowsError(try ProviderAuth.claudeIdentity(["account": ["uuid": ""], "organization": ["uuid": "org-a"]]))
+    }
+    func testGrokPreflightDoesNotConsumeCallbackAndRejectsUntrustedOrigins() throws {
+        let attempt = try OAuthAttempt(redirectURI: URL(string: "http://127.0.0.1:54321/callback")!, hostID: "fixture", provider: .grok)
+        let headers = ["origin": "https://accounts.x.ai", "access-control-request-method": "GET", "access-control-request-private-network": "true"]
+        let preflight = try LoopbackRequest.reply(method: "OPTIONS", target: "/callback", headers: headers, attempt: attempt)
+        XCTAssertTrue(preflight.preflight); XCTAssertNil(preflight.callback)
+        XCTAssertTrue(preflight.response.contains("Access-Control-Allow-Private-Network: true"))
+        let callback = try LoopbackRequest.reply(method: "GET", target: "/callback?state=\(attempt.state)&code=fixture", headers: ["origin": "https://accounts.x.ai"], attempt: attempt)
+        XCTAssertFalse(callback.preflight); XCTAssertNotNil(callback.callback)
+        XCTAssertThrowsError(try LoopbackRequest.reply(method: "GET", target: "/callback?state=wrong&code=fixture", headers: [:], attempt: attempt))
+        XCTAssertThrowsError(try LoopbackRequest.reply(method: "GET", target: "/callback?state=\(attempt.state)&code=fixture", headers: ["origin": "https://attacker.example"], attempt: attempt))
+        XCTAssertThrowsError(try LoopbackRequest.reply(method: "OPTIONS", target: "/callback", headers: ["origin": "https://accounts.x.ai", "access-control-request-method": "POST"], attempt: attempt))
+    }
+    func testRealGrokES256SignatureIsVerifiedAndAlgorithmCannotBeSubstituted() throws {
+        let key = P256.Signing.PrivateKey()
+        let bytes = key.publicKey.x963Representation
+        let jwks: [String: Any] = ["keys": [["kid": "grok-fixture", "kty": "EC", "crv": "P-256", "alg": "ES256", "x": bytes[1..<33].base64URL, "y": bytes[33..<65].base64URL]]]
+        let claims: [String: Any] = ["iss": ProviderAuth.issuer(.grok), "aud": ProviderAuth.grokClientID, "sub": "verified", "nonce": "fixture", "iat": Date.now.timeIntervalSince1970, "exp": Date.now.addingTimeInterval(3600).timeIntervalSince1970]
+        let header = try JSONSerialization.data(withJSONObject: ["alg": "ES256", "kid": "grok-fixture"]).base64URL
+        let payload = try JSONSerialization.data(withJSONObject: claims).base64URL
+        let message = header + "." + payload
+        let signature = try key.signature(for: Data(message.utf8)).rawRepresentation.base64URL
+        let token = message + "." + signature
+        XCTAssertEqual(try IdentityVerifier.verify(token, jwks: jwks, issuer: ProviderAuth.issuer(.grok), audience: ProviderAuth.grokClientID, nonce: "fixture", algorithm: "ES256")["sub"] as? String, "verified")
+        var forged = claims; forged["sub"] = "impostor"
+        XCTAssertThrowsError(try IdentityVerifier.verify(header + "." + JSONSerialization.data(withJSONObject: forged).base64URL + "." + signature, jwks: jwks, issuer: ProviderAuth.issuer(.grok), audience: ProviderAuth.grokClientID, nonce: "fixture", algorithm: "ES256"))
+        XCTAssertThrowsError(try IdentityVerifier.verify(token, jwks: jwks, issuer: ProviderAuth.issuer(.grok), audience: ProviderAuth.grokClientID, nonce: "fixture"))
+    }
+    func testGrokUserAndTeamPrincipalsRemainDifferentConnections() throws {
+        let user = try ProviderAuth.grokIdentity(["sub": "user", "principal_type": "User", "principal_id": "personal"])
+        let team = try ProviderAuth.grokIdentity(["sub": "user", "principal_type": "Team", "principal_id": "work"])
+        XCTAssertEqual(user.subject, team.subject)
+        XCTAssertNotEqual(user.accountID, team.accountID)
+        XCTAssertThrowsError(try ProviderAuth.grokIdentity(["sub": "user", "principal_type": "Other", "principal_id": "work"]))
+        XCTAssertThrowsError(try ProviderAuth.grokIdentity(["sub": "user", "principal_type": "Team"]))
     }
 }

@@ -18,7 +18,7 @@ final class AccountStore: ObservableObject {
     private let renewer: (AccountCredential) async throws -> AccountCredential
     init(location: URL? = nil, vault: any CredentialStorage = CredentialVault(), integratesWithSystem: Bool = true,
          fetcher: @escaping (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { try await UsageClient.fetch(account: $0, credential: $1) },
-         renewer: @escaping (AccountCredential) async throws -> AccountCredential = { try await OpenAIAuth.refresh($0) }) {
+         renewer: @escaping (AccountCredential) async throws -> AccountCredential = { try await ProviderAuth.refresh($0) }) {
         self.location = location ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Eyeballs/accounts.json")
         self.integratesWithSystem = integratesWithSystem
         self.vault = vault; self.fetcher = fetcher; self.renewer = renewer
@@ -86,13 +86,25 @@ final class AccountStore: ObservableObject {
         refreshing.insert(id); defer { refreshing.remove(id) }
         do {
             guard var credential = try vault.load(id: id) else { throw UsageError.signedOut }
+            var renewed = false
             if credential.expiresAt < .now.addingTimeInterval(60) {
                 credential = try await renewer(credential)
+                renewed = true
                 guard !isDemo, revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return }
                 // Save rotating tokens before the usage request, even if that later request fails.
                 try vault.save(credential, id: id)
             }
-            let snapshot = try await fetcher(account, credential)
+            let snapshot: UsageSnapshot
+            do { snapshot = try await fetcher(account, credential) }
+            catch UsageError.usageAccessDenied where !renewed {
+                // One refresh can recover a revoked/expired access token. If the fresh
+                // token is also denied, retain the connection and report permission
+                // failure; only a terminal refresh error requests another sign-in.
+                credential = try await renewer(credential)
+                guard !isDemo, revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return }
+                try vault.save(credential, id: id)
+                snapshot = try await fetcher(account, credential)
+            }
             guard !isDemo, revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return }
             accounts[index].snapshot = snapshot; accounts[index].issue = nil; accounts[index].needsLogin = false
         } catch {

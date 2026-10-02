@@ -121,4 +121,70 @@ final class AccountStoreTests: XCTestCase {
         try store.remove(account.id)
         XCTAssertEqual(WidgetCache.read(), original)
     }
+    func testDeniedAccessRefreshesOnceAndSavesRotatingTokenBeforeUsageRetry() async throws {
+        let vault = MemoryVault(); let original = Fixture.credential("a"); let account = Fixture.account(original)
+        var renewals = 0; var reads = 0
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, credential in
+            reads += 1
+            if reads == 1 { throw UsageError.usageAccessDenied }
+            XCTAssertEqual(vault.values[account.id]?.accessToken, "renewed")
+            XCTAssertEqual(credential.refreshToken, "rotated")
+            var snapshot = account.snapshot!; snapshot.windows[0].usedPercent = 42; return snapshot
+        }, renewer: { credential in
+            renewals += 1
+            var new = credential; new.accessToken = "renewed"; new.refreshToken = "rotated"; return new
+        })
+        try store.connect(account, credential: original)
+        await store.refresh(account.id)
+        XCTAssertEqual(renewals, 1); XCTAssertEqual(reads, 2)
+        XCTAssertFalse(store.accounts[0].needsLogin); XCTAssertNil(store.accounts[0].issue)
+        XCTAssertEqual(store.accounts[0].snapshot?.windows[0].safePercent, 42)
+    }
+    func testFreshPermissionDenialPreservesConnectionAndDoesNotLoopSignIn() async throws {
+        let vault = MemoryVault(); let credential = Fixture.credential("a"); let account = Fixture.account(credential)
+        var renewals = 0; var reads = 0
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, _ in
+            reads += 1; throw UsageError.usageAccessDenied
+        }, renewer: { old in renewals += 1; var new = old; new.refreshToken = "rotated"; return new })
+        try store.connect(account, credential: credential); await store.refresh(account.id)
+        XCTAssertEqual(renewals, 1); XCTAssertEqual(reads, 2)
+        XCTAssertFalse(store.accounts[0].needsLogin)
+        XCTAssertEqual(store.accounts[0].issue, UsageError.usageAccessDenied.localizedDescription)
+        XCTAssertEqual(store.accounts[0].snapshot, account.snapshot)
+        XCTAssertEqual(vault.values[account.id]?.refreshToken, "rotated")
+    }
+    func testTerminalRefreshFailureRequiresReconnectForOnlyAffectedAccount() async throws {
+        let vault = MemoryVault(); let a = Fixture.credential("a"), b = Fixture.credential("b")
+        let first = Fixture.account(a), second = Fixture.account(b)
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { account, credential in
+            if credential.subject == a.subject { throw UsageError.usageAccessDenied }
+            return account.snapshot!
+        }, renewer: { _ in throw UsageError.signedOut })
+        try store.connect(first, credential: a); try store.connect(second, credential: b); await store.refreshAll()
+        XCTAssertTrue(store.accounts[0].needsLogin); XCTAssertFalse(store.accounts[1].needsLogin)
+        XCTAssertEqual(vault.values[second.id], b)
+    }
+    func testTwoAccountsPerProviderKeepTheirOwnCredentials() throws {
+        let vault = MemoryVault(); let store = store(vault: vault)
+        var expected: [UUID: AccountCredential] = [:]
+        for provider in Provider.allCases {
+            for name in ["personal", "work"] {
+                var credential = Fixture.credential(name)
+                credential.provider = provider; credential.issuer = ProviderAuth.issuer(provider)
+                credential.clientID = ProviderAuth.clientID(provider)
+                let account = Fixture.account(credential, label: provider.name + " " + name)
+                try store.connect(account, credential: credential); expected[account.id] = credential
+            }
+        }
+        XCTAssertEqual(store.accounts.count, 6)
+        XCTAssertEqual(vault.values, expected)
+        let restored = self.store(vault: vault)
+        XCTAssertEqual(restored.accounts, store.accounts)
+        let removed = try XCTUnwrap(restored.accounts.first { $0.provider == .claude })
+        try restored.remove(removed.id); expected[removed.id] = nil
+        XCTAssertEqual(vault.values, expected)
+        XCTAssertEqual(restored.accounts.filter { $0.provider == .claude }.count, 1)
+        XCTAssertEqual(restored.accounts.filter { $0.provider == .codex }.count, 2)
+        XCTAssertEqual(restored.accounts.filter { $0.provider == .grok }.count, 2)
+    }
 }

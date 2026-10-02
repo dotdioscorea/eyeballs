@@ -1,7 +1,7 @@
 import XCTest
 
 final class EyeballsUITests: XCTestCase {
-    func testProviderSelectionCancellationAndHonestAvailability() {
+    func testAllProviderConnectionsAndCancellation() {
         let app = XCUIApplication(); app.launch()
         XCTAssertTrue(app.buttons["connect-first"].waitForExistence(timeout: 10))
         app.buttons["connect-first"].tap()
@@ -11,8 +11,11 @@ final class EyeballsUITests: XCTestCase {
         app.buttons["Cancel"].tap()
         XCTAssertTrue(app.buttons["connect-claude"].waitForExistence(timeout: 5))
         app.buttons["connect-claude"].tap()
-        XCTAssertTrue(app.staticTexts["A supported iPhone connection is not available yet."].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Continue with Claude"].exists)
+        XCTAssertTrue(app.buttons["Continue with Claude"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["independent-connections"].exists)
+        app.buttons["Cancel"].tap()
+        app.buttons["connect-grok"].tap()
+        XCTAssertTrue(app.buttons["Continue with Grok"].waitForExistence(timeout: 5))
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["connect-first"].exists)
     }
@@ -50,5 +53,26 @@ final class EyeballsUITests: XCTestCase {
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["connect-first"].waitForExistence(timeout: 5))
         // This verifies presentation and cancellation; real authorization is a separate release check.
+    }
+    func testClaudeAndGrokPresentProviderLoginPages() {
+        let app = XCUIApplication(); app.launch()
+        app.buttons["connect-first"].tap()
+        for provider in ["Claude", "Grok"] {
+            app.buttons["connect-" + provider.lowercased()].tap()
+            app.buttons["Continue with " + provider].tap()
+            let prompt = app.alerts.firstMatch
+            if prompt.waitForExistence(timeout: 3), prompt.buttons["Continue"].exists { prompt.buttons["Continue"].tap() }
+            let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+            XCTAssertTrue(service.buttons["Close"].waitForExistence(timeout: 15))
+            let address = service.buttons["URL"].value as? String ?? ""
+            XCTAssertTrue(provider == "Claude" ? address.contains("claude.") : address.contains("x.ai"), address)
+            XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 15))
+            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screenshot.name = provider + " provider login — no credentials entered"
+            screenshot.lifetime = .keepAlways; add(screenshot)
+            service.buttons["Close"].tap()
+            XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+            app.buttons["Cancel"].tap()
+        }
     }
 }
