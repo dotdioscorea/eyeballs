@@ -154,7 +154,10 @@ struct AddAccountView: View {
                         Button { selected = AgentAccount(provider: provider) } label: {
                             HStack {
                                 ProviderLogo(provider: provider, color: provider.color, size: 24)
-                                Text(provider.name).font(.body.weight(.semibold))
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(provider.name).font(.body.weight(.semibold))
+                                    if provider == .gemini { Text(provider.subtitle).font(.caption).foregroundStyle(.secondary) }
+                                }
                                 Spacer(); Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
                             }.panel()
                         }.buttonStyle(.plain).accessibilityIdentifier("connect-\(provider.rawValue)")

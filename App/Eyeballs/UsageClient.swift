@@ -71,6 +71,9 @@ struct UsageClient {
         case .claude:
             expectedIssuer = "https://platform.claude.com"
             endpoint = "https://api.anthropic.com/api/oauth/usage"
+        case .gemini:
+            expectedIssuer = GeminiAuth.issuer
+            endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
         case .grok:
             expectedIssuer = "https://auth.x.ai"
             endpoint = "https://cli-chat-proxy.grok.com/v1/billing?format=credits"
@@ -96,7 +99,14 @@ struct UsageClient {
         }
     }
     private static func fetchSnapshot(account: AgentAccount, credential: AccountCredential) async throws -> UsageSnapshot {
-        let raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: .usageAccessDenied)
+        var tier: [String: Any]?
+        let raw: Any
+        if account.provider == .gemini {
+            let assist = try await geminiRequest("loadCodeAssist", body: ["metadata": ["ideType": "IDE_UNSPECIFIED", "platform": "PLATFORM_UNSPECIFIED", "pluginType": "GEMINI"]], credential: credential)
+            tier = assist["paidTier"] as? [String: Any] ?? assist["currentTier"] as? [String: Any]
+            let project = try GeminiAuth.quotaProject(assist)
+            raw = try await geminiRequest("retrieveUserQuota", body: ["project": project], credential: credential)
+        } else { raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: .usageAccessDenied) }
         var parsed: UsageSnapshot?
         defer { Diagnostics.record(.usageParsed, provider: account.provider, parsing: .make(provider: account.provider, raw: raw, snapshot: parsed)) }
         var snapshot: UsageSnapshot
@@ -104,6 +114,7 @@ struct UsageClient {
         case .codex: snapshot = try UsageParser.codex(raw)
         case .claude: snapshot = try UsageParser.claude(raw)
         case .grok: snapshot = try UsageParser.grok(raw)
+        case .gemini: snapshot = try UsageParser.gemini(raw); snapshot.plan = tier?["name"] as? String ?? tier?["id"] as? String
         }
         parsed = snapshot
         if account.provider == .codex {
@@ -120,6 +131,16 @@ struct UsageClient {
         snapshot.source = "\(account.provider.name) API"
         return snapshot
     }
+    static func geminiRequest(_ method: String, body: [String: Any], credential: AccountCredential) async throws -> [String: Any] {
+        guard ["loadCodeAssist", "retrieveUserQuota"].contains(method) else { throw UsageError.invalidResponse }
+        var request = try request(provider: .gemini, credential: credential)
+        request.url = URL(string: "https://cloudcode-pa.googleapis.com/v1internal:" + method)!
+        request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        guard let object = try await ProviderHTTP.json(request, unauthorizedError: .usageAccessDenied) as? [String: Any] else { throw UsageError.invalidResponse }
+        return object
+    }
+
 }
 
 enum UsageParser {
@@ -207,6 +228,23 @@ enum UsageParser {
         }
         let balance = cent(config["prepaidBalance"]).map { String(format: "$%.2f", $0 / 100) }
         return UsageSnapshot(windows: windows, plan: ((config["subscriptionTier"] ?? object["subscriptionTier"]) as? String)?.replacingOccurrences(of: "_", with: " ").capitalized, creditBalance: balance, billingEndsAt: date(config["billingPeriodEnd"]))
+    }
+    static func gemini(_ raw: Any) throws -> UsageSnapshot {
+        guard let object = raw as? [String: Any], let buckets = object["buckets"] as? [[String: Any]] else { throw UsageError.invalidResponse }
+        var seen = Set<String>()
+        let windows = buckets.enumerated().compactMap { index, bucket -> UsageWindow? in
+            let model = bucket["modelId"] as? String ?? "Quota"
+            let token = bucket["tokenType"] as? String ?? ""
+            let id = model + ":" + token
+            guard seen.insert(id).inserted else { return nil }
+            var used: Double?
+            if let fraction = percent(bucket["remainingFraction"]), fraction <= 1 { used = (1 - fraction) * 100 }
+            // A reported remaining amount of zero establishes exhaustion even if
+            // proto JSON omitted the zero-valued fraction. Absence remains unknown.
+            else if bucket["remainingFraction"] == nil, bucket["remainingAmount"] as? String == "0" { used = 100 }
+            return UsageWindow(id: id, title: model + (token.isEmpty ? "" : " · " + token), usedPercent: used, resetsAt: date(bucket["resetTime"]))
+        }
+        return UsageSnapshot(windows: windows)
     }
     static func cent(_ raw: Any?) -> Double? {
         guard let object = raw as? [String: Any] else { return nil }

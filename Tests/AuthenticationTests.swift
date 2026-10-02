@@ -6,6 +6,27 @@ import CryptoKit
 
 final class AuthenticationTests: XCTestCase {
     let callback = URL(string: "http://127.0.0.1:1455/auth/callback")!
+    func testGeminiUsesGoogleNativeOAuthWithPKCEAndVerifiedIdentity() throws {
+        XCTAssertThrowsError(try GeminiAuth.quotaProject([:]))
+        XCTAssertThrowsError(try GeminiAuth.quotaProject(["cloudaicompanionProject": NSNull()]))
+        XCTAssertEqual(try GeminiAuth.quotaProject(["cloudaicompanionProject": "managed-project"]), "managed-project")
+        let redirect = URL(string: "http://127.0.0.1:43210/oauth2callback")!
+        let attempt = try OAuthAttempt(redirectURI: redirect, hostID: "fixture", provider: .gemini)
+        let url = attempt.authorizationURL
+        XCTAssertEqual(url.host, "accounts.google.com")
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!
+        XCTAssertEqual(query.first { $0.name == "client_id" }?.value, GeminiAuth.clientID)
+        XCTAssertEqual(query.first { $0.name == "access_type" }?.value, "offline")
+        XCTAssertEqual(query.first { $0.name == "code_challenge_method" }?.value, "S256")
+        XCTAssertFalse(url.absoluteString.contains(attempt.verifier))
+        XCTAssertThrowsError(try GeminiAuth.identity(["email": "unverified@example.com"]))
+        XCTAssertNil(try GeminiAuth.identity(["id": "a", "email": "unverified@example.com"]).email)
+        XCTAssertEqual(try GeminiAuth.identity(["id": "a", "email": "verified@example.com", "verified_email": true]).email, "verified@example.com")
+        var credential = Fixture.credential("google"); credential.provider = .gemini; credential.issuer = GeminiAuth.issuer
+        let request = try UsageClient.request(provider: .gemini, credential: credential)
+        XCTAssertEqual(request.url?.host, "cloudcode-pa.googleapis.com")
+        XCTAssertThrowsError(try UsageClient.request(provider: .codex, credential: credential))
+    }
     func testCodexLoginRequestsQuotaCompatibleNativeCredentialsAndPKCE() throws {
         let first = try OAuthAttempt(redirectURI: callback, hostID: "urn:uuid:phone")
         let second = try OAuthAttempt(redirectURI: callback, hostID: "urn:uuid:phone")

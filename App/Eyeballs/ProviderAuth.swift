@@ -6,13 +6,13 @@ enum ProviderAuth {
     static let claudeClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     static let grokClientID = "b1a00492-073a-47ea-816f-4c329264a828"
     static func clientID(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID }
+        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID; case .gemini: return GeminiAuth.clientID }
     }
     static func issuer(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai" }
+        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai"; case .gemini: return GeminiAuth.issuer }
     }
     static func authorizationEndpoint(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize" }
+        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize"; case .gemini: return "https://accounts.google.com/o/oauth2/v2/auth" }
     }
     static func scopes(_ provider: Provider) -> String {
         switch provider {
@@ -21,9 +21,11 @@ enum ProviderAuth {
         // The Grok public client authorizes billing through its CLI proxy scopes.
         // It does not allow a separate billing:read scope.
         case .grok: return "openid profile email offline_access grok-cli:access api:access"
+        case .gemini: return GeminiAuth.scopes
         }
     }
     static func exchange(callback: URL, attempt: OAuthAttempt) async throws -> AccountCredential {
+        if attempt.provider == .gemini { return try await GeminiAuth.exchange(callback: callback, attempt: attempt) }
         if attempt.provider == .codex { return try await OpenAIAuth.exchange(callback: callback, attempt: attempt) }
         let verified = try attempt.validateCallback(callback)
         guard verified.clientID == clientID(attempt.provider) else { throw AuthError.invalidIdentity }
@@ -34,6 +36,7 @@ enum ProviderAuth {
         return try await credential(raw, provider: attempt.provider, previous: attempt.previous, hostID: attempt.hostID, nonce: attempt.nonce)
     }
     static func refresh(_ previous: AccountCredential) async throws -> AccountCredential {
+        if previous.provider == .gemini { return try await GeminiAuth.refresh(previous) }
         if previous.provider == .codex { return try await OpenAIAuth.refresh(previous) }
         guard previous.issuer == issuer(previous.provider), previous.clientID == clientID(previous.provider),
               let refresh = previous.refreshToken, !refresh.isEmpty else { throw UsageError.signedOut }

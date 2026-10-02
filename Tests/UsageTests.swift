@@ -81,6 +81,21 @@ final class UsageTests: XCTestCase {
         let summary = try UsageParser.codex(["rate_limit": [:], "rate_limit_reset_credits": ["available_count": 3]])
         XCTAssertEqual(summary.bankedResets?.first?.count, 3)
     }
+    func testGeminiQuotasKeepModelBucketsIndependentAndHandleExhaustion() throws {
+        let raw: [String: Any] = ["buckets": [
+            ["modelId": "gemini-pro", "remainingFraction": 0.75, "remainingAmount": "75", "resetTime": "2026-10-03T07:00:00Z"],
+            ["modelId": "gemini-flash", "remainingAmount": "0", "resetTime": "2026-10-03T07:00:00Z"],
+            ["modelId": "gemini-unknown", "resetTime": "2026-10-03T07:00:00Z"],
+            ["modelId": "gemini-invalid", "remainingFraction": 1.2]
+        ]]
+        let value = try UsageParser.gemini(raw)
+        XCTAssertEqual(value.windows.map(\.safePercent), [25, 100, nil, nil])
+        XCTAssertTrue(value.windows.allSatisfy { $0.duration == nil })
+        XCTAssertEqual(AgentAccount(provider: .gemini, snapshot: value).readings().map(\.percent), [75, 0])
+        XCTAssertThrowsError(try UsageParser.gemini([:]))
+        let malformed = try UsageParser.gemini(["buckets": [["modelId": "boolean", "remainingFraction": true]]])
+        XCTAssertNil(malformed.windows.first?.safePercent)
+    }
     func testResetMarksStaleWithoutInventingZero() {
         let now = Date(timeIntervalSince1970: 1790931600)
         let window = UsageWindow(id: "window", title: "Window", usedPercent: 97, resetsAt: now.addingTimeInterval(-1), duration: 18000)
