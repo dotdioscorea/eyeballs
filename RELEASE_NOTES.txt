@@ -1,15 +1,6 @@
-Build 5
-
-Fixed Grok showing unknown remaining usage when the API omits its zero-valued percentage field. Missing or invalid values still remain unknown.
-
-Fixed missing App Group capabilities in the signed TestFlight package, which prevented widgets from reading saved accounts. Uploads now verify the actual app and widget signatures.
-
-Added an Account rows widget: up to six accounts in a medium widget or twelve in a large widget, selectable row counts, account selection, metrics and sorting. Tap an account row to open its page.
-
-Weekly time is enabled by default. Compact mode uses vertically stacked bars with labels above and percentages on the right. Controls and cards take less space. Updated timestamps change by the minute.
-
-Provider logos are back, using provider colours by default. Override colours in an account’s Display settings. The tab bar is hidden on account and settings detail pages.
-
-Codex banked reset counts and available expiry dates are shown on account pages. Unreported reset information stays unavailable.
-
-Debug bundles now include known usage field types, parsing decisions, request categories and anonymous account labels. They exclude credentials, identities, names and raw provider responses. Export remains optional and nothing is sent automatically.
+• Add Cursor sign-in and usage.
+• Add square tiles and saved drag ordering.
+• Show weekly usage in ring centres.
+• Add reset events, banked detection dates and configurable reminders.
+• Add line charts, heatmaps and account comparisons.
+• Offer debug reports when provider responses cannot be read.

@@ -1,5 +1,6 @@
 import Foundation
 import CoreFoundation
+import CryptoKit
 
 enum UsageError: LocalizedError {
     case signedOut, usageAccessDenied, unavailable, throttled(Date), invalidResponse, wrongAccount, unsupportedLogin
@@ -221,7 +222,9 @@ enum UsageParser {
             guard credit["status"] as? String == "available" else { return nil }
             let expiry = date(credit["expires_at"])
             guard expiry.map({ $0 > now }) ?? true else { return nil }
-            return BankedReset(id: "banked-\(index)", title: String((credit["title"] as? String ?? "Usage reset").prefix(100)), expiresAt: expiry)
+            let identity = credit["id"] as? String ?? "\(credit["title"] as? String ?? "reset")-\(expiry?.timeIntervalSince1970 ?? 0)-\(index)"
+            let key = SHA256.hash(data: Data(identity.utf8)).prefix(12).map { String(format: "%02x", $0) }.joined()
+            return BankedReset(id: "banked-" + key, title: String((credit["title"] as? String ?? "Usage reset").prefix(100)), expiresAt: expiry)
         }.sorted { ($0.expiresAt ?? .distantFuture) < ($1.expiresAt ?? .distantFuture) }
     }
     static func claude(_ raw: Any) throws -> UsageSnapshot {
@@ -255,7 +258,7 @@ enum UsageParser {
         let title = duration.map { $0 >= 6 * 86400 && $0 <= 8 * 86400 ? "Weekly credits" : "Current credits" } ?? "Current credits"
         var windows = [UsageWindow(id: "credits", title: title, usedPercent: used, resetsAt: end, duration: duration)]
         if let cap = cent(config["onDemandCap"]), cap > 0, let spent = cent(config["onDemandUsed"]) {
-            windows.append(UsageWindow(id: "on-demand", title: "On-demand", usedPercent: spent / cap * 100, resetsAt: date(config["billingPeriodEnd"])))
+            windows.append(UsageWindow(id: "on-demand", title: "On-demand", usedPercent: spent / cap * 100, resetsAt: date(config["billingPeriodEnd"]), usedAmount: spent / 100, limitAmount: cap / 100, amountUnit: "USD"))
         }
         for value in config["productUsage"] as? [[String: Any]] ?? [] {
             guard let product = value["product"] as? String, !product.isEmpty, let amount = percent(value["usagePercent"]) else { continue }
@@ -308,7 +311,7 @@ enum UsageParser {
                 if let remaining = percent(quota["percent_remaining"]), remaining <= 100 { used = 100 - remaining }
                 else if quota["percent_remaining"] == nil, let total = number(quota["entitlement"]), total > 0,
                         let left = number(quota["quota_remaining"]) { used = max(0, 100 - left / total * 100) }
-                windows.append(UsageWindow(id: id, title: label, usedPercent: used, resetsAt: date(quota["quota_reset_at"]) ?? reset))
+                windows.append(UsageWindow(id: id, title: label, usedPercent: used, resetsAt: date(quota["quota_reset_at"]) ?? reset, usedAmount: number(quota["credits_used"]) ?? number(quota["used"]), limitAmount: number(quota["entitlement"]), amountUnit: label))
             } else if let total = number(allocations[id]), total > 0, let left = number(legacy[id]) {
                 windows.append(UsageWindow(id: id, title: label, usedPercent: max(0, 100 - left / total * 100), resetsAt: reset))
             }

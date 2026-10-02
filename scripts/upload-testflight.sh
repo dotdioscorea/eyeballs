@@ -10,7 +10,7 @@ test -d build/Eyeballs.xcarchive || { echo 'Run scripts/archive.sh first'; exit 
 mkdir -p .release artifacts
 python3 - <<'PY'
 import os,plistlib,pathlib
-options={'destination':'export','method':'app-store-connect','signingStyle':'automatic','teamID':os.environ['APPLE_TEAM_ID'],'manageAppVersionAndBuildNumber':False,'testFlightInternalTestingOnly':True,'uploadSymbols':True}
+options={'destination':'export','method':'app-store-connect','signingStyle':'automatic','teamID':os.environ['APPLE_TEAM_ID'],'manageAppVersionAndBuildNumber':False,'testFlightInternalTestingOnly':os.environ.get('TESTFLIGHT_INTERNAL_ONLY', '0') == '1','uploadSymbols':True}
 pathlib.Path('.release/export.plist').write_bytes(plistlib.dumps(options))
 PY
 xcodebuild -exportArchive -archivePath build/Eyeballs.xcarchive \

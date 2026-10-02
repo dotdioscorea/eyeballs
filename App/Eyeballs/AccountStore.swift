@@ -7,6 +7,13 @@ final class AccountStore: ObservableObject {
     @Published private(set) var accounts: [AgentAccount] = []
     @Published private(set) var histories: [UUID: [UsageHistorySample]] = [:]
     private let historyStore: UsageHistoryStore
+    @Published private(set) var events: [AccountEvent] = []
+    @Published var notificationAccountID: UUID?
+    @Published var reportAccountID: UUID?
+    @Published var notificationRules = UserDefaults.standard.data(forKey: "notification-rules").flatMap { try? JSONDecoder().decode(ResetNotificationRules.self, from: $0) } ?? ResetNotificationRules()
+    private let eventFile: AccountEventFile
+    private var loadedEvents = false
+    private var notificationGeneration = 0
     @Published var refreshing: Set<UUID> = []
     @Published var error: String?
     @Published var notificationsEnabled = UserDefaults.standard.bool(forKey: "reset-notifications")
@@ -26,6 +33,7 @@ final class AccountStore: ObservableObject {
         if location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("EyeballsUITest/accounts.json") }
         #endif
         self.location = selectedLocation ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Eyeballs/accounts.json")
+        self.eventFile = AccountEventFile(location: self.location.deletingLastPathComponent().appendingPathComponent("events.json"))
         self.historyStore = UsageHistoryStore(directory: self.location.deletingLastPathComponent().appendingPathComponent("history"))
         self.integratesWithSystem = integratesWithSystem
         self.vault = vault; self.fetcher = fetcher; self.renewer = renewer
@@ -38,6 +46,7 @@ final class AccountStore: ObservableObject {
                 loadedAccounts = true
             } else { self.error = "Your saved accounts could not be read. Your secure sessions have been kept." }
         }
+        do { events = try eventFile.read(); loadedEvents = true } catch { self.error = "Saved events could not be read." }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--clear-widget-fixture"), !accounts.isEmpty,
            accounts.allSatisfy({ $0.snapshot?.source == "UI Test Fixture" }) { accounts = []; persist() }
@@ -45,6 +54,20 @@ final class AccountStore: ObservableObject {
         if SimulatorFixtures.widgetEnabled { persist() }
         #endif
         for account in accounts { histories[account.id] = historyStore.read(account.id); if let snapshot = account.snapshot { recordHistory(snapshot, id: account.id) } }
+        #if DEBUG
+        if SimulatorFixtures.enabled {
+            let fresh = SimulatorFixtures.accounts()
+            for index in accounts.indices { if let sample = fresh.first(where: { $0.id == accounts[index].id }) { accounts[index].snapshot = sample.snapshot } }
+            for account in accounts {
+                histories[account.id] = (0..<72).map { index in
+                    var windows = account.snapshot!.windows
+                    windows[0].usedPercent = Double((index * 7) % 100)
+                    windows[1].usedPercent = min(100, Double(index) * 0.55 + (account.snapshot?.windows[1].safePercent ?? 0) * 0.6)
+                    return UsageHistorySample(date: Date.now.addingTimeInterval(Double(index - 72) * 3600), windows: windows)
+                }
+            }
+        }
+        #endif
         if integratesWithSystem, loadedAccounts { publishWidgets() }
     }
     private func recordHistory(_ snapshot: UsageSnapshot, id: UUID) {
@@ -67,13 +90,14 @@ final class AccountStore: ObservableObject {
         if let existing {
             var merged = accounts[existing]
             try vault.save(credential, id: merged.id)
-            merged.snapshot = account.snapshot; merged.needsLogin = false; merged.issue = nil
+            if let snapshot = account.snapshot { merged.snapshot = observe(snapshot, previous: merged.snapshot, id: merged.id) }; merged.needsLogin = false; merged.issue = nil; merged.needsReport = nil
             revisions[merged.id, default: 0] += 1; cooldowns[merged.id] = nil
             accounts[existing] = merged
             if let snapshot = merged.snapshot { recordHistory(snapshot, id: merged.id) }
         } else {
             try vault.save(credential, id: account.id)
-            var connected = account; connected.needsLogin = false; connected.issue = nil
+            var connected = account; connected.needsLogin = false; connected.issue = nil; connected.needsReport = nil
+            if let snapshot = connected.snapshot { connected.snapshot = observe(snapshot, previous: nil, id: connected.id) }
             revisions[account.id, default: 0] += 1
             accounts.append(connected)
             if let snapshot = connected.snapshot { recordHistory(snapshot, id: connected.id) }
@@ -87,13 +111,34 @@ final class AccountStore: ObservableObject {
         accounts[index].notes = account.notes; accounts[index].renewalReminder = account.renewalReminder
         accounts[index].favorite = account.favorite; accounts[index].display = account.display; accounts[index].colorHex = account.colorHex; persist()
     }
+    func reorder(_ ids: [UUID]) {
+        let ranks = Dictionary(uniqueKeysWithValues: Array(Set(ids)).map { ($0, ids.firstIndex(of: $0)!) })
+        let ordered = accounts.filter { ranks[$0.id] != nil }.sorted { ranks[$0.id]! < ranks[$1.id]! }
+        var next = ordered.makeIterator()
+        accounts = accounts.map { ranks[$0.id] == nil ? $0 : next.next()! }
+        persist()
+    }
+    func move(_ id: UUID, to target: UUID) {
+        guard let from = accounts.firstIndex(where: { $0.id == id }), let to = accounts.firstIndex(where: { $0.id == target }), from != to else { return }
+        let account = accounts.remove(at: from); accounts.insert(account, at: to); persist()
+    }
     func remove(_ id: UUID) throws {
         try vault.delete(id: id)
         try historyStore.remove(id); histories[id] = nil
         revisions[id, default: 0] += 1
         accounts.removeAll { $0.id == id }
         cooldowns[id] = nil
-        if integratesWithSystem { UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: notificationIDs(id)) }
+        events.removeAll { $0.accountID == id }; saveEvents()
+        if integratesWithSystem {
+            let center = UNUserNotificationCenter.current()
+            center.removePendingNotificationRequests(withIdentifiers: notificationIDs(id))
+            Task {
+                let pending = await center.pendingNotificationRequests()
+                center.removePendingNotificationRequests(withIdentifiers: pending.filter { $0.content.userInfo["accountID"] as? String == id.uuidString }.map(\.identifier))
+                let delivered = await center.deliveredNotifications()
+                center.removeDeliveredNotifications(withIdentifiers: delivered.filter { $0.request.content.userInfo["accountID"] as? String == id.uuidString }.map { $0.request.identifier })
+            }
+        }
         persist()
     }
     func reloadAccountsIfNeeded() {
@@ -160,12 +205,18 @@ final class AccountStore: ObservableObject {
             }
             guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return }
             recordHistory(snapshot, id: id)
-            accounts[index].snapshot = snapshot; accounts[index].issue = nil; accounts[index].needsLogin = false
+            accounts[index].snapshot = observe(snapshot, previous: accounts[index].snapshot, id: id); accounts[index].issue = nil; accounts[index].needsLogin = false; accounts[index].needsReport = nil
             if integratesWithSystem { Diagnostics.record(.refreshSucceeded, provider: account.provider) }
         } catch {
             guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return }
             accounts[index].issue = error.localizedDescription
             if integratesWithSystem { Diagnostics.record(.refreshFailed, provider: account.provider, failure: .category(error)) }
+            if case UsageError.invalidResponse = error {
+                if accounts[index].needsReport != true {
+                    accounts[index].needsReport = true; reportAccountID = id
+                    appendEvents([AccountEvent(id: "\(id):parse:\(Date.now.timeIntervalSince1970)", accountID: id, kind: .parsingFailure, date: .now, detectedAt: .now)])
+                }
+            }
             if case UsageError.signedOut = error { accounts[index].needsLogin = true }
             if case UsageError.throttled(let until) = error { cooldowns[id] = until }
         }
@@ -187,24 +238,53 @@ final class AccountStore: ObservableObject {
         await scheduleNotifications()
     }
     private func notificationIDs(_ id: UUID) -> [String] { (0..<12).map { "reset-\(id)-\($0)" } }
+    func saveNotificationRules() {
+        if let data = try? JSONEncoder().encode(notificationRules) { UserDefaults.standard.set(data, forKey: "notification-rules") }
+        Task { await scheduleNotifications() }
+    }
+    private func observe(_ snapshot: UsageSnapshot, previous: UsageSnapshot?, id: UUID) -> UsageSnapshot {
+        let result = EventDetection.compare(accountID: id, previous: previous, current: snapshot)
+        appendEvents(result.events)
+        return result.snapshot
+    }
+    private func saveEvents() {
+        guard loadedEvents else { return }
+        do { try eventFile.write(events) } catch { self.error = "Events could not be saved." }
+    }
+    private func appendEvents(_ additions: [AccountEvent]) {
+        guard loadedEvents else { return }
+        let ids = Set(events.map(\.id))
+        let fresh = additions.filter { !ids.contains($0.id) }
+        events.append(contentsOf: fresh)
+        events = Array(events.filter { $0.detectedAt > Date.now.addingTimeInterval(-90 * 86400) }.sorted { $0.detectedAt < $1.detectedAt }.suffix(2000))
+        saveEvents()
+        if integratesWithSystem, notificationsEnabled {
+            for event in fresh where notificationRules.announces(event.kind) {
+                guard let account = accounts.first(where: { $0.id == event.accountID }) else { continue }
+                // The reset-date reminder already covers normal resets. Do not send it twice.
+                if event.kind == .weeklyReset { continue }
+                let content = UNMutableNotificationContent()
+                content.title = "\(account.title): \(event.kind.title.lowercased())"
+                content.body = event.detail.isEmpty ? "Open Eyeballs for details." : event.detail
+                content.sound = .default; content.userInfo = ["accountID": account.id.uuidString]
+                Task { try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "observed-" + event.id, content: content, trigger: nil)) }
+            }
+        }
+    }
     private func scheduleNotifications() async {
         guard integratesWithSystem, notificationsEnabled else { return }
+        notificationGeneration += 1; let generation = notificationGeneration
         let center = UNUserNotificationCenter.current()
-        // Bound the total to iOS's pending-notification limit, choosing the nearest resets.
-        center.removeAllPendingNotificationRequests()
-        let events = accounts.flatMap { account in
-            (account.snapshot?.windows ?? []).enumerated().compactMap { index, window -> (AgentAccount, UsageWindow, Int)? in
-                guard let date = window.resetsAt, date > .now else { return nil }
-                return (account, window, index)
-            }
-        }.sorted { $0.1.resetsAt! < $1.1.resetsAt! }.prefix(50)
-        for (account, window, index) in events {
+        let old = await center.pendingNotificationRequests()
+        guard generation == notificationGeneration, notificationsEnabled else { return }
+        center.removePendingNotificationRequests(withIdentifiers: old.filter { $0.identifier.hasPrefix("reminder-") || $0.identifier.hasPrefix("reset-") }.map(\.identifier))
+        for reminder in ResetReminderPlan.make(accounts: accounts, rules: notificationRules) {
+            guard generation == notificationGeneration, notificationsEnabled else { return }
             let content = UNMutableNotificationContent()
-            content.title = "\(account.title) is due to reset"
-            content.body = "\(account.provider.name) · \(window.title). Open Eyeballs for a fresh reading."
-            content.sound = .default
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, window.resetsAt!.timeIntervalSinceNow), repeats: false)
-            try? await center.add(UNNotificationRequest(identifier: "reset-\(account.id)-\(index)", content: content, trigger: trigger))
+            content.title = reminder.title; content.body = reminder.body; content.sound = .default
+            content.userInfo = ["accountID": reminder.accountID.uuidString]
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, reminder.date.timeIntervalSinceNow), repeats: false)
+            try? await center.add(UNNotificationRequest(identifier: reminder.id, content: content, trigger: trigger))
         }
     }
     private func persist() {

@@ -26,11 +26,12 @@ struct UsageRing: View {
                 }
             }
             if readings.isEmpty { Circle().stroke(color.opacity(0.15), style: StrokeStyle(lineWidth: lineWidth, dash: [3, 6])) }
-            if showsNumber, readings.count <= 2 {
+            if showsNumber {
+                let hole = max(24, size - CGFloat(max(0, readings.count - 1)) * 2 * (lineWidth + 4) - lineWidth * 2 - 8)
                 VStack(spacing: 1) {
-                    Text(readings.first?.value ?? "—").font(.system(size: size * 0.235, weight: .semibold, design: .rounded)).monospacedDigit()
-                    Text(readings.first?.centerCaption ?? "").font(.system(size: max(7, size * 0.075), weight: .medium)).foregroundStyle(.secondary)
-                }
+                    Text(readings.primary?.value ?? "—").font(.system(size: min(size * 0.235, hole * 0.45), weight: .semibold, design: .rounded)).monospacedDigit().minimumScaleFactor(0.6)
+                    Text(readings.primary?.centerCaption ?? "").font(.system(size: max(6, min(size * 0.075, hole * 0.14)), weight: .medium)).foregroundStyle(.secondary)
+                }.frame(width: hole)
             }
         }.frame(width: size, height: size)
         .accessibilityElement(children: .ignore)

@@ -84,6 +84,29 @@ final class EyeballsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["compact-mode"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.buttons["compact-mode"].value as? String, "On")
     }
+    func testTilesDragOrderChartsAndEvents() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture"]; app.launch()
+        XCTAssertTrue(app.buttons["layout-tiles"].waitForExistence(timeout: 10)); app.buttons["layout-tiles"].tap()
+        app.buttons["sort-accounts"].tap(); app.buttons["Custom order"].tap()
+        if app.buttons["Clear search"].exists { app.buttons["Clear search"].tap() }
+        let personal = app.buttons["account-Personal"], work = app.buttons["account-Work"]
+        XCTAssertTrue(personal.waitForExistence(timeout: 5)); XCTAssertTrue(work.exists)
+        XCTAssertLessThan(abs(personal.frame.width - personal.frame.height), 3)
+        let workStartedLeft = work.frame.minX < personal.frame.minX
+        personal.press(forDuration: 1.0, thenDragTo: work)
+        XCTAssertEqual(work.frame.minX < personal.frame.minX, !workStartedLeft)
+        let tiles = XCTAttachment(screenshot: app.screenshot()); tiles.name = "Square tiles and custom order"; tiles.lifetime = .keepAlways; add(tiles)
+        app.terminate(); app.launch()
+        XCTAssertEqual(app.buttons["layout-tiles"].value as? String, "On")
+        XCTAssertEqual(app.buttons["account-Work"].frame.minX < app.buttons["account-Personal"].frame.minX, !workStartedLeft)
+        app.tabBars.buttons["Charts"].tap()
+        XCTAssertTrue(app.buttons["chart-accounts"].waitForExistence(timeout: 5))
+        let lines = XCTAttachment(screenshot: app.screenshot()); lines.name = "Account comparison lines"; lines.lifetime = .keepAlways; add(lines)
+        app.buttons["Heatmaps"].tap()
+        XCTAssertTrue(app.buttons["Daily"].firstMatch.waitForExistence(timeout: 5)); app.buttons["Daily"].firstMatch.tap()
+        let heatmap = XCTAttachment(screenshot: app.screenshot()); heatmap.name = "Daily usage heatmap"; heatmap.lifetime = .keepAlways; add(heatmap)
+        app.tabBars.buttons["Events"].tap(); XCTAssertTrue(app.staticTexts["No events recorded."].waitForExistence(timeout: 5))
+    }
     func testSystemAuthenticationPresentation() {
         let app = XCUIApplication(); app.launch()
         app.buttons["connect-first"].tap(); app.buttons["connect-codex"].tap()

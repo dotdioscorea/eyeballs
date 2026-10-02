@@ -1,10 +1,13 @@
 import SwiftUI
 import BackgroundTasks
+import UserNotifications
+
 
 @MainActor
-final class AppDelegate: NSObject, UIApplicationDelegate {
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     let store = AccountStore()
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
         BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.dotdioscorea.eyeballs.refresh", using: nil) { [weak self] task in
             let operation = Task { @MainActor in
                 guard let self else { task.setTaskCompleted(success: false); return }
@@ -15,6 +18,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             task.expirationHandler = { operation.cancel() }
         }
         return true
+    }
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        if let value = response.notification.request.content.userInfo["accountID"] as? String, let id = UUID(uuidString: value) {
+            Task { @MainActor [weak self] in self?.store.notificationAccountID = id }
+        }
+        completionHandler()
+    }
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
     }
     static func scheduleRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: "com.dotdioscorea.eyeballs.refresh")
