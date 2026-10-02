@@ -80,6 +80,7 @@ struct SignInView: View {
                             ProviderLogo(provider: account.provider, color: account.color, size: 22)
                             Text("Sign in with \(account.provider == .codex ? "ChatGPT" : account.provider.name).").font(.subheadline).foregroundStyle(.secondary)
                         }
+                        if account.provider == .gemini { Text("Shows Gemini CLI and Code Assist quotas.").font(.caption).foregroundStyle(.secondary) }
                         if account.snapshot != nil {
                             Text("Reconnect only this account. Choose Add account to connect a different one.").font(.subheadline).foregroundStyle(.secondary).panel()
                         }
@@ -99,6 +100,9 @@ struct SignInView: View {
                     }
                     if let message = model.message {
                         Label(message, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.orange).panel()
+                        if account.provider == .gemini, model.credential != nil && model.snapshot == nil {
+                            Link("Google Code Assist", destination: account.provider.usageURL).font(.subheadline)
+                        }
                         if model.credential != nil && model.snapshot == nil {
                             Text("Sign-in completed, but usage access could not be verified. This connection has not been saved.").font(.caption).foregroundStyle(.secondary)
                         }

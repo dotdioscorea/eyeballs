@@ -124,6 +124,22 @@ final class EyeballsUITests: XCTestCase {
             app.buttons["Cancel"].tap()
         }
     }
+    func testGeminiPresentsGoogleSystemSignInAndCancelsWithoutSaving() {
+        let app = XCUIApplication(); app.launch()
+        app.buttons["connect-first"].tap()
+        app.buttons["connect-gemini"].tap()
+        app.buttons["Continue with Gemini"].tap(); allowSystemSignIn()
+        let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+        let cancel = service.buttons["Cancel"]
+        print("GOOGLE AUTHENTICATION STATE\n" + service.debugDescription)
+        XCTAssertTrue(cancel.waitForExistence(timeout: 15))
+        XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 15))
+        let url = service.buttons["URL"].value as? String ?? ""
+        XCTAssertTrue(url.contains("accounts.google.com"), url)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Google system sign-in — no account created"; shot.lifetime = .keepAlways; add(shot)
+        cancel.tap()
+        XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+    }
     func testWidgetAccountPickerStaysOpenAndSelectsAccount() {
         let app = XCUIApplication(); app.launchArguments = ["--widget-fixture"]; app.launch()
         XCTAssertTrue(app.buttons["compact-mode"].waitForExistence(timeout: 10))

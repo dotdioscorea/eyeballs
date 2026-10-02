@@ -183,7 +183,7 @@ final class AccountStoreTests: XCTestCase {
                 try store.connect(account, credential: credential); expected[account.id] = credential
             }
         }
-        XCTAssertEqual(store.accounts.count, 6)
+        XCTAssertEqual(store.accounts.count, Provider.allCases.count * 2)
         XCTAssertEqual(vault.values, expected)
         let restored = self.store(vault: vault)
         XCTAssertEqual(restored.accounts, store.accounts)

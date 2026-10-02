@@ -21,9 +21,9 @@ enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedRe
     static func identify(_ url: URL?) -> Self {
         guard let url else { return .other }
         switch url.path {
-        case "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token": return .token
-        case "/api/oauth/profile": return .identity
-        case "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing": return .usage
+        case "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token": return .token
+        case "/api/oauth/profile", "/oauth2/v2/userinfo": return .identity
+        case "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing": return .usage
         case "/backend-api/wham/rate-limit-reset-credits": return .bankedResets
         case "/.well-known/jwks.json": return .identityKeys
         default: return .other
@@ -53,7 +53,7 @@ struct UsageParsingDiagnostic: Codable {
     enum KnownUsageField: String, Codable, CaseIterable {
         case creditUsagePercent, currentPeriod, periodType, periodStart, periodEnd, isUnifiedBillingUser
         case monthlyLimit, used, onDemandCap, onDemandUsed, prepaidBalance
-        case rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots
+        case rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots, remainingFraction, remainingAmount, quotaResetTime
     }
     enum CodingKeys: String, CodingKey { case fields, calculation, readings }
     init(fields: [KnownUsageField: DiagnosticValueType], calculation: UsageCalculation, readings: [DiagnosticReading]) {
@@ -101,6 +101,10 @@ struct UsageParsingDiagnostic: Codable {
         case .codex:
             let limits = object["rate_limit"] as? [String: Any] ?? [:]
             fields[.rateLimit] = type(object["rate_limit"]); fields[.primaryWindow] = type(limits["primary_window"]); fields[.secondaryWindow] = type(limits["secondary_window"])
+        case .gemini:
+            fields[.quotaBuckets] = type(object["buckets"])
+            let bucket = (object["buckets"] as? [[String: Any]])?.first ?? [:]
+            fields[.remainingFraction] = type(bucket["remainingFraction"]); fields[.remainingAmount] = type(bucket["remainingAmount"]); fields[.quotaResetTime] = type(bucket["resetTime"])
         case .claude:
             fields[.fiveHour] = type(object["five_hour"]); fields[.sevenDay] = type(object["seven_day"])
         }

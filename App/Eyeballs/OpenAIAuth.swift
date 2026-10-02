@@ -49,6 +49,7 @@ struct OAuthAttempt {
                 URLQueryItem(name: "code_challenge_method", value: "S256"),
                 URLQueryItem(name: "code_challenge", value: Data(SHA256.hash(data: Data(verifier.utf8))).base64URL)
             ]
+            if provider == .gemini { parts.queryItems! += [URLQueryItem(name: "access_type", value: "offline"), URLQueryItem(name: "prompt", value: "consent select_account")] }
             if provider == .grok { parts.queryItems! += [URLQueryItem(name: "nonce", value: nonce), URLQueryItem(name: "referrer", value: "eyeballs")] }
             return parts.url!
         }
@@ -287,7 +288,7 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
                     guard let port = listener?.port else { self.finish(.failure(AuthError.unavailable)); return }
                     do {
                         let host = provider == .claude ? "localhost" : "127.0.0.1"
-                        let path = provider == .codex ? "/auth/callback" : "/callback"
+                        let path = provider == .codex ? "/auth/callback" : provider == .gemini ? "/oauth2callback" : "/callback"
                         let redirect = URL(string: "http://\(host):\(port.rawValue)\(path)")!
                         let attempt = try OAuthAttempt(redirectURI: redirect, hostID: OpenAIAuth.hostID, previous: previous, provider: provider)
                         self.attempt = attempt
