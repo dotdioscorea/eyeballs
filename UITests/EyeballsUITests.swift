@@ -140,6 +140,19 @@ final class EyeballsUITests: XCTestCase {
         cancel.tap()
         XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
     }
+    func testCursorPresentsSystemSignInAndCancelsWithoutSaving() {
+        let app = XCUIApplication(); app.launch()
+        app.buttons["connect-first"].tap(); app.buttons["connect-cursor"].tap()
+        app.buttons["Continue with Cursor"].tap(); allowSystemSignIn()
+        let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+        XCTAssertTrue(service.buttons["Cancel"].waitForExistence(timeout: 15))
+        XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 15))
+        let url = service.buttons["URL"].value as? String ?? ""
+        XCTAssertTrue(url.contains("cursor.com") || url.contains("cursor.sh"), url)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Cursor system sign-in"; shot.lifetime = .keepAlways; add(shot)
+        service.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+    }
     func testCopilotPresentsGitHubSystemVerificationAndCancelsWithoutSaving() {
         let app = XCUIApplication(); app.launch()
         app.buttons["connect-first"].tap(); app.buttons["connect-copilot"].tap()

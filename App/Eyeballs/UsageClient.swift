@@ -74,6 +74,9 @@ struct UsageClient {
         case .gemini:
             expectedIssuer = GeminiAuth.issuer
             endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+        case .cursor:
+            expectedIssuer = CursorAuth.issuer
+            endpoint = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage"
         case .copilot:
             expectedIssuer = CopilotAuth.issuer
             endpoint = "https://api.github.com/copilot_internal/user"
@@ -93,6 +96,10 @@ struct UsageClient {
             request.setValue("xai-grok-cli", forHTTPHeaderField: "x-xai-token-auth")
             let teamID = credential.accountID?.hasPrefix("Team:") == true ? credential.accountID?.dropFirst(5).description : nil
             request.setValue(teamID ?? credential.subject, forHTTPHeaderField: "x-userid")
+        }
+        if provider == .cursor {
+            guard credential.clientID == CursorAuth.clientID else { throw UsageError.wrongAccount }
+            return try CursorAuth.request("GetCurrentPeriodUsage", accessToken: credential.accessToken)
         }
         return request
     }
@@ -119,6 +126,10 @@ struct UsageClient {
         case .grok: snapshot = try UsageParser.grok(raw)
         case .gemini: snapshot = try UsageParser.gemini(raw); snapshot.plan = tier?["name"] as? String ?? tier?["id"] as? String
         case .copilot: snapshot = try UsageParser.copilot(raw)
+        case .cursor:
+            snapshot = try UsageParser.cursor(raw)
+            if let info = try? await ProviderHTTP.json(CursorAuth.request("GetPlanInfo", accessToken: credential.accessToken)) as? [String: Any] { snapshot.plan = (info["planInfo"] as? [String: Any])?["planName"] as? String }
+            try Task.checkCancellation()
         }
         parsed = snapshot
         if account.provider == .codex {
@@ -158,6 +169,26 @@ enum UsageParser {
         guard let number = raw as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() else { return nil }
         let value = number.doubleValue
         return value.isFinite && value >= 0 ? value : nil
+    }
+    static func cursorMilliseconds(_ value: Any?) -> Date? {
+        let number: Double?
+        if let text = value as? String, text.range(of: "^[0-9]+$", options: .regularExpression) != nil { number = Double(text) }
+        else { number = percent(value) }
+        guard let number, number > 0, number.isFinite else { return nil }
+        return Date(timeIntervalSince1970: number / 1000)
+    }
+    static func cursor(_ raw: Any) throws -> UsageSnapshot {
+        guard let object = raw as? [String: Any], let plan = object["planUsage"] as? [String: Any] else { throw UsageError.invalidResponse }
+        let end = cursorMilliseconds(object["billingCycleEnd"])
+        let start = cursorMilliseconds(object["billingCycleStart"])
+        let duration = start.flatMap { start in end.flatMap { $0 > start ? $0.timeIntervalSince(start) : nil } }
+        var windows: [UsageWindow] = []
+        for (key, title) in [("totalPercentUsed", "Included usage"), ("autoPercentUsed", "Auto"), ("apiPercentUsed", "Named models")] {
+            var used = percent(plan[key])
+            if plan[key] == nil, key == "totalPercentUsed", let limit = percent(plan["limit"]), limit > 0, let spend = percent(plan["totalSpend"]) { used = spend / limit * 100 }
+            if key == "totalPercentUsed" || plan[key] != nil { windows.append(UsageWindow(id: key, title: title, usedPercent: used, resetsAt: end, duration: duration)) }
+        }
+        return UsageSnapshot(windows: windows, billingEndsAt: end)
     }
     static func codex(_ raw: Any) throws -> UsageSnapshot {
         guard let object = raw as? [String: Any], object["rate_limit"] != nil || object["credits"] != nil else { throw UsageError.invalidResponse }

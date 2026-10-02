@@ -12,6 +12,7 @@ The existing mark paths are extracted without the favicon background.
 
 Gemini: https://www.gstatic.com/lamda/images/gemini_sparkle_4g_512_lt_f94943af3be039176192d.png
 Cursor: https://cursor.com/marketing-static/favicon.svg
+The mark is cropped and the background and border are omitted.
 Cline: https://github.com/cline/cline/blob/main/assets/branding/logos/cline-icon-white.svg
 Copilot: https://github.com/primer/octicons/blob/main/icons/copilot-24.svg
 
