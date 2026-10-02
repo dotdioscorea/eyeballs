@@ -230,4 +230,33 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertTrue(store.histories.values.allSatisfy { $0.last?.windows[0].safePercent == 51 })
     }
 
+    func testCustomOrderSurvivesRestartAndFilteredReorderingKeepsHiddenAccounts() throws {
+        let vault = MemoryVault(); let store = store(vault: vault)
+        let credentials = (0..<4).map { Fixture.credential("order-\($0)") }
+        let accounts = credentials.map { Fixture.account($0) }
+        for (account, credential) in zip(accounts, credentials) { try store.connect(account, credential: credential) }
+        store.reorder([accounts[2].id, UUID(), accounts[0].id, accounts[2].id])
+        XCTAssertEqual(store.accounts.map(\.id), [accounts[2].id, accounts[1].id, accounts[0].id, accounts[3].id])
+        store.move(accounts[3].id, to: accounts[1].id)
+        XCTAssertEqual(self.store(vault: vault).accounts.map(\.id), [accounts[2].id, accounts[3].id, accounts[1].id, accounts[0].id])
+        XCTAssertEqual(AccountSort.manual.sorted(store.accounts), store.accounts)
+        XCTAssertEqual(vault.values.count, 4)
+    }
+    func testParsingFailureKeepsLastReadingAndOffersOnlyOneReportUntilRecovery() async throws {
+        let vault = MemoryVault(); var fails = true
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { account, _ in
+            if fails { throw UsageError.invalidResponse }; var snapshot = account.snapshot!; snapshot.updatedAt = .now; return snapshot
+        })
+        let credential = Fixture.credential("parse"); let account = Fixture.account(credential)
+        try store.connect(account, credential: credential)
+        await store.refresh(account.id)
+        XCTAssertEqual(store.reportAccountID, account.id); XCTAssertEqual(store.accounts.first?.snapshot, account.snapshot)
+        XCTAssertEqual(store.events.filter { $0.kind == .parsingFailure }.count, 1)
+        store.reportAccountID = nil; await store.refresh(account.id)
+        XCTAssertNil(store.reportAccountID); XCTAssertEqual(store.events.filter { $0.kind == .parsingFailure }.count, 1)
+        fails = false; await store.refresh(account.id); XCTAssertNil(store.accounts.first?.needsReport)
+        XCTAssertEqual(self.store(vault: vault).events, store.events)
+        try store.remove(account.id); XCTAssertTrue(self.store(vault: vault).events.isEmpty)
+    }
+
 }

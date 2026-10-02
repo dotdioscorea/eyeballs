@@ -151,12 +151,12 @@ final class DisplayAndHistoryTests: XCTestCase {
         XCTAssertFalse(raw.contains("private@example.com")); XCTAssertFalse(raw.contains("private-subject"))
         try store.remove(a.id); XCTAssertTrue(store.read(a.id, now: now).isEmpty)
     }
-    func testHistorySplitsGapsResetsAndUnknownValues() {
+    func testHistoryConnectsLongGapsAndResetsButBreaksUnknownValues() {
         let original = account().snapshot!.windows
         var reset = original; reset[0].resetsAt = now.addingTimeInterval(604800); reset[0].usedPercent = 0
         var unknown = original; unknown[0].usedPercent = nil
         let samples = [UsageHistorySample(date: now, windows: original), UsageHistorySample(date: now.addingTimeInterval(60), windows: original), UsageHistorySample(date: now.addingTimeInterval(8000), windows: original), UsageHistorySample(date: now.addingTimeInterval(8060), windows: reset), UsageHistorySample(date: now.addingTimeInterval(8120), windows: unknown), UsageHistorySample(date: now.addingTimeInterval(8180), windows: reset)]
-        XCTAssertEqual(HistorySeries.segments(samples: samples, windowID: "week").map(\.count), [2, 1, 1, 1])
+        XCTAssertEqual(HistorySeries.segments(samples: samples, windowID: "week").map(\.count), [4, 1])
     }
     @MainActor
     func testDebugBundleCannotIncludeAccountIdentityOrPrivateText() throws {

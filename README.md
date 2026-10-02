@@ -1,15 +1,15 @@
 # Eyeballs
 
-An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI and GitHub Copilot and Cursor accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
+An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot and Cursor accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
 - Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
-- Persistent compact bars, search, provider filters and account sorting.
+- Cards, square tiles or compact bars; saved drag order, search, filters and metric sorting.
 - Account and multi-account widgets with selectable accounts, bars or rings, metrics and sorting. Dense rows show up to six accounts in a medium widget or twelve in a large widget, with account links.
 - Provider logos, default brand colours and per-account colour overrides.
-- Banked Codex reset counts and expiry dates when reported by the API.
-- Local usage charts for 24 hours, 7, 30 or 90 days.
-- Pull-to-refresh, timestamps, reset reminders and provider billing information where available.
+- Banked Codex reset counts, reported expiry dates and first detection timestamps.
+- Local line charts and daily, weekly and monthly heatmaps; account and metric comparisons.
+- Pull-to-refresh, timestamps, configurable reset/expiry/unused-allowance reminders and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
 TestFlight **1.0 (7)** is available for internal testing, built from commit `58d4bda` and tagged `testflight/1.0-7`. It includes Copilot in addition to the Grok, widget and display fixes in builds 5–6. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
@@ -39,15 +39,19 @@ Protocol references: [Codex login](https://github.com/openai/codex/blob/main/cod
 
 ## Storage and updates
 
-UUID-keyed tokens use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history and widget summary.
+UUID-keyed tokens use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history, events and widget summary.
 
 Widgets read an atomic App Group summary file. They receive names, workstreams, display preferences and cached usage, without emails, identities, notes or credentials. Unreadable account metadata preserves the last usable cache; unsupported or malformed individual summary entries are skipped without hiding other valid accounts. Entities and queries are compiled into both the app and widget extension so system configuration can resolve accounts in either process.
 
 Usage is fetched when the app opens, every five minutes while it is active, on pull-to-refresh, and during background app refresh when iOS allows it. Widgets show cached readings; timestamp entries update their time rings. A widget does not keep the app running or guarantee extra provider fetches. [Apple controls widget update budgets](https://developer.apple.com/documentation/widgetkit/keeping-a-widget-up-to-date/) and background execution.
 
-History records successful provider readings, retains up to 90 days and is capped at 12,000 samples per account. Charts split resets, unknown readings and gaps over two hours. Widget timelines never create history samples.
+History records successful provider readings, retains up to 90 days and is capped at 12,000 samples per account. Charts connect observed readings across gaps and reset drops, while unknown readings remain breaks. Heatmap cells average observed usage levels; blank cells have no readings. Provider-reported amounts are shown only where available and comparisons keep different units separate. Widget timelines never create history samples.
+
+Events retain up to 90 days, capped at 2,000 records. Early resets and banked reset use are inferred from large quota drops before the known deadline; unexplained reductions in banked counts are recorded as removals, not asserted to be used. Reset reminders use provider dates and the last reported allowance. Observed-event notifications depend on successful refreshes; iOS does not guarantee background refresh intervals. Parsing failures keep the previous reading and offer a report with an optional debug bundle.
 
 Diagnostics retain at most 100 local events for seven days. They record typed stages, providers, request categories, HTTP status codes, error categories and types of known usage fields. Parsing records identify the calculation used and classify readings as zero, partial, full or missing. Local connection UUIDs are replaced with bundle-local anonymous labels when exported, so multiple accounts and unsaved failed sign-ins can be distinguished. Debug exports also contain app/iOS versions and availability counts. They exclude tokens, passwords, OAuth state, HTTP bodies, URLs, account IDs, names, emails, workstreams and notes. Nothing is uploaded automatically; users review and attach the JSON file to a public GitHub issue themselves.
+
+The next build adds Cursor, tiles and drag order, reset events and notification rules, line charts and heatmaps, comparisons and parsing-failure reports. 74 unit tests and two distinct native UI checks passed, covering persisted compact settings/debug export and square tiles, drag-order persistence, comparison lines and heatmap navigation. Release packaging is in progress.
 
 ## Development
 
@@ -67,7 +71,7 @@ Tests cover account isolation, identity verification, token rotation, OAuth call
 
 ## TestFlight
 
-App and widget build numbers must match and increase for every upload. The archive is stamped with both targets’ capabilities before cloud signing. The exported IPA’s actual signatures must contain the shared App Group and distribution entitlements; `scripts/verify-release.py` checks this before the same IPA is uploaded. Apple signing credentials stay outside Git.
+App and widget build numbers must match and increase for every upload. The archive is stamped with both targets’ capabilities before cloud signing. The exported IPA’s actual signatures must contain the shared App Group and distribution entitlements; `scripts/verify-release.py` checks this before the same IPA is uploaded. Apple signing credentials stay outside Git. Exports allow external TestFlight review by default; set `TESTFLIGHT_INTERNAL_ONLY=1` only for a build that must remain internal. External invitations require Apple’s beta review approval.
 
 ```sh
 APPLE_TEAM_ID=<team-id> IOS_BUILD_NUMBER=<build-number> scripts/archive.sh

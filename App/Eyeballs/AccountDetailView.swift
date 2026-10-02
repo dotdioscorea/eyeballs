@@ -7,6 +7,7 @@ struct AccountDetailView: View {
     @State private var configuring = false
     @State private var connecting = false
     @State private var removing = false
+    @State private var reporting = false
     private var account: AgentAccount? { store.accounts.first { $0.id == id } }
     var body: some View {
         Group {
@@ -26,7 +27,10 @@ struct AccountDetailView: View {
                                 Text("Banked resets").font(.subheadline.weight(.semibold))
                                 ForEach(resets) { reset in
                                     HStack(alignment: .top) {
-                                        Text("\(reset.count) × \(reset.title)")
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("\(reset.count) × \(reset.title)")
+                                            if let first = reset.firstDetectedAt { Text("Detected \(first.formatted(date: .abbreviated, time: .shortened))").foregroundStyle(.secondary) }
+                                        }
                                         Spacer()
                                         Text(reset.expiresAt.map { "Expires \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "No expiry reported").foregroundStyle(.secondary).multilineTextAlignment(.trailing)
                                     }.font(.caption)
@@ -48,7 +52,7 @@ struct AccountDetailView: View {
                             }.panel()
                         }
                         UsageHistoryView(samples: store.histories[id] ?? [], account: account)
-                        if let issue = account.issue { Text(issue).font(.subheadline).foregroundStyle(.orange).frame(maxWidth: .infinity, alignment: .leading).panel() }
+                        if let issue = account.issue { VStack(alignment: .leading, spacing: 10) { Text(issue).font(.subheadline).foregroundStyle(.orange); if account.needsReport == true { Button("Report problem") { reporting = true } } }.frame(maxWidth: .infinity, alignment: .leading).panel() }
                         VStack(alignment: .leading, spacing: 16) {
                             if !account.workstream.isEmpty { info("Workstream", value: account.workstream) }
                             if let email = account.snapshot?.email { info("Signed in as", value: email) }
@@ -69,6 +73,7 @@ struct AccountDetailView: View {
                     .toolbar { ToolbarItem(placement: .topBarTrailing) {
                         Button { var copy = account; copy.favorite.toggle(); store.update(copy) } label: { Image(systemName: account.favorite ? "star.fill" : "star") }.accessibilityLabel(account.favorite ? "Remove from favorites" : "Add to favorites")
                     } }
+                    .sheet(isPresented: $reporting) { NavigationStack { ProblemReportView(title: "\(account.provider.name) usage response could not be parsed", includeDebug: true).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { reporting = false } } } } }
                     .sheet(isPresented: $editing) { EditAccountView(account: account) }
                     .sheet(isPresented: $configuring) { DisplaySettingsView(account: account) }
                     .sheet(isPresented: $connecting) { SignInView(account: account) }

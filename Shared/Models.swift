@@ -34,6 +34,9 @@ struct UsageWindow: Codable, Identifiable, Equatable, Sendable {
     var usedPercent: Double?
     var resetsAt: Date?
     var duration: TimeInterval?
+    var usedAmount: Double?
+    var limitAmount: Double?
+    var amountUnit: String?
     var safePercent: Double? {
         guard let usedPercent, usedPercent.isFinite, usedPercent >= 0 else { return nil }
         return min(100, usedPercent)
@@ -63,6 +66,7 @@ struct BankedReset: Codable, Equatable, Identifiable, Sendable {
     var title: String
     var count: Int = 1
     var expiresAt: Date?
+    var firstDetectedAt: Date?
 }
 
 struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
@@ -76,6 +80,7 @@ struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
     var snapshot: UsageSnapshot?
     var issue: String?
     var needsLogin: Bool = false
+    var needsReport: Bool?
     var display: AccountDisplay?
     var colorHex: UInt32?
     var addedAt: Date = .now

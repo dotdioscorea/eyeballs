@@ -85,11 +85,26 @@ enum UpdatedText {
 }
 enum UsagePeriod { case session, weekly }
 
+enum DashboardLayout: String, CaseIterable, Identifiable {
+    case cards, tiles, bars
+    var id: Self { self }
+    var title: String { switch self { case .cards: return "Cards"; case .tiles: return "Tiles"; case .bars: return "Compact" } }
+    var symbol: String { switch self { case .cards: return "rectangle"; case .tiles: return "square.grid.2x2"; case .bars: return "line.3.horizontal" } }
+}
+
+extension Array where Element == MetricReading {
+    var primary: MetricReading? {
+        first { $0.definition.kind == .usage && ($0.window?.duration.map { abs($0 - 604800) < 60 } == true || $0.window?.title.localizedCaseInsensitiveContains("weekly") == true) }
+        ?? first { $0.definition.kind == .usage } ?? first
+    }
+}
+
 enum AccountSort: String, CaseIterable, Identifiable {
-    case favorites, name, provider, mostRemaining, leastRemaining, sessionRemaining, weeklyRemaining, nextReset, lastUpdated
+    case manual, favorites, name, provider, mostRemaining, leastRemaining, sessionRemaining, weeklyRemaining, nextReset, lastUpdated
     var id: Self { self }
     var title: String {
         switch self {
+        case .manual: return "Custom order"
         case .favorites: return "Favorites first"
         case .name: return "Name"
         case .provider: return "Provider"
@@ -102,7 +117,8 @@ enum AccountSort: String, CaseIterable, Identifiable {
         }
     }
     func sorted(_ accounts: [AgentAccount]) -> [AgentAccount] {
-        accounts.sorted { lhs, rhs in
+        if self == .manual { return accounts }
+        return accounts.sorted { lhs, rhs in
             switch self {
             case .favorites:
                 if lhs.favorite != rhs.favorite { return lhs.favorite }

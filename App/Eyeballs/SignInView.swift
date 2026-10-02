@@ -6,6 +6,7 @@ final class SignInModel: ObservableObject {
     @Published var message: String?
     @Published var credential: AccountCredential?
     @Published var snapshot: UsageSnapshot?
+    @Published var reportSuggested = false
     @Published var verificationCode: String?
     private let browser = OAuthBrowser()
     private let copilotBrowser = CopilotBrowser()
@@ -19,7 +20,7 @@ final class SignInModel: ObservableObject {
     }
     func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false) {
         guard !working else { return }
-        working = true; message = nil; credential = nil; snapshot = nil; verificationCode = nil
+        working = true; reportSuggested = false; message = nil; credential = nil; snapshot = nil; verificationCode = nil
         Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
             Diagnostics.record(.signInStarted, privateSession: usePrivateSession)
         }
@@ -44,7 +45,7 @@ final class SignInModel: ObservableObject {
                 Diagnostics.record(.usageVerified, provider: account.provider)
                 try Task.checkCancellation()
             } catch is CancellationError { credential = nil; snapshot = nil }
-            catch { snapshot = nil; message = error.localizedDescription; Diagnostics.record(.signInFailed, provider: account.provider, failure: .category(error)) }
+            catch { snapshot = nil; message = error.localizedDescription; if case UsageError.invalidResponse = error { reportSuggested = true }; Diagnostics.record(.signInFailed, provider: account.provider, failure: .category(error)) }
           }
         }
     }
@@ -59,6 +60,7 @@ struct SignInView: View {
     @StateObject private var model = SignInModel()
     @State private var name = ""
     @State private var workstream = ""
+    @State private var reporting = false
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -117,7 +119,8 @@ struct SignInView: View {
                         Text("Credentials protected by iPhone Keychain").font(.caption).foregroundStyle(.secondary)
                     }
                     if let message = model.message {
-                        Label(message, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.orange).panel()
+                        Text(message).font(.subheadline).foregroundStyle(.orange).panel()
+                        if model.reportSuggested { Button("Report problem") { reporting = true } }
                         if account.provider == .gemini, model.credential != nil && model.snapshot == nil {
                             Link("Google Code Assist", destination: account.provider.usageURL).font(.subheadline)
                         }
@@ -131,6 +134,6 @@ struct SignInView: View {
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { model.cancel(); dismiss() } } }
                 .onAppear { name = account.label; workstream = account.workstream }
                 .onDisappear { model.cancel() }
-        }.interactiveDismissDisabled(model.working)
+        }.interactiveDismissDisabled(model.working).sheet(isPresented: $reporting) { NavigationStack { ProblemReportView(title: "\(account.provider.name) sign-in response could not be parsed", includeDebug: true).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { reporting = false } } } } }
     }
 }

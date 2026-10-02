@@ -1,8 +1,6 @@
-Build 7
-
-• Added GitHub Copilot sign-in and quota monitoring.
-• Added Gemini CLI / Code Assist sign-in. Please test with your existing Google account.
-• Fixed Grok zero-usage parsing and signed widget App Group access.
-• Added dense account-row widgets and account links.
-• Added default weekly time, stacked compact bars, provider logos and colour settings.
-• Added Codex banked reset details and improved optional debug bundles.
+• Add Cursor sign-in and usage.
+• Add square tiles and saved drag ordering.
+• Show weekly usage in ring centres.
+• Add reset events, banked detection dates and configurable reminders.
+• Add line charts, heatmaps and account comparisons.
+• Offer debug reports when provider responses cannot be read.

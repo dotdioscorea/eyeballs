@@ -1,20 +1,35 @@
 import SwiftUI
+import UniformTypeIdentifiers
+
+extension UTType { static let eyeballsAccount = UTType(exportedAs: "com.dotdioscorea.eyeballs.account-order") }
 
 struct RootView: View {
     @EnvironmentObject private var store: AccountStore
     @State private var path: [UUID] = []
     @State private var tab = 0
+    @State private var reporting = false
+    @State private var failedProvider: Provider?
     var body: some View {
         TabView(selection: $tab) {
             NavigationStack(path: $path) {
                 DashboardView().navigationDestination(for: UUID.self) { id in AccountDetailView(id: id) }
             }.tabItem { Label("Accounts", systemImage: "circle.hexagongrid") }.tag(0)
-            NavigationStack { ResetTimelineView() }.tabItem { Label("Resets", systemImage: "clock.arrow.circlepath") }.tag(1)
+            NavigationStack { ChartsView() }.tabItem { Label("Charts", systemImage: "chart.xyaxis.line") }.tag(1)
+            NavigationStack { EventsView() }.tabItem { Label("Events", systemImage: "clock.arrow.circlepath") }.tag(3)
             NavigationStack { SettingsView() }.tabItem { Label("Settings", systemImage: "slider.horizontal.3") }.tag(2)
         }
         .alert("Error", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("OK") { store.error = nil }
         } message: { Text(store.error ?? "") }
+        .alert("Usage could not be read", isPresented: Binding(get: { store.reportAccountID != nil }, set: { if !$0 { store.reportAccountID = nil } })) {
+            Button("Report problem") { failedProvider = store.accounts.first { $0.id == store.reportAccountID }?.provider; store.reportAccountID = nil; reporting = true }
+            Button("Not now", role: .cancel) { store.reportAccountID = nil }
+        } message: { Text("The provider response may have changed. Your last usage reading has been kept.") }
+        .sheet(isPresented: $reporting) { NavigationStack { ProblemReportView(title: "\(failedProvider?.name ?? "Provider") usage response could not be parsed", includeDebug: true).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { reporting = false } } } } }
+        .onChange(of: store.notificationAccountID, initial: true) { _, value in
+            guard let id = value, store.accounts.contains(where: { $0.id == id }) else { return }
+            tab = 0; path = [id]; store.notificationAccountID = nil
+        }
         .onOpenURL { url in
             guard url.scheme == "eyeballs" else { return }
             tab = 0
@@ -25,7 +40,12 @@ struct RootView: View {
 
 struct DashboardView: View {
     @EnvironmentObject private var store: AccountStore
-    @AppStorage("dashboard-compact") private var compact = false
+    @AppStorage("dashboard-compact") private var oldCompact = false
+    @AppStorage("dashboard-layout") private var layoutValue = ""
+    @State private var dragging: UUID?
+    @State private var reordering = false
+    private var layout: DashboardLayout { DashboardLayout(rawValue: layoutValue) ?? (oldCompact ? .bars : .cards) }
+    private var compact: Bool { layout != .cards }
     @AppStorage("dashboard-sort") private var sortValue = AccountSort.favorites.rawValue
     @State private var adding = false
     @State private var search = ""
@@ -46,10 +66,15 @@ struct DashboardView: View {
                     Button("Add account") { adding = true }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("connect-first")
                 }.padding(24).frame(maxWidth: 500).frame(maxWidth: .infinity)
             } else {
-                LazyVStack(spacing: compact ? 4 : 14) {
-                    ForEach(displayed) { account in
-                        NavigationLink(value: account.id) { AccountCard(account: account, compact: compact) }
-                            .buttonStyle(.plain).accessibilityIdentifier("account-\(account.title)")
+                Group {
+                    if layout == .tiles {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                            ForEach(displayed) { account in accountLink(account, tile: true) }
+                        }
+                    } else {
+                        LazyVStack(spacing: compact ? 4 : 14) {
+                            ForEach(displayed) { account in accountLink(account, tile: false) }
+                        }
                     }
                     if displayed.isEmpty { ContentUnavailableView.search(text: search) }
                 }.padding(.horizontal, compact ? 12 : 16).padding(.top, compact ? 4 : 10).padding(.bottom, 20).frame(maxWidth: 650).frame(maxWidth: .infinity)
@@ -62,14 +87,20 @@ struct DashboardView: View {
         .safeAreaInset(edge: .top, spacing: 0) { if !store.accounts.isEmpty { controls } }
         .refreshable { await store.refreshAll() }
         .sheet(isPresented: $adding) { AddAccountView() }
+        .sheet(isPresented: $reordering) { reorderSheet }
     }
     private var controls: some View {
         VStack(spacing: compact ? 6 : 10) {
             HStack {
-                Button { compact.toggle() } label: {
-                    Label("Compact", systemImage: compact ? "checkmark.square.fill" : "square")
-                        .font(.subheadline).padding(.vertical, 5)
-                }.tint(Theme.accent).accessibilityValue(compact ? "On" : "Off").accessibilityIdentifier("compact-mode")
+                HStack(spacing: 12) {
+                    ForEach(DashboardLayout.allCases) { choice in
+                        Button { layoutValue = choice.rawValue; oldCompact = choice == .bars } label: {
+                            Image(systemName: choice.symbol).font(.subheadline).padding(.vertical, 5)
+                        }.tint(layout == choice ? Theme.accent : .secondary)
+                            .accessibilityLabel(choice.title).accessibilityValue(layout == choice ? "On" : "Off")
+                            .accessibilityIdentifier(choice == .bars ? "compact-mode" : "layout-\(choice.rawValue)")
+                    }
+                }
                 Spacer()
                 if compact {
                     Button { searching.toggle() } label: { Image(systemName: "magnifyingglass") }.accessibilityLabel("Search accounts")
@@ -80,6 +111,7 @@ struct DashboardView: View {
                 }
                 Menu {
                     Picker("Sort accounts", selection: $sortValue) { ForEach(AccountSort.allCases) { Text($0.title).tag($0.rawValue) } }
+                    Button("Reorder accounts") { adoptCustomOrder(); reordering = true }
                 } label: { Label(sort.title, systemImage: "arrow.up.arrow.down").font(.caption.weight(.medium)) }
                     .accessibilityLabel("Sort accounts").accessibilityIdentifier("sort-accounts")
             }
@@ -95,6 +127,34 @@ struct DashboardView: View {
                 }
             } }
         }.padding(.horizontal, 16).padding(.vertical, compact ? 4 : 10).background(Theme.background)
+    }
+    private func adoptCustomOrder() {
+        if sort != .manual { store.reorder(sort.sorted(store.accounts).map(\.id)); sortValue = AccountSort.manual.rawValue }
+    }
+    private func accountLink(_ account: AgentAccount, tile: Bool) -> some View {
+        NavigationLink(value: account.id) {
+            if tile { AccountTile(account: account) } else { AccountCard(account: account, compact: layout == .bars) }
+        }.buttonStyle(.plain).accessibilityIdentifier("account-\(account.title)")
+            .onDrag {
+                adoptCustomOrder(); dragging = account.id
+                let item = NSItemProvider()
+                item.registerDataRepresentation(forTypeIdentifier: UTType.eyeballsAccount.identifier, visibility: .ownProcess) { handler in handler(Data(account.id.uuidString.utf8), nil); return nil }
+                return item
+            }
+            .onDrop(of: [UTType.eyeballsAccount], delegate: AccountDropDelegate(target: account.id, dragging: $dragging, store: store))
+    }
+    private var reorderSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(store.accounts) { account in
+                    HStack { ProviderLogo(provider: account.provider, color: account.color, size: 20); Text(account.title) }
+                }.onMove { offsets, destination in
+                    var ids = store.accounts.map(\.id); ids.move(fromOffsets: offsets, toOffset: destination); store.reorder(ids)
+                }
+            }.environment(\.editMode, .constant(.active)).scrollContentBackground(.hidden).background(Theme.background)
+                .navigationTitle("Account order").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { reordering = false } } }
+        }
     }
     private func filterButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) { Text(title).font(.caption.weight(.medium)).padding(.horizontal, 13).padding(.vertical, 7).background(selected ? Theme.accent : Theme.card, in: Capsule()).foregroundStyle(selected ? Theme.background : .white.opacity(0.7)) }
@@ -139,6 +199,47 @@ struct AccountCard: View {
             }.padding(compact ? 8 : 18).background(Theme.card, in: RoundedRectangle(cornerRadius: compact ? 9 : 22))
                 .overlay(RoundedRectangle(cornerRadius: compact ? 9 : 22).strokeBorder(Theme.border, lineWidth: 1))
         }
+    }
+}
+
+private struct AccountDropDelegate: DropDelegate {
+    let target: UUID
+    @Binding var dragging: UUID?
+    let store: AccountStore
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != target else { return }
+        withAnimation(.easeInOut(duration: 0.15)) { store.move(dragging, to: target) }
+    }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+    func performDrop(info: DropInfo) -> Bool { dragging = nil; return true }
+}
+struct AccountTile: View {
+    let account: AgentAccount
+    var body: some View {
+        GeometryReader { geometry in
+        TimelineView(.periodic(from: .now, by: 60)) { context in
+            let readings = account.readings(at: context.date)
+            VStack(spacing: 4) {
+                HStack(spacing: 6) {
+                    ProviderLogo(provider: account.provider, color: account.color, size: 17)
+                    Text(account.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+                UsageRing(readings: readings, color: account.color, size: min(96, geometry.size.width * 0.48), lineWidth: readings.count > 2 ? 5 : 7)
+                HStack(spacing: 8) {
+                    ForEach(Array(readings.prefix(2).enumerated()), id: \.element.id) { index, reading in
+                        Text("\(reading.window?.duration == 18000 ? "5h" : reading.window?.title ?? "Usage") \(reading.value)")
+                            .foregroundStyle(MetricColor.color(index, base: account.color)).lineLimit(1).minimumScaleFactor(0.7)
+                    }
+                }.font(.system(size: 10)).monospacedDigit()
+                Text(account.needsLogin ? "Reconnect" : account.displayedReset(for: readings).map { $0 <= context.date ? "Reset due" : "Reset in \(ResetText.relative($0, now: context.date))" } ?? account.provider.name)
+                    .font(.caption2).foregroundStyle(account.needsLogin ? .orange : .secondary).lineLimit(1)
+                if let updated = account.snapshot?.updatedAt { Text(UpdatedText.relative(updated, now: context.date)).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
+            }.padding(10).frame(width: geometry.size.width, height: geometry.size.height)
+                .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Theme.border, lineWidth: 1))
+        }
+        }.aspectRatio(1, contentMode: .fit)
     }
 }
 
