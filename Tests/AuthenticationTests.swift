@@ -5,6 +5,20 @@ import XCTest
 
 final class AuthenticationTests: XCTestCase {
     let callback = URL(string: "http://127.0.0.1:1455/auth/callback")!
+    func testCursorBindsNativeHandshakeAndKeepsVerifierOutOfURLs() throws {
+        let attempt = try CursorAuth.Attempt()
+        XCTAssertFalse(attempt.url.absoluteString.contains(attempt.verifier))
+        XCTAssertEqual(attempt.request.httpMethod, "POST")
+        let body = try JSONSerialization.jsonObject(with: attempt.request.httpBody!) as! [String: String]
+        XCTAssertEqual(body["verifier"], attempt.verifier)
+        var raw: [String: Any] = ["uuid": attempt.id.uuidString, "challenge": attempt.challenge, "authId": "private-principal", "accessToken": "private-token"]
+        XCTAssertNoThrow(try attempt.validate(raw))
+        raw["uuid"] = UUID().uuidString; XCTAssertThrowsError(try attempt.validate(raw))
+        raw["uuid"] = attempt.id.uuidString; raw["challenge"] = "different"; XCTAssertThrowsError(try attempt.validate(raw))
+        XCTAssertEqual(try CursorAuth.identity(["authId": "private", "publicUserId": "verified-principal"]), "verified-principal")
+        XCTAssertThrowsError(try CursorAuth.identity(["authId": "private"]))
+        XCTAssertThrowsError(try CursorAuth.request("CreateUserApiKey", accessToken: "private"))
+    }
     func testCopilotDeviceFlowRejectsForeignVerificationURLsAndInvalidPrincipals() throws {
         var raw: [String: Any] = ["device_code": "private-device-code", "user_code": "ABCD-EFGH", "verification_uri": "https://github.com/login/device", "expires_in": 900, "interval": 5]
         let verification = try CopilotAuth.Verification.decode(raw)

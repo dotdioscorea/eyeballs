@@ -1,6 +1,6 @@
 # Eyeballs
 
-An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI and GitHub Copilot accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
+An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI and GitHub Copilot and Cursor accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
 - Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
@@ -12,11 +12,11 @@ An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI and GitHub
 - Pull-to-refresh, timestamps, reset reminders and provider billing information where available.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (6)** is available for internal testing, built from commit `33f2771` and tagged `testflight/1.0-6`. The dashboard, widget and history changes are on `feature/configurable-dashboard-widgets`, with [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) open and unmerged into `main`. The owner confirmed fresh Codex, Claude and Grok sign-ins in build 3. Build 5 corrects Grok's zero-usage parsing and verifies shared App Group capabilities on the actual cloud-signed app and widget before upload. Build 6 adds Google sign-in for existing Gemini CLI/Code Assist accounts, with 58 unit tests and a native Google presentation/cancellation test passing. Completed live Gemini authorization remains for the owner's manual test. TestFlight release notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
+TestFlight **1.0 (7)** is available for internal testing, built from commit `58d4bda` and tagged `testflight/1.0-7`. It includes Copilot in addition to the Grok, widget and display fixes in builds 5–6. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt).
 
 ## Provider connections
 
-Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
+Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
 
 | Provider | Usage endpoint | Identity |
 | --- | --- | --- |
@@ -25,14 +25,17 @@ Sign-in uses `ASWebAuthenticationSession` and the providers’ public native cli
 | Grok | `cli-chat-proxy.grok.com/v1/billing?format=credits` | Signed ES256 identity and access-token principal |
 | Gemini CLI | `cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota` | Authenticated Google user-info API |
 | GitHub Copilot | `api.github.com/copilot_internal/user` | Authenticated GitHub user API |
+| Cursor | `api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage` | Authenticated Cursor GetMe API |
 
 Gemini reports Gemini CLI and Code Assist model quota buckets. It does not report the Gemini chat website's message allowance. Google must supply an existing Code Assist project for the account; the app does not create a Google account or enroll it into a new service. Unknown quota durations stay unknown. Google's system sign-in presentation and cancellation and the quota parser have been tested; a completed live Gemini authorization remains for the owner to test with their existing account.
 
-Copilot requests only `read:user` and rejects credentials with repository scopes. It reports finite quota buckets and provider reset dates, skipping unlimited allowances. A completed device authorization returned a new `read:user` token; authenticated identity and usage requests both returned HTTP 200. The quota parser was checked against a live response; 63 unit tests and the native device-code presentation/cancellation check passed. The completed protocol authorization and simulator presentation are separate checks. Copilot is on the additional-providers branch and is not included in TestFlight build 6.
+Copilot requests only `read:user` and rejects credentials with repository scopes. It reports finite quota buckets and provider reset dates, skipping unlimited allowances. A completed device authorization returned a new `read:user` token; authenticated identity and usage requests both returned HTTP 200. The quota parser was checked against a live response; 63 unit tests and the native device-code presentation/cancellation check passed. The completed protocol authorization and simulator presentation are separate checks. Copilot is included in TestFlight build 7.
+
+Cursor reports included, Auto and named-model usage percentages and the reported billing cycle. A free test account completed the native handshake; identity, usage and plan requests returned HTTP 200. The browser session expires after the provider’s reported token lifetime (currently 60 days) and requires sign-in again; the app does not create an API key. 65 unit tests and the native Cursor browser presentation/cancellation check passed. Cursor is not included in build 7.
 
 These are personal-use integrations with provider-controlled interfaces. Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
 
-Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts), [GitHub device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow), [VS Code GitHub authentication client](https://github.com/microsoft/vscode/tree/main/extensions/github-authentication).
+Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts), [GitHub device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow), [VS Code GitHub authentication client](https://github.com/microsoft/vscode/tree/main/extensions/github-authentication), [Cursor CLI authentication](https://cursor.com/docs/cli/reference/authentication).
 
 ## Storage and updates
 

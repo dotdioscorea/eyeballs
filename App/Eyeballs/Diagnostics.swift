@@ -22,9 +22,9 @@ enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedRe
         guard let url else { return .other }
         switch url.path {
         case "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
-        case "/login/device/code": return .deviceAuthorization
-        case "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
-        case "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
+        case "/auth/poll", "/login/device/code": return .deviceAuthorization
+        case "/aiserver.v1.DashboardService/GetMe", "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
+        case "/aiserver.v1.DashboardService/GetCurrentPeriodUsage", "/aiserver.v1.DashboardService/GetPlanInfo", "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
         case "/backend-api/wham/rate-limit-reset-credits": return .bankedResets
         case "/.well-known/jwks.json": return .identityKeys
         default: return .other
@@ -54,7 +54,7 @@ struct UsageParsingDiagnostic: Codable {
     enum KnownUsageField: String, Codable, CaseIterable {
         case creditUsagePercent, currentPeriod, periodType, periodStart, periodEnd, isUnifiedBillingUser
         case monthlyLimit, used, onDemandCap, onDemandUsed, prepaidBalance
-        case rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots, remainingFraction, remainingAmount, quotaResetTime
+        case rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots, remainingFraction, remainingAmount, quotaResetTime, planUsage, totalPercentUsed, autoPercentUsed, apiPercentUsed, billingCycleStart, billingCycleEnd
     }
     enum CodingKeys: String, CodingKey { case fields, calculation, readings }
     init(fields: [KnownUsageField: DiagnosticValueType], calculation: UsageCalculation, readings: [DiagnosticReading]) {
@@ -109,6 +109,11 @@ struct UsageParsingDiagnostic: Codable {
         case .copilot:
             fields[.quotaSnapshots] = type(object["quota_snapshots"])
             fields[.quotaResetTime] = type(object["quota_reset_date_utc"])
+        case .cursor:
+            let plan = object["planUsage"] as? [String: Any] ?? [:]
+            fields[.planUsage] = type(object["planUsage"])
+            fields[.billingCycleStart] = type(object["billingCycleStart"]); fields[.billingCycleEnd] = type(object["billingCycleEnd"])
+            for field in [KnownUsageField.totalPercentUsed, .autoPercentUsed, .apiPercentUsed] { fields[field] = type(plan[field.rawValue]) }
         case .claude:
             fields[.fiveHour] = type(object["five_hour"]); fields[.sevenDay] = type(object["seven_day"])
         }

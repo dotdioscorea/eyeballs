@@ -2,6 +2,21 @@ import XCTest
 @testable import Eyeballs
 
 final class UsageTests: XCTestCase {
+    func testCursorLiveFreeUsageAndMillisecondBillingDates() throws {
+        let raw: [String: Any] = ["billingCycleStart": "1790964716786", "billingCycleEnd": "1793643116786", "planUsage": ["autoPercentUsed": 0, "apiPercentUsed": 0, "totalPercentUsed": 0], "spendLimitUsage": ["overallLimit": 0, "overallRemaining": 0]]
+        let snapshot = try UsageParser.cursor(raw)
+        XCTAssertEqual(snapshot.windows.count, 3)
+        XCTAssertEqual(snapshot.windows[0].usedPercent, 0)
+        XCTAssertEqual(snapshot.billingEndsAt!.timeIntervalSince1970, 1793643116.786, accuracy: 0.001)
+        XCTAssertEqual(snapshot.windows[0].duration, 31 * 86400)
+        XCTAssertNil(try UsageParser.cursor(["planUsage": ["totalPercentUsed": NSNull(), "limit": 100, "totalSpend": 20]]).windows[0].usedPercent)
+        XCTAssertEqual(try UsageParser.cursor(["planUsage": ["limit": 100, "totalSpend": 20]]).windows[0].usedPercent, 20)
+        XCTAssertNil(UsageParser.cursorMilliseconds(true))
+        XCTAssertNil(UsageParser.cursorMilliseconds("NaN"))
+        let diagnostic = UsageParsingDiagnostic.make(provider: .cursor, raw: raw, snapshot: snapshot)
+        XCTAssertEqual(diagnostic.fields[.totalPercentUsed], .number)
+        XCTAssertEqual(diagnostic.readings, [.zeroUsed, .zeroUsed, .zeroUsed])
+    }
     func testCodexWeeklyPrimaryIsNotPresentedAsAShortWindow() throws {
         let raw: [String: Any] = ["plan_type": "pro", "rate_limit": ["primary_window": ["used_percent": 41, "reset_at": 1791104422, "limit_window_seconds": 604800]]]
         let value = try UsageParser.codex(raw)

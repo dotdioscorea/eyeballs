@@ -40,6 +40,7 @@
 		AEC98F93B644A0F5BF18A6C6 /* EyeballsWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB7C96965668FA84945135BD /* EyeballsWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B17BAB9B0B9961BC2195B4C2 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */; };
 		B78636509C532C5DBD80E187 /* SimulatorFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E222D06115E48D6C4B8A45F /* SimulatorFixtures.swift */; };
+		C05B8879AF5C0ECFCC861D61 /* CursorAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11DF0FB35290D1DD4DB23F11 /* CursorAuth.swift */; };
 		C353FE54EF29D9B82B4F7990 /* UsageClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */; };
 		C8A970A48C24A58202AE0F44 /* GeminiAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAEB5F6AFC79AD6D417A033F /* GeminiAuth.swift */; };
 		C8D7A94755290C40C6B9FA5B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 79AECE995479EE0B545151E2 /* PrivacyInfo.xcprivacy */; };
@@ -49,6 +50,7 @@
 		D5B1D5CCE8C975AAB6375936 /* EyeballsWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9063130896E61880DFDF5DAC /* EyeballsWidgets.swift */; };
 		EB11AA56B918AC4A9EE49D0A /* ProviderLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019C17C1A379490985ED6FF8 /* ProviderLogo.swift */; };
 		EF56B745C7CC542B3E6207F5 /* AccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */; };
+		F512F396E93CC1D63F6F3767 /* CursorBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3EEF24F95C6D849EAFFEFA2 /* CursorBrowser.swift */; };
 		F569CD1E2B6F54098B3D96E4 /* EyeballsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0568FF4A40E5DD98C07AC800 /* EyeballsUITests.swift */; };
 		F7CBA12E8CE9089FC185DFC8 /* UsageHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 181841084ED748786CD43750 /* UsageHistory.swift */; };
 /* End PBXBuildFile section */
@@ -98,6 +100,7 @@
 		0994ECBFFDA50E8B2A7BDC78 /* DisplayAndHistoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayAndHistoryTests.swift; sourceTree = "<group>"; };
 		0AB592D3EBCC0F7D04BDFF58 /* SignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInTests.swift; sourceTree = "<group>"; };
 		0E222D06115E48D6C4B8A45F /* SimulatorFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatorFixtures.swift; sourceTree = "<group>"; };
+		11DF0FB35290D1DD4DB23F11 /* CursorAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorAuth.swift; sourceTree = "<group>"; };
 		181841084ED748786CD43750 /* UsageHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageHistory.swift; sourceTree = "<group>"; };
 		1B0CADB0B5A3485C1468D6FA /* UsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTests.swift; sourceTree = "<group>"; };
 		1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
@@ -128,6 +131,7 @@
 		BA47537705E50CB6EC65A726 /* WidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
 		BB7C96965668FA84945135BD /* EyeballsWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = EyeballsWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C21A76FF5FCC0F3666156941 /* EyeballsTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EyeballsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3EEF24F95C6D849EAFFEFA2 /* CursorBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorBrowser.swift; sourceTree = "<group>"; };
 		DE281900BE28A9DF2AEEE232 /* ProviderAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = ProviderAssets.xcassets; sourceTree = "<group>"; };
 		E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
 		E88869C5AFC93BA7FDBB7E05 /* CopilotAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopilotAuth.swift; sourceTree = "<group>"; };
@@ -197,6 +201,8 @@
 				E88869C5AFC93BA7FDBB7E05 /* CopilotAuth.swift */,
 				442EC851C13AC561AF132D8D /* CopilotBrowser.swift */,
 				AB6C216786AFDAD32A68746E /* CredentialVault.swift */,
+				11DF0FB35290D1DD4DB23F11 /* CursorAuth.swift */,
+				C3EEF24F95C6D849EAFFEFA2 /* CursorBrowser.swift */,
 				74C333F79FBBB68B524059B7 /* DashboardView.swift */,
 				B3306B7B51777233C9826251 /* Diagnostics.swift */,
 				92A860BE684EB2FAFF9006C6 /* Eyeballs.entitlements */,
@@ -397,6 +403,8 @@
 				38F74B9EB8C562C6DF7FFAE4 /* CopilotAuth.swift in Sources */,
 				2F7376ACC2D49B95FE05FBDA /* CopilotBrowser.swift in Sources */,
 				825BFE17C9A718E42CF4B1DF /* CredentialVault.swift in Sources */,
+				C05B8879AF5C0ECFCC861D61 /* CursorAuth.swift in Sources */,
+				F512F396E93CC1D63F6F3767 /* CursorBrowser.swift in Sources */,
 				CE49F0EEDB016B674455D259 /* DashboardView.swift in Sources */,
 				A5535733E6EA70F5844208A8 /* Diagnostics.swift in Sources */,
 				0BB1A11BA6A2F7904A85E162 /* EyeballsApp.swift in Sources */,
