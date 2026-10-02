@@ -2,7 +2,7 @@
 
 Build 8 is already queued for its first external TestFlight review. It has no release Demo mode. The published privacy policy was added to its beta localization on 2 October 2026. Do not describe the following Demo instructions as available in build 8.
 
-## Demo in the next build
+## Demo in build 9
 
 1. Open Settings → Demo. A persistent “Demo · Sample data” bar identifies the mode.
 2. Open Accounts. Try cards, compact bars and square tiles; sorting, drag order, account edits, colours and ring configuration use the normal interfaces.
