@@ -330,8 +330,10 @@ enum UsageParser {
         let data = try ClineAuth.unwrap(raw)
         guard data["userId"] as? String == subject else { throw UsageError.wrongAccount }
         guard let balance = data["balance"] as? NSNumber, CFGetTypeID(balance) != CFBooleanGetTypeID(), balance.doubleValue.isFinite else { throw UsageError.invalidResponse }
-        // Cline reports a credit balance, not a fixed allowance or reset period.
-        return UsageSnapshot(creditBalance: String(format: "%.2f", balance.doubleValue))
+        // Match Cline's controller (/100) and credit display (/10,000).
+        // The live dashboard shows REST balance 500,000 as 0.5000 credits.
+        // A balance does not establish a fixed allowance or reset period.
+        return UsageSnapshot(creditBalance: String(format: "%.4f", balance.doubleValue / 1_000_000))
     }
     static func cent(_ raw: Any?) -> Double? {
         guard let object = raw as? [String: Any] else { return nil }

@@ -45,11 +45,12 @@ final class ClineTests: XCTestCase {
 
     func testRegisteredTokensBindToAuthenticatedProfileAndReturningAccount() throws {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
-        let data: [String: Any] = ["accessToken": "new-access", "refreshToken": "new-refresh", "expiresAt": now.addingTimeInterval(3600).timeIntervalSince1970, "userInfo": ["clineUserId": "account-a"]]
+        let data: [String: Any] = ["accessToken": "new-access", "refreshToken": "new-refresh", "tokenType": "Bearer", "expiresAt": "2027-01-15T09:00:00.123456789Z", "userInfo": ["clineUserId": "account-a"]]
         let raw: [String: Any] = ["success": true, "data": data]
         let profile: [String: Any] = ["success": true, "data": ["id": "account-a", "email": "private@example.test"]]
         let first = try ClineAuth.validatedCredential(raw, profile: profile, previous: nil, now: now)
         XCTAssertEqual(first.subject, "account-a")
+        XCTAssertEqual(first.expiresAt.timeIntervalSince(now), 3600.123456789, accuracy: 0.001)
         let rotated = try ClineAuth.validatedCredential(raw, profile: profile, previous: first, now: now)
         XCTAssertEqual(rotated.hostID, first.hostID)
         var other = first; other.subject = "account-b"
@@ -63,10 +64,10 @@ final class ClineTests: XCTestCase {
     }
 
     func testCreditBalanceKeepsZeroDistinctFromMissingWithoutInventingQuota() throws {
-        for balance in [0.0, 12.75, -0.25] {
+        for (balance, expected) in [(0, "0.0000"), (500_000, "0.5000"), (1_234_567, "1.2346"), (-250_000, "-0.2500")] {
             let raw: [String: Any] = ["success": true, "data": ["userId": "private-user", "balance": balance, "privateField": "private-value"]]
             let snapshot = try UsageParser.cline(raw, subject: "private-user")
-            XCTAssertEqual(snapshot.creditBalance, String(format: "%.2f", balance))
+            XCTAssertEqual(snapshot.creditBalance, expected)
             XCTAssertTrue(snapshot.windows.isEmpty)
             XCTAssertNil(snapshot.billingEndsAt)
             let diagnostic = UsageParsingDiagnostic.make(provider: .cline, raw: raw, snapshot: snapshot)
