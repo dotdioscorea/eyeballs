@@ -6,13 +6,13 @@ enum ProviderAuth {
     static let claudeClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     static let grokClientID = "b1a00492-073a-47ea-816f-4c329264a828"
     static func clientID(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID; case .gemini: return GeminiAuth.clientID; case .copilot: return CopilotAuth.clientID; case .cursor: return CursorAuth.clientID }
+        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID; case .gemini: return GeminiAuth.clientID; case .copilot: return CopilotAuth.clientID; case .cursor: return CursorAuth.clientID; case .cline: return ClineAuth.clientID }
     }
     static func issuer(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai"; case .gemini: return GeminiAuth.issuer; case .copilot: return CopilotAuth.issuer; case .cursor: return CursorAuth.issuer }
+        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai"; case .gemini: return GeminiAuth.issuer; case .copilot: return CopilotAuth.issuer; case .cursor: return CursorAuth.issuer; case .cline: return ClineAuth.issuer }
     }
     static func authorizationEndpoint(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize"; case .gemini: return "https://accounts.google.com/o/oauth2/v2/auth"; case .copilot: return CopilotAuth.issuer + "/login/device"; case .cursor: return "https://cursor.com/loginDeepControl" }
+        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize"; case .gemini: return "https://accounts.google.com/o/oauth2/v2/auth"; case .copilot: return CopilotAuth.issuer + "/login/device"; case .cursor: return "https://cursor.com/loginDeepControl"; case .cline: return "https://authkit.cline.bot/device" }
     }
     static func scopes(_ provider: Provider) -> String {
         switch provider {
@@ -23,11 +23,11 @@ enum ProviderAuth {
         case .grok: return "openid profile email offline_access grok-cli:access api:access"
         case .gemini: return GeminiAuth.scopes
         case .copilot: return "read:user"
-        case .cursor: return ""
+        case .cursor, .cline: return ""
         }
     }
     static func exchange(callback: URL, attempt: OAuthAttempt) async throws -> AccountCredential {
-        guard attempt.provider != .copilot && attempt.provider != .cursor else { throw AuthError.invalidCallback }
+        guard attempt.provider != .copilot && attempt.provider != .cursor && attempt.provider != .cline else { throw AuthError.invalidCallback }
         if attempt.provider == .gemini { return try await GeminiAuth.exchange(callback: callback, attempt: attempt) }
         if attempt.provider == .codex { return try await OpenAIAuth.exchange(callback: callback, attempt: attempt) }
         let verified = try attempt.validateCallback(callback)
@@ -39,6 +39,7 @@ enum ProviderAuth {
         return try await credential(raw, provider: attempt.provider, previous: attempt.previous, hostID: attempt.hostID, nonce: attempt.nonce)
     }
     static func refresh(_ previous: AccountCredential) async throws -> AccountCredential {
+        if previous.provider == .cline { return try await ClineAuth.refresh(previous) }
         if previous.provider == .cursor { throw UsageError.signedOut }
         if previous.provider == .copilot { return try await CopilotAuth.refresh(previous) }
         if previous.provider == .gemini { return try await GeminiAuth.refresh(previous) }

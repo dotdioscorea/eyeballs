@@ -21,13 +21,13 @@ enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedRe
     static func identify(_ url: URL?) -> Self {
         guard let url else { return .other }
         switch url.path {
-        case "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
-        case "/auth/poll", "/login/device/code": return .deviceAuthorization
-        case "/aiserver.v1.DashboardService/GetMe", "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
+        case "/api/v1/auth/register", "/api/v1/auth/refresh", "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
+        case "/user_management/authorize/device", "/user_management/authenticate", "/auth/poll", "/login/device/code": return .deviceAuthorization
+        case "/api/v1/users/me", "/aiserver.v1.DashboardService/GetMe", "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
         case "/aiserver.v1.DashboardService/GetCurrentPeriodUsage", "/aiserver.v1.DashboardService/GetPlanInfo", "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
         case "/backend-api/wham/rate-limit-reset-credits": return .bankedResets
         case "/.well-known/jwks.json": return .identityKeys
-        default: return .other
+        default: return url.host == "api.cline.bot" && url.path.range(of: "^/api/v1/users/[A-Za-z0-9_-]{1,160}/balance$", options: .regularExpression) != nil ? .usage : .other
         }
     }
 }
@@ -54,7 +54,7 @@ struct UsageParsingDiagnostic: Codable {
     enum KnownUsageField: String, Codable, CaseIterable {
         case creditUsagePercent, currentPeriod, periodType, periodStart, periodEnd, isUnifiedBillingUser
         case monthlyLimit, used, onDemandCap, onDemandUsed, prepaidBalance
-        case rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots, remainingFraction, remainingAmount, quotaResetTime, planUsage, totalPercentUsed, autoPercentUsed, apiPercentUsed, billingCycleStart, billingCycleEnd
+        case creditBalance, rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots, remainingFraction, remainingAmount, quotaResetTime, planUsage, totalPercentUsed, autoPercentUsed, apiPercentUsed, billingCycleStart, billingCycleEnd
     }
     enum CodingKeys: String, CodingKey { case fields, calculation, readings }
     init(fields: [KnownUsageField: DiagnosticValueType], calculation: UsageCalculation, readings: [DiagnosticReading]) {
@@ -109,6 +109,8 @@ struct UsageParsingDiagnostic: Codable {
         case .copilot:
             fields[.quotaSnapshots] = type(object["quota_snapshots"])
             fields[.quotaResetTime] = type(object["quota_reset_date_utc"])
+        case .cline:
+            fields[.creditBalance] = type((object["data"] as? [String: Any])?["balance"])
         case .cursor:
             let plan = object["planUsage"] as? [String: Any] ?? [:]
             fields[.planUsage] = type(object["planUsage"])

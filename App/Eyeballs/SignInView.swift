@@ -11,6 +11,7 @@ final class SignInModel: ObservableObject {
     private let browser = OAuthBrowser()
     private let copilotBrowser = CopilotBrowser()
     private let cursorBrowser = CursorBrowser()
+    private let clineBrowser = ClineBrowser()
     private let signer: ((AccountCredential?) async throws -> AccountCredential)?
     private let fetcher: (AgentAccount, AccountCredential) async throws -> UsageSnapshot
     private var task: Task<Void, Never>?
@@ -30,6 +31,9 @@ final class SignInModel: ObservableObject {
             do {
                 let connection: AccountCredential
                 if let signer { connection = try await signer(previous) }
+                else if account.provider == .cline {
+                    connection = try await clineBrowser.signIn(previous: previous, privateSession: usePrivateSession)
+                }
                 else if account.provider == .cursor {
                     connection = try await cursorBrowser.signIn(previous: previous, privateSession: usePrivateSession)
                 }
@@ -50,7 +54,7 @@ final class SignInModel: ObservableObject {
         }
     }
     func openGitHub() { copilotBrowser.open() }
-    func cancel() { task?.cancel(); task = nil; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); verificationCode = nil }
+    func cancel() { task?.cancel(); task = nil; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); clineBrowser.cancel(); verificationCode = nil }
 }
 
 struct SignInView: View {

@@ -24,6 +24,7 @@
 		470782475E04E8FA44C090D0 /* ResetTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCAA20E5EF38C1598F6E06A9 /* ResetTimelineView.swift */; };
 		48500BFEE22B433E15ED4725 /* EventAndChartTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C0271AE508B96055D14825 /* EventAndChartTests.swift */; };
 		51F894819DFCDFCB48AEB7BF /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586D2A36DAC6AD2D0EC7C502 /* Theme.swift */; };
+		72F585409FFFD8DE6CF834AF /* ClineBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E0901E7794EA427271CF36 /* ClineBrowser.swift */; };
 		75065CCED2E79E97CF944FDE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */; };
 		77D4BD237AACAF92F7ED4674 /* ProviderLogo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019C17C1A379490985ED6FF8 /* ProviderLogo.swift */; };
 		7E24CE8E158AB83109058255 /* DisplayAndHistoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0994ECBFFDA50E8B2A7BDC78 /* DisplayAndHistoryTests.swift */; };
@@ -31,6 +32,7 @@
 		825BFE17C9A718E42CF4B1DF /* CredentialVault.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6C216786AFDAD32A68746E /* CredentialVault.swift */; };
 		857C28387CCF689043E67253 /* Rings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6A5FE6D05A77A7AD24B /* Rings.swift */; };
 		8860B7922A6C370D2D056FB5 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D64A389A37C2185E8AD904D /* SignInView.swift */; };
+		8C5CCB3C9BFE75B379CBF679 /* ClineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99904C44853D1BAEC77FA838 /* ClineTests.swift */; };
 		8CC863EDBAE99264FC054C95 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 79AECE995479EE0B545151E2 /* PrivacyInfo.xcprivacy */; };
 		8CE21BB583CF1E3525F09680 /* Rings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D6D6A5FE6D05A77A7AD24B /* Rings.swift */; };
 		91B31B26197F4D7EADB74682 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65929DC8B984D88BE27D375E /* Models.swift */; };
@@ -39,6 +41,7 @@
 		9A55CB2D8F00A7B7264ACCD7 /* ProviderAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 237FA47F8F46B8FD3A98C502 /* ProviderAuth.swift */; };
 		9C708E093CEA00589B210085 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65929DC8B984D88BE27D375E /* Models.swift */; };
 		A48D20DAA386AAB1A142BFC2 /* AccountStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F56F04F43CF1D3627795B32C /* AccountStore.swift */; };
+		A506078F1F50325C806889F9 /* ClineAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C2672D37B7B28F59AFFB235 /* ClineAuth.swift */; };
 		A5535733E6EA70F5844208A8 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3306B7B51777233C9826251 /* Diagnostics.swift */; };
 		AEC98F93B644A0F5BF18A6C6 /* EyeballsWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB7C96965668FA84945135BD /* EyeballsWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B17BAB9B0B9961BC2195B4C2 /* AccountDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E51EB28C44E1DEA9046DC18B /* AccountDetailView.swift */; };
@@ -109,12 +112,14 @@
 		1B0CADB0B5A3485C1468D6FA /* UsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageTests.swift; sourceTree = "<group>"; };
 		1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStoreTests.swift; sourceTree = "<group>"; };
 		1B7BB7786844A6233C03C25A /* AccountEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountEvents.swift; sourceTree = "<group>"; };
+		1C2672D37B7B28F59AFFB235 /* ClineAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClineAuth.swift; sourceTree = "<group>"; };
 		1E4C42AB581D58EB654E496C /* WidgetCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetCache.swift; sourceTree = "<group>"; };
 		1EEAEE20CF95404145476053 /* HistoryCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryCharts.swift; sourceTree = "<group>"; };
 		22BA0AD6D37B6DB9FE061315 /* UsageClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageClient.swift; sourceTree = "<group>"; };
 		237FA47F8F46B8FD3A98C502 /* ProviderAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAuth.swift; sourceTree = "<group>"; };
 		2D64A389A37C2185E8AD904D /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		3193C2CE03CF0CA3BBECC747 /* EyeballsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EyeballsApp.swift; sourceTree = "<group>"; };
+		34E0901E7794EA427271CF36 /* ClineBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClineBrowser.swift; sourceTree = "<group>"; };
 		415CE169D28297BA3FCA60A3 /* ResetNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetNotifications.swift; sourceTree = "<group>"; };
 		442EC851C13AC561AF132D8D /* CopilotBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopilotBrowser.swift; sourceTree = "<group>"; };
 		4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -130,6 +135,7 @@
 		889F928CEE66024DD743D87A /* EyeballsWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EyeballsWidgets.entitlements; sourceTree = "<group>"; };
 		9063130896E61880DFDF5DAC /* EyeballsWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EyeballsWidgets.swift; sourceTree = "<group>"; };
 		92A860BE684EB2FAFF9006C6 /* Eyeballs.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Eyeballs.entitlements; sourceTree = "<group>"; };
+		99904C44853D1BAEC77FA838 /* ClineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClineTests.swift; sourceTree = "<group>"; };
 		9AE3CCDC959AEFB204D546C7 /* AuthenticationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationTests.swift; sourceTree = "<group>"; };
 		A2D0AA46499D2C54A0134F61 /* Eyeballs.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Eyeballs.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB6C216786AFDAD32A68746E /* CredentialVault.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CredentialVault.swift; sourceTree = "<group>"; };
@@ -192,6 +198,7 @@
 			children = (
 				1B2DDD258183761C0E34A61D /* AccountStoreTests.swift */,
 				9AE3CCDC959AEFB204D546C7 /* AuthenticationTests.swift */,
+				99904C44853D1BAEC77FA838 /* ClineTests.swift */,
 				671CD44FC5762C05FB415615 /* CredentialVaultTests.swift */,
 				0994ECBFFDA50E8B2A7BDC78 /* DisplayAndHistoryTests.swift */,
 				86C0271AE508B96055D14825 /* EventAndChartTests.swift */,
@@ -208,6 +215,8 @@
 				1B7BB7786844A6233C03C25A /* AccountEvents.swift */,
 				F56F04F43CF1D3627795B32C /* AccountStore.swift */,
 				4D6232AB5EFE2BA855244DB9 /* Assets.xcassets */,
+				1C2672D37B7B28F59AFFB235 /* ClineAuth.swift */,
+				34E0901E7794EA427271CF36 /* ClineBrowser.swift */,
 				E88869C5AFC93BA7FDBB7E05 /* CopilotAuth.swift */,
 				442EC851C13AC561AF132D8D /* CopilotBrowser.swift */,
 				AB6C216786AFDAD32A68746E /* CredentialVault.swift */,
@@ -413,6 +422,8 @@
 				46ECBE83B6165FFC0BC72494 /* AccountDisplay.swift in Sources */,
 				92619770F287401B12EAA6AA /* AccountEvents.swift in Sources */,
 				A48D20DAA386AAB1A142BFC2 /* AccountStore.swift in Sources */,
+				A506078F1F50325C806889F9 /* ClineAuth.swift in Sources */,
+				72F585409FFFD8DE6CF834AF /* ClineBrowser.swift in Sources */,
 				38F74B9EB8C562C6DF7FFAE4 /* CopilotAuth.swift in Sources */,
 				2F7376ACC2D49B95FE05FBDA /* CopilotBrowser.swift in Sources */,
 				825BFE17C9A718E42CF4B1DF /* CredentialVault.swift in Sources */,
@@ -469,6 +480,7 @@
 			files = (
 				EF56B745C7CC542B3E6207F5 /* AccountStoreTests.swift in Sources */,
 				0693CB2F497C68C7DCE33727 /* AuthenticationTests.swift in Sources */,
+				8C5CCB3C9BFE75B379CBF679 /* ClineTests.swift in Sources */,
 				38742D24F93F30DBE07EFA12 /* CredentialVaultTests.swift in Sources */,
 				7E24CE8E158AB83109058255 /* DisplayAndHistoryTests.swift in Sources */,
 				48500BFEE22B433E15ED4725 /* EventAndChartTests.swift in Sources */,

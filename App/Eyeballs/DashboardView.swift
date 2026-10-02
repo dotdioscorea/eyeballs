@@ -225,7 +225,8 @@ struct AccountTile: View {
                     Text(account.title).font(.subheadline.weight(.semibold)).lineLimit(1)
                     Spacer(minLength: 0)
                 }
-                UsageRing(readings: readings, color: account.color, size: min(96, geometry.size.width * 0.48), lineWidth: readings.count > 2 ? 5 : 7)
+                if readings.isEmpty, let balance = account.snapshot?.creditBalance { VStack(spacing: 4) { Text(balance).font(.title2.monospacedDigit()); Text("Credits").font(.caption).foregroundStyle(.secondary) }.frame(height: min(96, geometry.size.width * 0.48)) }
+                else { UsageRing(readings: readings, color: account.color, size: min(96, geometry.size.width * 0.48), lineWidth: readings.count > 2 ? 5 : 7) }
                 HStack(spacing: 8) {
                     ForEach(Array(readings.prefix(2).enumerated()), id: \.element.id) { index, reading in
                         Text("\(reading.window?.duration == 18000 ? "5h" : reading.window?.title ?? "Usage") \(reading.value)")

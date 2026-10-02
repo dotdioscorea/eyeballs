@@ -75,6 +75,9 @@ struct UsageClient {
         case .gemini:
             expectedIssuer = GeminiAuth.issuer
             endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+        case .cline:
+            expectedIssuer = ClineAuth.issuer
+            endpoint = ClineAuth.issuer + "/api/v1/users/" + credential.subject + "/balance"
         case .cursor:
             expectedIssuer = CursorAuth.issuer
             endpoint = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage"
@@ -97,6 +100,10 @@ struct UsageClient {
             request.setValue("xai-grok-cli", forHTTPHeaderField: "x-xai-token-auth")
             let teamID = credential.accountID?.hasPrefix("Team:") == true ? credential.accountID?.dropFirst(5).description : nil
             request.setValue(teamID ?? credential.subject, forHTTPHeaderField: "x-userid")
+        }
+        if provider == .cline {
+            guard credential.clientID == ClineAuth.clientID else { throw UsageError.wrongAccount }
+            return try ClineAuth.apiRequest("/api/v1/users/" + credential.subject + "/balance", accessToken: credential.accessToken)
         }
         if provider == .cursor {
             guard credential.clientID == CursorAuth.clientID else { throw UsageError.wrongAccount }
@@ -126,6 +133,7 @@ struct UsageClient {
         case .claude: snapshot = try UsageParser.claude(raw)
         case .grok: snapshot = try UsageParser.grok(raw)
         case .gemini: snapshot = try UsageParser.gemini(raw); snapshot.plan = tier?["name"] as? String ?? tier?["id"] as? String
+        case .cline: snapshot = try UsageParser.cline(raw, subject: credential.subject)
         case .copilot: snapshot = try UsageParser.copilot(raw)
         case .cursor:
             snapshot = try UsageParser.cursor(raw)
@@ -317,6 +325,13 @@ enum UsageParser {
             }
         }
         return UsageSnapshot(windows: windows, plan: object["copilot_plan"] as? String, billingEndsAt: reset)
+    }
+    static func cline(_ raw: Any, subject: String) throws -> UsageSnapshot {
+        let data = try ClineAuth.unwrap(raw)
+        guard data["userId"] as? String == subject else { throw UsageError.wrongAccount }
+        guard let balance = data["balance"] as? NSNumber, CFGetTypeID(balance) != CFBooleanGetTypeID(), balance.doubleValue.isFinite else { throw UsageError.invalidResponse }
+        // Cline reports a credit balance, not a fixed allowance or reset period.
+        return UsageSnapshot(creditBalance: String(format: "%.2f", balance.doubleValue))
     }
     static func cent(_ raw: Any?) -> Double? {
         guard let object = raw as? [String: Any] else { return nil }

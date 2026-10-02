@@ -163,6 +163,22 @@ final class EyeballsUITests: XCTestCase {
         cancel.tap()
         XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
     }
+    func testClinePresentsSystemSignInAndCancelsWithoutSaving() {
+        let app = XCUIApplication(); app.launch()
+        app.buttons["connect-first"].tap()
+        if !app.buttons["connect-cline"].isHittable { app.swipeUp() }
+        app.buttons["connect-cline"].tap()
+        app.buttons["Continue with Cline"].tap(); allowSystemSignIn()
+        let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+        XCTAssertTrue(service.buttons["Cancel"].waitForExistence(timeout: 15))
+        XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 15))
+        let url = service.buttons["URL"].value as? String ?? ""
+        XCTAssertTrue(url.contains("authkit.cline.bot"), url)
+        XCTAssertTrue(service.staticTexts["Welcome to Cline"].firstMatch.waitForExistence(timeout: 30))
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Cline system sign-in"; shot.lifetime = .keepAlways; add(shot)
+        service.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+    }
     func testCursorPresentsSystemSignInAndCancelsWithoutSaving() {
         let app = XCUIApplication(); app.launch()
         app.buttons["connect-first"].tap(); app.buttons["connect-cursor"].tap()
