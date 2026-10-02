@@ -33,11 +33,13 @@ Copilot requests only `read:user` and rejects credentials with repository scopes
 
 Cursor reports included, Auto and named-model usage percentages and the reported billing cycle. A free test account completed the native handshake; identity, usage and plan requests returned HTTP 200. The browser session expires after the provider’s reported token lifetime (currently 60 days) and requires sign-in again; the app does not create an API key. 65 unit tests and the native Cursor browser presentation/cancellation check passed. Cursor is included in build 8.
 
-These are personal-use integrations with provider-controlled interfaces. Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
+These integrations use provider-controlled interfaces. Distribution permission is separate from technical access; see the [current permission investigation](docs/provider-integration-permissions-2026-10-02.md). Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
 
 Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts), [GitHub device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow), [VS Code GitHub authentication client](https://github.com/microsoft/vscode/tree/main/extensions/github-authentication), [Cursor CLI authentication](https://cursor.com/docs/cli/reference/authentication).
 
 ## Storage and updates
+
+The [privacy policy](https://dotdioscorea.github.io/eyeballs/) covers provider requests, local storage, widgets, optional reports and deletion. Its canonical source is [docs/privacy.html](docs/privacy.html).
 
 UUID-keyed tokens use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history, events and widget summary.
 
@@ -63,7 +65,9 @@ export SIMULATOR_ID=<iPhone-simulator-UUID>
 scripts/check.sh -parallel-testing-enabled NO
 ```
 
-Simulator builds use local signing (`CODE_SIGN_IDENTITY=-`) so Keychain is available. `--ui-fixture` provides anonymous internal fixtures in a separate metadata directory in Debug builds. System widget tests use `--widget-fixture` to seed a disposable simulator’s normal account store, so a system-launched intent can resolve the same accounts; teardown clears only these labelled fixture records. Neither fixture has credentials, and both flags are absent from Release builds. There is no public preview mode.
+Simulator builds use local signing (`CODE_SIGN_IDENTITY=-`) so Keychain is available. `--ui-fixture` provides anonymous internal fixtures in a separate metadata directory in Debug builds. System widget tests use `--widget-fixture` to seed a disposable simulator’s normal account store, so a system-launched intent can resolve the same accounts; teardown clears only these labelled fixture records. Neither fixture has credentials, and both flags are absent from Release builds.
+
+Settings → Demo is a release feature added after build 8. It uses separate sample metadata, history, events, dashboard preferences and widget summaries, with no credentials or provider calls. Exit demo restores real connections and widget summaries. See [reviewer testing](docs/app-review-testing.md) for its scope and Apple’s access requirements.
 
 Build 5 passed **56 unit tests and three distinct UI checks** on iOS 18.3.1 before packaging. UI checks verified account-picker selection in the Home Screen editor; persistent compact mode, display configuration and debug export; and a six-account widget retaining its rows after app termination, with a row tap opening the correct account and hiding the tab bar. The Grok parser was checked against a live billing response. Signed distribution app and widget entitlements were verified on the exact uploaded IPA.
 

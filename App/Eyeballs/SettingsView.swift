@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var store: AccountStore
+    @EnvironmentObject private var session: AccountSession
     var body: some View {
         List {
             Section {
@@ -13,6 +14,16 @@ struct SettingsView: View {
                 Link("Source code", destination: URL(string: "https://github.com/dotdioscorea/eyeballs")!)
                 NavigationLink("Report a problem") { ProblemReportView() }
             }
+            Section {
+                if store.isDemo {
+                    Button("Reset sample data") { store.resetDemo() }
+                    Button("Simulate early reset") { store.simulateDemoReset() }
+                    Button("Test notification") { Task { await session.testNotification() } }
+                    Button("Exit demo") { session.endDemo() }
+                } else {
+                    Button("Demo") { session.startDemo() }.accessibilityIdentifier("start-demo")
+                }
+            } footer: { Text(store.isDemo ? "Sample accounts use separate storage and make no provider requests." : "Explore with sample accounts.") }
             Section { LabeledContent("Version", value: Diagnostics.version) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings")
     }
@@ -30,6 +41,9 @@ struct PrivacyView: View {
             Section {
                 Text("Diagnostic events record sign-in stages, error categories, HTTP status codes and known usage field types for up to seven days. They exclude credentials and account identities. Nothing is sent automatically.")
                 Button(cleared ? "Diagnostics cleared" : "Clear diagnostics") { Diagnostics.clear(); cleared = true }.disabled(cleared)
+            }
+            Section {
+                Link("Privacy policy", destination: URL(string: "https://dotdioscorea.github.io/eyeballs/")!)
             }
         }.font(.subheadline).scrollContentBackground(.hidden).background(Theme.background)
             .navigationTitle("Privacy & storage").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)

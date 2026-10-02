@@ -7,7 +7,7 @@ final class EyeballsUITests: XCTestCase {
             let failureShot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); failureShot.name = "Failure screen"; failureShot.lifetime = .keepAlways; add(failureShot)
             print("FAILURE HOME STATE\n" + XCUIApplication(bundleIdentifier: "com.apple.springboard").debugDescription)
         }
-        let app = XCUIApplication(); app.terminate(); app.launchArguments = ["--clear-widget-fixture"]; app.launch(); app.terminate()
+        let app = XCUIApplication(); app.terminate(); app.launchArguments = ["--clear-widget-fixture", "--exit-demo-test"]; app.launch(); app.terminate()
     }
     private func allowSystemSignIn() {
         // Shared sessions ask iOS for permission to use existing browser data.
@@ -27,6 +27,37 @@ final class EyeballsUITests: XCTestCase {
             let alert = home.alerts.firstMatch
             if alert.waitForExistence(timeout: 3), alert.buttons["Remove"].exists { alert.buttons["Remove"].tap() }
         }
+    }
+    func testReleaseDemoAndRestoration() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Settings"].waitForExistence(timeout: 10)); app.tabBars.buttons["Settings"].tap()
+        app.buttons["start-demo"].tap()
+        XCTAssertTrue(app.buttons["exit-demo"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
+        app.tabBars.buttons["Accounts"].tap()
+        XCTAssertTrue(app.buttons["account-Demo · Personal"].waitForExistence(timeout: 5))
+        app.buttons["layout-tiles"].tap()
+        let dashboard = XCTAttachment(screenshot: app.screenshot()); dashboard.name = "Release demo tiles"; dashboard.lifetime = .keepAlways; add(dashboard)
+        app.buttons["account-Demo · Personal"].tap()
+        XCTAssertTrue(app.staticTexts["Banked resets"].waitForExistence(timeout: 5))
+        app.swipeUp()
+        XCTAssertTrue(app.staticTexts["Usage history"].waitForExistence(timeout: 5))
+        let history = XCTAttachment(screenshot: app.screenshot()); history.name = "Release demo history"; history.lifetime = .keepAlways; add(history)
+        app.navigationBars.buttons["Eyeballs"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Events"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Events"].tap()
+        XCTAssertTrue(app.staticTexts["Banked reset detected"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Settings"].tap()
+        app.buttons["Simulate early reset"].tap()
+        app.tabBars.buttons["Events"].tap()
+        XCTAssertTrue(app.staticTexts["Banked reset used"].waitForExistence(timeout: 5))
+        app.terminate(); app.launchArguments = ["--ui-fixture"]; app.launch()
+        XCTAssertTrue(app.buttons["exit-demo"].waitForExistence(timeout: 10))
+        app.buttons["exit-demo"].tap()
+        XCTAssertTrue(app.buttons["account-Personal"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["account-Demo · Personal"].exists)
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Privacy & storage"].tap()
+        XCTAssertTrue(app.buttons["Privacy policy"].waitForExistence(timeout: 5))
     }
     func testAllProviderConnectionsAndCancellation() {
         let app = XCUIApplication(); app.launch()

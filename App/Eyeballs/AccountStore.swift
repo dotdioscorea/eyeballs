@@ -4,6 +4,7 @@ import UserNotifications
 
 @MainActor
 final class AccountStore: ObservableObject {
+    let isDemo: Bool
     @Published private(set) var accounts: [AgentAccount] = []
     @Published private(set) var histories: [UUID: [UsageHistorySample]] = [:]
     private let historyStore: UsageHistoryStore
@@ -22,21 +23,25 @@ final class AccountStore: ObservableObject {
     private let location: URL
     private var loadedAccounts = false
     private let integratesWithSystem: Bool
+    private let publishesWidgetSummaries: Bool
     private let vault: any CredentialStorage
     private let fetcher: (AgentAccount, AccountCredential) async throws -> UsageSnapshot
     private let renewer: (AccountCredential) async throws -> AccountCredential
-    init(location: URL? = nil, vault: any CredentialStorage = CredentialVault(), integratesWithSystem: Bool = true,
+    init(location: URL? = nil, vault: any CredentialStorage = CredentialVault(), integratesWithSystem: Bool = true, isDemo: Bool = false,
          fetcher: @escaping (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { try await UsageClient.fetch(account: $0, credential: $1) },
          renewer: @escaping (AccountCredential) async throws -> AccountCredential = { try await ProviderAuth.refresh($0) }) {
-        var selectedLocation = location
+        self.isDemo = isDemo
+        var selectedLocation = location ?? (isDemo ? DemoData.location : nil)
         #if DEBUG
-        if location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("EyeballsUITest/accounts.json") }
+        if !isDemo, location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("EyeballsUITest/accounts.json") }
         #endif
         self.location = selectedLocation ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Eyeballs/accounts.json")
         self.eventFile = AccountEventFile(location: self.location.deletingLastPathComponent().appendingPathComponent("events.json"))
         self.historyStore = UsageHistoryStore(directory: self.location.deletingLastPathComponent().appendingPathComponent("history"))
-        self.integratesWithSystem = integratesWithSystem
+        self.integratesWithSystem = integratesWithSystem && !isDemo
+        self.publishesWidgetSummaries = integratesWithSystem
         self.vault = vault; self.fetcher = fetcher; self.renewer = renewer
+        if isDemo { notificationsEnabled = false }
         do {
             let data = try Data(contentsOf: self.location)
             accounts = try JSONDecoder().decode([AgentAccount].self, from: data)
@@ -50,12 +55,12 @@ final class AccountStore: ObservableObject {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--clear-widget-fixture"), !accounts.isEmpty,
            accounts.allSatisfy({ $0.snapshot?.source == "UI Test Fixture" }) { accounts = []; persist() }
-        if SimulatorFixtures.enabled, accounts.isEmpty { accounts = SimulatorFixtures.accounts() }
-        if SimulatorFixtures.widgetEnabled { persist() }
+        if !isDemo, SimulatorFixtures.enabled, accounts.isEmpty { accounts = SimulatorFixtures.accounts() }
+        if !isDemo, SimulatorFixtures.widgetEnabled { persist() }
         #endif
         for account in accounts { histories[account.id] = historyStore.read(account.id); if let snapshot = account.snapshot { recordHistory(snapshot, id: account.id) } }
         #if DEBUG
-        if SimulatorFixtures.enabled {
+        if !isDemo, SimulatorFixtures.enabled {
             let fresh = SimulatorFixtures.accounts()
             for index in accounts.indices { if let sample = fresh.first(where: { $0.id == accounts[index].id }) { accounts[index].snapshot = sample.snapshot } }
             for account in accounts {
@@ -68,7 +73,7 @@ final class AccountStore: ObservableObject {
             }
         }
         #endif
-        if integratesWithSystem, loadedAccounts { publishWidgets() }
+        if publishesWidgetSummaries, loadedAccounts { publishWidgets() }
     }
     private func recordHistory(_ snapshot: UsageSnapshot, id: UUID) {
         let samples = historyStore.append(snapshot, to: histories[id] ?? [])
@@ -76,11 +81,14 @@ final class AccountStore: ObservableObject {
         catch { self.error = "Usage history could not be saved." }
     }
     private func publishWidgets() {
-        WidgetCache.write(accounts)
+        guard publishesWidgetSummaries else { return }
+        if isDemo { WidgetCache.writeDemo(accounts) } else { WidgetCache.write(accounts) }
         WidgetCenter.shared.reloadAllTimelines()
     }
-    func savedCredential(for id: UUID) throws -> AccountCredential? { try vault.load(id: id) }
+    func restoreWidgetSummaries() { if loadedAccounts { publishWidgets() } }
+    func savedCredential(for id: UUID) throws -> AccountCredential? { isDemo ? nil : try vault.load(id: id) }
     func connect(_ account: AgentAccount, credential: AccountCredential) throws {
+        guard !isDemo else { throw UsageError.unavailable }
         guard loadedAccounts else { throw UsageError.unavailable }
         guard account.provider == credential.provider, account.snapshot?.identity == credential.registrationIdentity else { throw UsageError.wrongAccount }
         let identity = credential.registrationIdentity
@@ -123,7 +131,7 @@ final class AccountStore: ObservableObject {
         let account = accounts.remove(at: from); accounts.insert(account, at: to); persist()
     }
     func remove(_ id: UUID) throws {
-        try vault.delete(id: id)
+        if !isDemo { try vault.delete(id: id) }
         try historyStore.remove(id); histories[id] = nil
         revisions[id, default: 0] += 1
         accounts.removeAll { $0.id == id }
@@ -151,6 +159,7 @@ final class AccountStore: ObservableObject {
         } catch { }
     }
     func refreshAll() async {
+        if isDemo { for account in accounts { await refresh(account.id) }; return }
         reloadAccountsIfNeeded()
         #if DEBUG
         if SimulatorFixtures.enabled { return }
@@ -172,6 +181,10 @@ final class AccountStore: ObservableObject {
         }
     }
     func refresh(_ id: UUID) async {
+        if isDemo {
+            guard let index = accounts.firstIndex(where: { $0.id == id }), var snapshot = accounts[index].snapshot else { return }
+            snapshot.updatedAt = .now; accounts[index].snapshot = snapshot; recordHistory(snapshot, id: id); persist(); return
+        }
         #if DEBUG
         if SimulatorFixtures.enabled { return }
         #endif
@@ -223,6 +236,7 @@ final class AccountStore: ObservableObject {
         persist()
     }
     func enableNotifications(_ enabled: Bool) async {
+        if isDemo { notificationsEnabled = enabled; return }
         guard integratesWithSystem else { return }
         if enabled {
             do {
@@ -239,6 +253,7 @@ final class AccountStore: ObservableObject {
     }
     private func notificationIDs(_ id: UUID) -> [String] { (0..<12).map { "reset-\(id)-\($0)" } }
     func saveNotificationRules() {
+        guard !isDemo else { return }
         if let data = try? JSONEncoder().encode(notificationRules) { UserDefaults.standard.set(data, forKey: "notification-rules") }
         Task { await scheduleNotifications() }
     }
@@ -292,10 +307,44 @@ final class AccountStore: ObservableObject {
         do {
             try FileManager.default.createDirectory(at: location.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(accounts).write(to: location, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-            if integratesWithSystem {
+            if isDemo { publishWidgets() }
+            else if integratesWithSystem {
                 publishWidgets()
                 Task { await scheduleNotifications() }
             }
         } catch { self.error = "Your changes could not be saved. Please try again." }
+    }
+
+    func resetDemo(now: Date = .now) {
+        guard isDemo, loadedAccounts, loadedEvents else { return }
+        for id in histories.keys { try? historyStore.remove(id) }
+        accounts = DemoData.accounts(now: now); histories = [:]
+        for account in accounts {
+            let samples = DemoData.history(for: account, now: now)
+            do { try historyStore.write(samples, id: account.id); histories[account.id] = samples }
+            catch { self.error = "Demo history could not be saved." }
+        }
+        events = DemoData.events(accounts: accounts, now: now); saveEvents(); persist()
+    }
+    func simulateDemoReset(now: Date = .now) {
+        guard isDemo, let index = accounts.firstIndex(where: { $0.provider == .codex }), var snapshot = accounts[index].snapshot else { return }
+        let id = accounts[index].id
+        let previous = snapshot
+        snapshot.updatedAt = max(now, previous.updatedAt.addingTimeInterval(1))
+        for i in snapshot.windows.indices { snapshot.windows[i].usedPercent = 0 }
+        if let banked = snapshot.bankedResets, !banked.isEmpty { snapshot.bankedResets = [] }
+        accounts[index].snapshot = observe(snapshot, previous: previous, id: id)
+        recordHistory(snapshot, id: id); persist()
+    }
+    func addDemoAccount(provider: Provider, name: String) {
+        guard isDemo, loadedAccounts, var account = DemoData.accounts().first(where: { $0.provider == provider }) else { return }
+        let random = UUID().uuidString
+        account.id = UUID(uuidString: "DE000000" + random.dropFirst(8))!
+        account.label = "Demo · " + (name.isEmpty ? provider.name : String(name.prefix(80)))
+        accounts.append(account)
+        let samples = DemoData.history(for: account)
+        do { try historyStore.write(samples, id: account.id); histories[account.id] = samples }
+        catch { self.error = "Demo history could not be saved." }
+        persist()
     }
 }

@@ -30,11 +30,6 @@ struct RootView: View {
             guard let id = value, store.accounts.contains(where: { $0.id == id }) else { return }
             tab = 0; path = [id]; store.notificationAccountID = nil
         }
-        .onOpenURL { url in
-            guard url.scheme == "eyeballs" else { return }
-            tab = 0
-            if let id = UUID(uuidString: url.lastPathComponent), store.accounts.contains(where: { $0.id == id }) { path = [id] }
-        }
     }
 }
 
