@@ -158,7 +158,7 @@ struct AccountCard: View {
             VStack(alignment: .leading, spacing: compact ? 5 : 15) {
                 HStack(spacing: compact ? 6 : 9) {
                     ProviderLogo(provider: account.provider, color: account.color, size: compact ? 16 : 22)
-                    Text(account.title).font(compact ? .subheadline.weight(.semibold) : .title3.weight(.semibold)).lineLimit(1)
+                    Text(account.title).font(compact ? .subheadline.weight(.semibold) : .title3.weight(.semibold)).lineLimit(1).layoutPriority(1)
                     Spacer(minLength: 8)
                     Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -175,7 +175,8 @@ struct AccountCard: View {
                     }
                 }
                 }
-                if readings.isEmpty, account.snapshot?.creditBalance == nil { Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
+                if let allowances = account.snapshot?.remainingAllowances, !allowances.isEmpty { RemainingAllowancesView(allowances: allowances, dense: compact) }
+                else if readings.isEmpty, account.snapshot?.creditBalance == nil { Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
                 if let credits = account.snapshot?.creditBalance {
                     HStack { Text("Credits").foregroundStyle(.secondary); Spacer(); Text(credits).monospacedDigit().fontWeight(.medium) }.font(compact ? .caption : .subheadline)
                     if !account.exhaustedWindows.isEmpty { Text(account.exhaustedWindows.map(\.title).joined(separator: ", ") + " allowance exhausted").font(.caption2).foregroundStyle(.orange) }
@@ -218,6 +219,9 @@ struct AccountTile: View {
                     Spacer(minLength: 0)
                 }
                 if readings.isEmpty, let balance = account.snapshot?.creditBalance { VStack(spacing: 4) { Text(balance).font(.title2.monospacedDigit()); Text("Credits").font(.caption).foregroundStyle(.secondary) }.frame(height: min(92, geometry.size.width * 0.44)) }
+                else if readings.isEmpty, let allowance = account.primaryAllowance {
+                    VStack(spacing: 4) { Text(allowance.remaining.map { $0.formatted() } ?? allowance.value).font(.title.monospacedDigit()); Text(allowance.title + (allowance.remaining != nil ? " left" : "")).font(.caption).foregroundStyle(.secondary) }.frame(height: min(92, geometry.size.width * 0.44))
+                }
                 else if readings.isEmpty { Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary).frame(height: min(92, geometry.size.width * 0.44)) }
                 else { UsageRing(readings: readings, color: account.color, size: min(92, geometry.size.width * 0.44), lineWidth: readings.count > 2 ? 5 : 7) }
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)], alignment: .leading, spacing: 2) {

@@ -2,19 +2,19 @@ import Foundation
 import SwiftUI
 
 enum Provider: String, CaseIterable, Codable, Identifiable, Sendable {
-    case codex, claude, grok, gemini, copilot, cursor, cline, kimi
+    case codex, claude, grok, gemini, copilot, cursor, cline, kimi, perplexity
     var id: String { rawValue }
     var name: String {
-        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .grok: return "Grok"; case .gemini: return "Gemini"; case .copilot: return "Copilot"; case .cursor: return "Cursor"; case .cline: return "Cline"; case .kimi: return "Kimi Code" }
+        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .grok: return "Grok"; case .gemini: return "Gemini"; case .copilot: return "Copilot"; case .cursor: return "Cursor"; case .cline: return "Cline"; case .kimi: return "Kimi Code"; case .perplexity: return "Perplexity" }
     }
     var subtitle: String {
-        switch self { case .codex: return "ChatGPT plans & Codex"; case .claude: return "Claude & Claude Code"; case .grok: return "SuperGrok & Grok Build"; case .gemini: return "Gemini CLI & Code Assist"; case .copilot: return "GitHub Copilot"; case .cursor: return "Cursor plans & agents"; case .cline: return "Cline account credits"; case .kimi: return "Kimi Code quotas & credits" }
+        switch self { case .codex: return "ChatGPT plans & Codex"; case .claude: return "Claude & Claude Code"; case .grok: return "SuperGrok & Grok Build"; case .gemini: return "Gemini CLI & Code Assist"; case .copilot: return "GitHub Copilot"; case .cursor: return "Cursor plans & agents"; case .cline: return "Cline account credits"; case .kimi: return "Kimi Code quotas & credits"; case .perplexity: return "Search & research allowances" }
     }
     var symbol: String {
-        switch self { case .codex: return "command"; case .claude: return "asterisk"; case .grok: return "slash.circle"; case .gemini: return "sparkle"; case .copilot: return "sparkles"; case .cursor: return "cursorarrow"; case .cline: return "terminal"; case .kimi: return "moon" }
+        switch self { case .codex: return "command"; case .claude: return "asterisk"; case .grok: return "slash.circle"; case .gemini: return "sparkle"; case .copilot: return "sparkles"; case .cursor: return "cursorarrow"; case .cline: return "terminal"; case .kimi: return "moon"; case .perplexity: return "sparkle.magnifyingglass" }
     }
     var color: Color {
-        switch self { case .codex: return Color(hex: 0x10A37F); case .claude: return Color(hex: 0xD97757); case .grok: return Color(hex: 0xE5E5E5); case .gemini: return Color(hex: 0x4285F4); case .copilot: return Color(hex: 0x8250DF); case .cursor: return Color(hex: 0xE5E5E5); case .cline: return Color(hex: 0xFFFFFF); case .kimi: return Color(hex: 0x6172F3) }
+        switch self { case .codex: return Color(hex: 0x10A37F); case .claude: return Color(hex: 0xD97757); case .grok: return Color(hex: 0xE5E5E5); case .gemini: return Color(hex: 0x4285F4); case .copilot: return Color(hex: 0x8250DF); case .cursor: return Color(hex: 0xE5E5E5); case .cline: return Color(hex: 0xFFFFFF); case .kimi: return Color(hex: 0x6172F3); case .perplexity: return Color(hex: 0x20B8CD) }
     }
     var usageURL: URL {
         switch self {
@@ -26,6 +26,7 @@ enum Provider: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cursor: return URL(string: "https://cursor.com/dashboard")!
         case .cline: return URL(string: "https://app.cline.bot/")!
         case .kimi: return URL(string: "https://www.kimi.ai/code/console")!
+        case .perplexity: return URL(string: "https://www.perplexity.ai/account")!
         }
     }
 }
@@ -59,6 +60,7 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
     var bankedResets: [BankedReset]?
     var allowanceContext: String?
     var details: ProviderDetails?
+    var remainingAllowances: [RemainingAllowance]?
     var nextReset: Date? { windows.compactMap(\.resetsAt).filter { $0 > .now }.min() }
     func isStale(at date: Date = .now) -> Bool {
         date.timeIntervalSince(updatedAt) > 30 * 60 || windows.contains { $0.resetDue(at: date) }

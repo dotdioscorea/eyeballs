@@ -7,6 +7,9 @@ enum SimulatorFixtures {
     static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled }
     static func accounts(now: Date = .now) -> [AgentAccount] {
         (0..<8).map { index in
+            if index == 5, ProcessInfo.processInfo.arguments.contains("--perplexity-count-fixture") {
+                return AgentAccount(id: UUID(uuidString: "00000000-0000-0000-0000-000000000006")!, provider: .perplexity, label: "Studio", snapshot: UsageSnapshot(windows: [], plan: "Free", updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture", remainingAllowances: [.init(id: "pro_search", title: "Pro searches", remaining: 3, available: true)]), addedAt: now)
+            }
             let provider = Provider.allCases[index % 3]
             var windows = [UsageWindow(id: "session", title: "5-hour window", usedPercent: Double(12 + index * 9), resetsAt: now.addingTimeInterval(10800 - Double(index * 600)), duration: 18000), UsageWindow(id: "week", title: "Weekly", usedPercent: Double(20 + index * 8), resetsAt: now.addingTimeInterval(259200 + Double(index * 14400)), duration: 604800)]
             let boundary = ProcessInfo.processInfo.arguments.contains("--ring-boundaries")

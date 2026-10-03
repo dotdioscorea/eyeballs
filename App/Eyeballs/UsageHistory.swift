@@ -6,6 +6,7 @@ struct UsageHistorySample: Codable, Equatable, Identifiable {
     var date: Date
     var windows: [UsageWindow]
     var allowanceContext: String?
+    var remainingAllowances: [RemainingAllowance]?
     var id: Date { date }
 }
 struct UsageHistoryStore {
@@ -20,7 +21,7 @@ struct UsageHistoryStore {
     func append(_ snapshot: UsageSnapshot, to samples: [UsageHistorySample], now: Date = .now) -> [UsageHistorySample] {
         guard snapshot.updatedAt <= now.addingTimeInterval(60), snapshot.updatedAt >= now.addingTimeInterval(-Self.retention) else { return samples }
         var samples = samples.filter { $0.date >= now.addingTimeInterval(-Self.retention) }
-        let sample = UsageHistorySample(date: snapshot.updatedAt, windows: snapshot.windows, allowanceContext: snapshot.allowanceContext ?? snapshot.plan)
+        let sample = UsageHistorySample(date: snapshot.updatedAt, windows: snapshot.windows, allowanceContext: snapshot.allowanceContext ?? snapshot.plan, remainingAllowances: snapshot.remainingAllowances)
         if let last = samples.last {
             guard sample.date > last.date else { return samples }
             // Coalesce an unchanged tail while preserving its starting point.
@@ -28,6 +29,7 @@ struct UsageHistoryStore {
             if samples.count > 1 {
                 let anchor = samples[samples.count - 2]
                 if last.windows == sample.windows, anchor.windows == sample.windows,
+                   last.remainingAllowances == sample.remainingAllowances, anchor.remainingAllowances == sample.remainingAllowances,
                    last.allowanceContext == sample.allowanceContext, anchor.allowanceContext == sample.allowanceContext,
                    sample.date.timeIntervalSince(anchor.date) < 300 { samples.removeLast() }
             }

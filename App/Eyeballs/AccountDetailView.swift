@@ -33,7 +33,8 @@ struct AccountDetailView: View {
                                         }
                                     }
                                 }
-                                if snapshot.windows.isEmpty { Text("No usage limit reported.").font(.subheadline).foregroundStyle(.secondary) }
+                                if let allowances = snapshot.remainingAllowances, !allowances.isEmpty { RemainingAllowancesView(allowances: allowances) }
+                                else if snapshot.windows.isEmpty { Text("No usage limit reported.").font(.subheadline).foregroundStyle(.secondary) }
                             }.panel()
                         }
                         if account.snapshot?.creditBalance != nil || account.snapshot?.details?.credits != nil {
@@ -60,7 +61,9 @@ struct AccountDetailView: View {
                                 }
                             }.frame(maxWidth: .infinity, alignment: .leading).panel()
                         }
-                        UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id })
+                        if account.snapshot?.remainingAllowances?.isEmpty == false {
+                            RemainingAllowanceHistoryView(samples: store.histories[id] ?? [], account: account)
+                        } else { UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id }) }
                         if let issue = account.issue { VStack(alignment: .leading, spacing: 10) { Text(issue).font(.subheadline).foregroundStyle(.orange); if account.needsReport == true { Button("Report problem") { reporting = true } } }.frame(maxWidth: .infinity, alignment: .leading).panel() }
                         VStack(alignment: .leading, spacing: 16) {
                             if !account.workstream.isEmpty { info("Workstream", value: account.workstream) }
@@ -142,6 +145,7 @@ struct DisplaySettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if !settings.rings.isEmpty || account.snapshot?.windows.isEmpty == false {
                 Section {
                     HStack { Spacer(); UsageRing(readings: account.readings(settings: settings), color: colorHex.map { Color(hex: $0) } ?? account.provider.color, size: 140, lineWidth: settings.rings.count > 2 ? 8 : 11); Spacer() }.padding(.vertical, 12)
                     Picker("Default amounts", selection: $settings.direction) { ForEach(AmountDirection.allCases) { Text($0.title).tag($0) } }.accessibilityIdentifier("amount-direction")
@@ -162,6 +166,7 @@ struct DisplaySettingsView: View {
                 } header: { HStack { Text("Rings"); Spacer(); EditButton() } } footer: { Text("Up to four rings, outside to inside. Compact bars use the same metrics.") }
                 Section("Available metrics") {
                     ForEach(availableMetrics) { metric in metricToggle(metric.window, kind: metric.kind) }
+                }
                 }
                 Section("Colour") {
                     ColorPicker("Account colour", selection: colorBinding, supportsOpacity: false)

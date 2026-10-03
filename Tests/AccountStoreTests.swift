@@ -10,6 +10,23 @@ final class MemoryVault: CredentialStorage {
 
 @MainActor
 final class AccountStoreTests: XCTestCase {
+    func testPerplexityRefreshRenewsAndPersistsItsSessionBeforeAUsageFailure() async throws {
+        let vault = MemoryVault()
+        let old = try PerplexityAuth.validated(["user": ["id": "account-a", "email": "person@example.test"], "expires": Date.now.addingTimeInterval(30 * 86400).ISO8601Format()], token: "header..iv.ciphertext.tag", previous: nil, expectedEmail: nil, hostID: "host")
+        let account = AgentAccount(provider: .perplexity, snapshot: UsageSnapshot(windows: [], identity: old.registrationIdentity, remainingAllowances: [.init(id: "pro_search", title: "Pro searches", remaining: 3, available: true)]))
+        var renewals = 0, reads = 0
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, credential in
+            reads += 1; XCTAssertEqual(credential.accessToken, "rotated\(renewals)..iv.ciphertext.tag"); throw UsageError.invalidResponse
+        }, renewer: { original in
+            renewals += 1; var next = original; next.accessToken = "rotated\(renewals)..iv.ciphertext.tag"; return next
+        })
+        try store.connect(account, credential: old)
+        await store.refresh(account.id); await store.refresh(account.id)
+        XCTAssertEqual(renewals, 2); XCTAssertEqual(reads, 2)
+        XCTAssertEqual(vault.values[account.id]?.accessToken, "rotated2..iv.ciphertext.tag")
+        XCTAssertEqual(store.accounts[0].snapshot, account.snapshot); XCTAssertFalse(store.accounts[0].needsLogin)
+        XCTAssertTrue(store.accounts[0].needsReport == true)
+    }
     func testRefreshingAdditionalCodexLimitsMigratesSavedDisplayAndHistory() async throws {
         let path = directory.appendingPathComponent("accounts.json")
         let vault = MemoryVault()

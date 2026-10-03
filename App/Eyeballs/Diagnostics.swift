@@ -13,6 +13,7 @@ enum DiagnosticFailure: String, Codable {
             switch error { case .signedOut: return .signedOut; case .usageAccessDenied: return .permission; case .throttled: return .throttled; case .invalidResponse: return .response; case .wrongAccount: return .accountMismatch; default: return .other }
         }
         if error is CancellationError { return .cancelled }
+        if let error = error as? PerplexityAuth.LoginError { return error == .code ? .callback : .identity }
         if error is URLError { return .network }
         return .other
     }
@@ -21,10 +22,10 @@ enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedRe
     static func identify(_ url: URL?) -> Self {
         guard let url else { return .other }
         switch url.path {
-        case "/api/oauth/token", "/api/v1/auth/register", "/api/v1/auth/refresh", "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
+        case "/api/auth/csrf", "/api/auth/signin/email", "/api/auth/callback/email", "/api/auth/session", "/api/oauth/token", "/api/v1/auth/register", "/api/v1/auth/refresh", "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
         case "/api/oauth/device_authorization", "/user_management/authorize/device", "/user_management/authenticate", "/auth/poll", "/login/device/code": return .deviceAuthorization
-        case "/coding/v1/me", "/api/v1/users/me", "/aiserver.v1.DashboardService/GetMe", "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
-        case "/coding/v1/usages", "/aiserver.v1.DashboardService/GetCurrentPeriodUsage", "/aiserver.v1.DashboardService/GetPlanInfo", "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
+        case "/api/user", "/coding/v1/me", "/api/v1/users/me", "/aiserver.v1.DashboardService/GetMe", "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
+        case "/rest/rate-limit/status", "/coding/v1/usages", "/aiserver.v1.DashboardService/GetCurrentPeriodUsage", "/aiserver.v1.DashboardService/GetPlanInfo", "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
         case "/backend-api/wham/rate-limit-reset-credits": return .bankedResets
         case "/.well-known/jwks.json": return .identityKeys
         default: return url.host == "api.cline.bot" && url.path.range(of: "^/api/v1/users/[A-Za-z0-9_-]{1,160}/balance$", options: .regularExpression) != nil ? .usage : .other
@@ -55,6 +56,7 @@ struct UsageParsingDiagnostic: Codable {
         case creditUsagePercent, currentPeriod, periodType, periodStart, periodEnd, isUnifiedBillingUser
         case monthlyLimit, used, onDemandCap, onDemandUsed, prepaidBalance
         case creditBalance, rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots, remainingFraction, remainingAmount, quotaResetTime, planUsage, totalPercentUsed, autoPercentUsed, apiPercentUsed, billingCycleStart, billingCycleEnd
+        case perplexityModes, remainingDetail, remainingKind, remainingCount, proSearchAvailable
         case kimiUsages, kimiWallet, kimiLegacyUsage
         case credits, spend, modelUsage, additionalRateLimits, extraUsage, scopedLimits, weeklyBreakdown
     }
@@ -113,6 +115,14 @@ struct UsageParsingDiagnostic: Codable {
         case .copilot:
             fields[.quotaSnapshots] = type(object["quota_snapshots"])
             fields[.quotaResetTime] = type(object["quota_reset_date_utc"])
+        case .perplexity:
+            fields[.perplexityModes] = type(object["modes"])
+            let pro = (object["modes"] as? [String: Any])?["pro_search"] as? [String: Any] ?? [:]
+            let detail = pro["remaining_detail"] as? [String: Any] ?? [:]
+            fields[.remainingDetail] = type(pro["remaining_detail"])
+            fields[.remainingKind] = type(detail["kind"])
+            fields[.remainingCount] = type(detail["remaining"])
+            fields[.proSearchAvailable] = type(pro["available"])
         case .kimi:
             fields[.kimiUsages] = type(object["usages"]); fields[.kimiWallet] = type(object["boosterWallet"]); fields[.kimiLegacyUsage] = type(object["usage"])
         case .cline:

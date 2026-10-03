@@ -75,6 +75,8 @@ struct UsageClient {
         case .gemini:
             expectedIssuer = GeminiAuth.issuer
             endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+        case .perplexity:
+            return try PerplexityAuth.sessionRequest("/rest/rate-limit/status", credential: credential)
         case .kimi:
             guard credential.clientID == KimiAuth.clientID else { throw UsageError.wrongAccount }
             return try KimiAuth.request("/usages", region: KimiAuth.Region.matching(credential.issuer), accessToken: credential.accessToken)
@@ -140,6 +142,9 @@ struct UsageClient {
         case .kimi:
             let profile = try await ProviderHTTP.json(KimiAuth.request("/me", region: KimiAuth.Region.matching(credential.issuer), accessToken: credential.accessToken), unauthorizedError: .usageAccessDenied)
             snapshot = try UsageParser.kimi(raw, profile: profile, subject: credential.subject)
+        case .perplexity:
+            let profile = try await ProviderHTTP.json(PerplexityAuth.sessionRequest("/api/user", credential: credential), unauthorizedError: .usageAccessDenied)
+            snapshot = try UsageParser.perplexity(raw, profile: profile, subject: credential.subject)
         case .copilot: snapshot = try UsageParser.copilot(raw)
         case .cursor:
             snapshot = try UsageParser.cursor(raw)

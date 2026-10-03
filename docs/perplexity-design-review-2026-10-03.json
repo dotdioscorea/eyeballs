@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-03",
+  "reviewer": "claude-opus-5-5",
+  "scope": [
+    "Perplexity email login",
+    "Remaining-count cards, compact rows and tiles",
+    "Count history",
+    "Widget code"
+  ],
+  "evidence": "Anonymous native simulator screenshots and Swift sources",
+  "changes": [
+    "Prioritize account names over plan captions",
+    "Label count history Remaining",
+    "Allow reconnect email entry when no saved email exists",
+    "Confirm the code was sent to the selected address",
+    "Show a stacked remaining count after verification",
+    "Use compact availability icons with full accessibility labels in circular widgets",
+    "Emphasize remaining counts in dense widget rows",
+    "Hide ring settings for accounts without percentage or time metrics"
+  ],
+  "verification": "Native email form/cancellation, remaining-count cards/compact rows/tiles/history, release Demo restoration and a six-account system widget with a Perplexity count passed simulator checks. Widget rows persisted after app termination and a row opened its account."
+}

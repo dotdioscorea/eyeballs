@@ -33,7 +33,7 @@ struct PrivacyView: View {
     var body: some View {
         List {
             Section {
-                Text("Sign-in uses the iOS system browser. Tokens are stored in this iPhone’s Keychain and don’t sync to iCloud. Requota doesn’t store passwords.")
+                Text("Sign-in uses the iOS system browser or Perplexity’s email codes. Tokens are stored in this iPhone’s Keychain and don’t sync to iCloud. Requota doesn’t store passwords or email codes.")
                 Text("Usage history is kept for up to 90 days. Account names and notes are stored on this device. Widgets receive names and usage, without emails, identities, notes or tokens.")
                 Text("Requests go directly to provider APIs. Requota has no backend, ads or analytics.")
                 Text("Removing an account deletes its local tokens and saved data.")

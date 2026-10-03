@@ -83,6 +83,38 @@ final class EyeballsUITests: XCTestCase {
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["connect-first"].exists)
     }
+    func testPerplexityEmailFormAndCancellation() {
+        let app = XCUIApplication(); app.launchArguments = ["--exit-demo-test"]; app.launch()
+        XCTAssertTrue(app.buttons["connect-first"].waitForExistence(timeout: 10)); app.buttons["connect-first"].tap()
+        for _ in 0..<3 { if app.buttons["connect-perplexity"].isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.buttons["connect-perplexity"].waitForExistence(timeout: 5)); app.buttons["connect-perplexity"].tap()
+        let email = app.textFields["perplexity-email"]
+        XCTAssertTrue(email.waitForExistence(timeout: 5)); XCTAssertFalse(app.buttons["send-perplexity-code"].isEnabled)
+        email.tap(); email.typeText("person@example.test")
+        XCTAssertTrue(app.buttons["send-perplexity-code"].isEnabled)
+        XCTAssertFalse(app.buttons["Save connection"].exists)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Perplexity native email form"; shot.lifetime = .keepAlways; add(shot)
+        app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["connect-first"].waitForExistence(timeout: 5))
+    }
+    func testPerplexityCountsAndHistoryAcrossLayouts() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap(); app.tabBars.buttons["Accounts"].tap()
+        let search = app.textFields["search-accounts"]; search.tap(); search.typeText("Perplexity\n")
+        XCTAssertTrue(app.buttons["account-Demo · Perplexity"].waitForExistence(timeout: 5))
+        for layout in ["layout-cards", "compact-mode", "layout-tiles"] {
+            app.buttons[layout].tap()
+            XCTAssertFalse(app.staticTexts["—%"].exists)
+            let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Perplexity counts \(layout)"; shot.lifetime = .keepAlways; add(shot)
+        }
+        app.buttons["account-Demo · Perplexity"].tap()
+        XCTAssertTrue(app.staticTexts["3 left"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Next reset"].exists)
+        for _ in 0..<3 { if app.descendants(matching: .any)["history-plot"].firstMatch.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.descendants(matching: .any)["history-plot"].firstMatch.waitForExistence(timeout: 5))
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Perplexity remaining search history"; shot.lifetime = .keepAlways; add(shot)
+    }
     func testHistorySelectionEventsAndCalendar() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
         app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
@@ -366,7 +398,7 @@ final class EyeballsUITests: XCTestCase {
         let face = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); face.name = "Small widget four rings 100 percent"; face.lifetime = .keepAlways; add(face)
     }
     func testDenseRowsWidgetRetainsSixAccountsAndOpensAccount() {
-        let app = XCUIApplication(); app.launchArguments = ["--widget-fixture"]; app.launch()
+        let app = XCUIApplication(); app.launchArguments = ["--widget-fixture", "--perplexity-count-fixture"]; app.launch()
         XCTAssertTrue(app.buttons["compact-mode"].waitForExistence(timeout: 10))
         XCUIDevice.shared.press(.home)
         let home = XCUIApplication(bundleIdentifier: "com.apple.springboard")
@@ -419,8 +451,9 @@ final class EyeballsUITests: XCTestCase {
         app.terminate()
         let studio = home.staticTexts["Studio"].firstMatch
         XCTAssertTrue(studio.waitForExistence(timeout: 15))
+        XCTAssertTrue(home.staticTexts["3 left"].firstMatch.waitForExistence(timeout: 15))
         XCTAssertFalse(home.staticTexts["No accounts"].isHittable)
-        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Six account rows after app termination"; shot.lifetime = .keepAlways; add(shot)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Six account rows with Perplexity count after app termination"; shot.lifetime = .keepAlways; add(shot)
         home.staticTexts["Work"].firstMatch.tap()
         XCTAssertTrue(app.buttons["configure-display"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.navigationBars["Work"].exists)

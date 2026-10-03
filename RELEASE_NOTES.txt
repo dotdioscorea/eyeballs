@@ -1,4 +1,3 @@
-- Added Kimi Code sign-in, regional account support and quota tracking.
-- Added Claude extra spending, named allowances and weekly usage shares.
-- Added Codex credit estimates, spending caps and model access.
-- Preserved saved rings and history when additional Codex limits change order.
+- Added Perplexity email-code sign-in and remaining search allowances.
+- Added Perplexity count history and app/widget displays.
+- Renewed Perplexity sessions automatically before usage updates.

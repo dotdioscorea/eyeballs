@@ -43,7 +43,6 @@
     "thread_usage": "Official endpoints require task IDs and are not account-wide totals; not collected"
   },
   "pending": [
-    "Perplexity subscription login and usage",
     "Devin / Windsurf login and quota protocol",
     "Meta Muse read-only quota access"
   ],
@@ -53,7 +52,7 @@
       "https://www.perplexity.ai/"
     ],
     "completed_free_browser_sign_in": true,
-    "feature_allowances_endpoint": "/rest/rate-limit/all",
+    "feature_allowances_endpoint": "/rest/rate-limit/status",
     "feature_allowances_live_shape": {
       "remaining_pro": "integer",
       "remaining_research": "integer",
@@ -63,7 +62,8 @@
     },
     "subscription_quota_endpoint": "/rest/billing/quota",
     "free_subscription_quota_result": "USAGE_QUOTA_FEATURE_DISABLED",
-    "native_login_validation": "Independent API session received providers, CSRF and email-sign-in responses with HTTP 200; completed native credential lifecycle remains unverified",
-    "app_connection_shipped": false
+    "native_login_validation": "Independent email-code protocol completed and renewed with the same authenticated identity; native URLSession and UI checks recorded separately in perplexity-protocol-validation-2026-10-03.json",
+    "app_connection_shipped": false,
+    "next_build": "12"
   }
 }

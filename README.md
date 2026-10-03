@@ -18,7 +18,7 @@ TestFlight **1.0 (11)** is available for internal and external testing, built fr
 
 ## Provider connections
 
-Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline uses WorkOS device authorization. Kimi Code uses its device flow, with a choice of international or mainland China services. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
+Browser sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Perplexity uses a native passwordless email-code form and its own isolated session token. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline uses WorkOS device authorization. Kimi Code uses its device flow, with a choice of international or mainland China services. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
 
 | Provider | Usage endpoint | Identity |
 | --- | --- | --- |
@@ -30,6 +30,7 @@ Sign-in uses `ASWebAuthenticationSession` and the providers’ public native cli
 | Cursor | `api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage` | Authenticated Cursor GetMe API |
 | Cline | `api.cline.bot/api/v1/users/{id}/balance` | Authenticated Cline profile API |
 | Kimi Code | `api.kimi.ai/coding/v1/usages` or `api.kimi.com/coding/v1/usages` | Authenticated Kimi Code `/me` API |
+| Perplexity | `www.perplexity.ai/rest/rate-limit/status` | Authenticated Perplexity session and `/api/user` APIs |
 
 Gemini reports Gemini CLI and Code Assist model quota buckets. It does not report the Gemini chat website's message allowance. Google must supply an existing Code Assist project for the account; the app does not create a Google account or enroll it into a new service. Unknown quota durations stay unknown. Google's system sign-in presentation and cancellation and the quota parser have been tested; a completed live Gemini authorization remains for the owner to test with their existing account.
 
@@ -42,6 +43,8 @@ Cline uses the SDK's WorkOS device flow, native token registration and authentic
 Five Cline tests cover the live response's expiry format and balance units. The simulator loaded Cline's system sign-in page and cancelled without saving a connection; a completed native iPhone sign-in remains a separate manual check. Cline is included in TestFlight build 10.
 
 Kimi Code, included in build 11, uses the [official SDK device flow and account APIs](https://github.com/MoonshotAI/kimi-code/tree/main/packages/oauth/src). Both regional services completed device authorization, refresh, profile and quota requests with HTTP 200. The tested Free account reported no Code quota; the app keeps that state distinct from 100% remaining. The parser supports the SDK's 5-hour, weekly and monthly ratios, older amount-based windows and extra-credit wallet/spending units. Paid-plan shapes are covered by fixtures; live paid-plan validation is outstanding. Native system-browser presentation and cancellation were checked separately from completed browser/API authorization.
+
+Perplexity uses six-digit email codes, verifies the selected email and account identity, and renews its own provider-issued session before each refresh. Each connection has a separate Keychain record; no browser cookies are imported. The API reports remaining Pro searches, Research, Labs and Agentic research counts or explicit availability. Counts appear in cards, compact rows, tiles and widgets, and are stored in local history. The tested Free account reported no cap, reset date or billing period, so the app does not manufacture percentages or reset rings. Count history remains separate from percentage comparisons and heatmaps. Paid-plan readings remain to be tested live. See [protocol checks](docs/perplexity-protocol-validation-2026-10-03.json).
 
 Claude account pages show reported extra spending, credit balances, named model/surface allowances and shares of weekly usage by app. Codex shows credit availability, spending caps, estimated local/cloud message ranges, model access and both periods of additional limits. Additional Codex metrics use stable feature IDs, with unambiguous migration of older saved rings and history. Estimates, usage shares and access flags do not establish actual token consumption or active credit charging. See [protocol validation](docs/provider-stats-research-2026-10-03.json).
 
@@ -59,7 +62,7 @@ The app is now named Requota. Existing bundle IDs, Keychain services, App Groups
 
 The [privacy policy](https://dotdioscorea.github.io/eyeballs/) covers provider requests, local storage, widgets, optional reports and deletion. Its canonical source is [docs/privacy.html](docs/privacy.html).
 
-UUID-keyed tokens use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history, events and widget summary.
+UUID-keyed provider tokens, including Perplexity session tokens, use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history, events and widget summary.
 
 Widgets read an atomic App Group summary file. They receive names, workstreams, display preferences and cached usage, without emails, identities, notes or credentials. Unreadable account metadata preserves the last usable cache; unsupported or malformed individual summary entries are skipped without hiding other valid accounts. Entities and queries are compiled into both the app and widget extension so system configuration can resolve accounts in either process.
 

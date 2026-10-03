@@ -69,9 +69,9 @@ final class AccountStore: ObservableObject {
             for account in accounts {
                 histories[account.id] = (0..<72).map { index in
                     var windows = account.snapshot!.windows
-                    windows[0].usedPercent = Double((index * 7) % 100)
-                    windows[1].usedPercent = min(100, Double(index) * 0.55 + (account.snapshot?.windows[1].safePercent ?? 0) * 0.6)
-                    return UsageHistorySample(date: Date.now.addingTimeInterval(Double(index - 72) * 3600), windows: windows)
+                    if windows.indices.contains(0) { windows[0].usedPercent = Double((index * 7) % 100) }
+                    if windows.indices.contains(1) { windows[1].usedPercent = min(100, Double(index) * 0.55 + (account.snapshot?.windows[1].safePercent ?? 0) * 0.6) }
+                    return UsageHistorySample(date: Date.now.addingTimeInterval(Double(index - 72) * 3600), windows: windows, remainingAllowances: account.snapshot?.remainingAllowances)
                 }
             }
         }
@@ -225,7 +225,7 @@ final class AccountStore: ObservableObject {
         do {
             guard var credential = try vault.load(id: id) else { throw UsageError.signedOut }
             var renewed = false
-            if credential.expiresAt < .now.addingTimeInterval(60) {
+            if credential.provider == .perplexity || credential.expiresAt < .now.addingTimeInterval(60) {
                 credential = try await renewCredential(credential, account: account)
                 renewed = true
                 guard revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return }

@@ -71,14 +71,21 @@ struct AccountWidgetView: View {
                     if let percent = readings.primary?.percent {
                         Gauge(value: percent / 100) { Text(readings.primary?.caption ?? "") } currentValueLabel: { Text("\(Int(percent.rounded()))") }
                             .gaugeStyle(.accessoryCircular).tint(account.color)
-                    } else { Text("—").accessibilityLabel("Usage unavailable") }
+                    } else if let allowance = account.primaryAllowance {
+                        VStack(spacing: 2) {
+                            if let count = allowance.remaining { Text(count.formatted()).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5); Text("left").font(.caption2) }
+                            else { Image(systemName: allowance.available == true ? "checkmark" : allowance.available == false ? "minus" : "questionmark") }
+                        }.accessibilityLabel(allowance.summary)
+                    }
+                    else { Text("—").accessibilityLabel("Usage unavailable") }
                 } else if family == .accessoryRectangular {
-                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text("\(readings.primary?.title ?? account.provider.name) · \(readings.primary?.value ?? "—") \(readings.primary?.caption ?? "")").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
+                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text(account.allowanceSummary ?? "\(readings.primary?.title ?? account.provider.name) · \(readings.primary?.value ?? "—") \(readings.primary?.caption ?? "")").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack { ProviderLogo(provider: account.provider, color: account.color, size: 16); Text(account.title).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); if family == .systemMedium { Text(account.provider.name).font(.caption2).foregroundStyle(.secondary) } }
                         HStack(spacing: 16) {
                             if !readings.isEmpty { UsageRing(readings: readings, color: account.color, size: family == .systemSmall ? 75 : 92, lineWidth: readings.count > 2 ? 4 : 6) }
+                            else if let allowances = account.snapshot?.remainingAllowances { RemainingAllowancesView(allowances: Array(allowances.prefix(family == .systemSmall ? 2 : 4)), dense: true) }
                             else { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
                             if family == .systemMedium { MetricLegend(readings: readings, color: account.color) }
                         }.frame(maxWidth: .infinity)
@@ -121,6 +128,7 @@ struct OverviewWidgetView: View {
                                     VStack(spacing: 3) { Text(balance).font(.caption.monospacedDigit()); Text("Credits").font(.system(size: 8)).foregroundStyle(.secondary) }
                                         .frame(height: family == .systemSmall ? 76 : 62)
                                 }
+                                else if let allowance = account.primaryAllowance { VStack(spacing: 3) { Text(allowance.remaining.map { $0.formatted() } ?? allowance.value).font(.title2.monospacedDigit()); Text(allowance.title + (allowance.remaining != nil ? " left" : "")).font(.system(size: 8)).foregroundStyle(.secondary) }.frame(height: family == .systemSmall ? 76 : 62) }
                                 HStack(spacing: 3) { ProviderLogo(provider: account.provider, color: account.color, size: 12); Text(account.title).font(.system(size: 10, weight: .medium)).lineLimit(1) }
                                 Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.system(size: 8)).foregroundStyle(.secondary).lineLimit(1)
                             }
@@ -164,7 +172,13 @@ struct CompactWidgetRow: View {
     }
     private var bars: some View {
         Group {
-            if readings.isEmpty { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
+            if readings.isEmpty, let allowance = account.primaryAllowance {
+                HStack(spacing: 3) {
+                    Text(allowance.title).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
+                    Spacer(minLength: 2)
+                    Text(allowance.value).font(.system(size: 10, weight: .semibold)).monospacedDigit().lineLimit(1).fixedSize()
+                }
+            } else if readings.isEmpty { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
             else {
                 HStack(spacing: 7) {
                     ForEach(Array(readings.prefix(small ? 2 : 4).enumerated()), id: \.element.id) { index, reading in

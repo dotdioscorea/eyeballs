@@ -6,13 +6,13 @@ enum ProviderAuth {
     static let claudeClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     static let grokClientID = "b1a00492-073a-47ea-816f-4c329264a828"
     static func clientID(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID; case .gemini: return GeminiAuth.clientID; case .copilot: return CopilotAuth.clientID; case .cursor: return CursorAuth.clientID; case .cline: return ClineAuth.clientID; case .kimi: return KimiAuth.clientID }
+        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID; case .gemini: return GeminiAuth.clientID; case .copilot: return CopilotAuth.clientID; case .cursor: return CursorAuth.clientID; case .cline: return ClineAuth.clientID; case .kimi: return KimiAuth.clientID; case .perplexity: return PerplexityAuth.clientID }
     }
     static func issuer(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai"; case .gemini: return GeminiAuth.issuer; case .copilot: return CopilotAuth.issuer; case .cursor: return CursorAuth.issuer; case .cline: return ClineAuth.issuer; case .kimi: return KimiAuth.Region.global.issuer }
+        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai"; case .gemini: return GeminiAuth.issuer; case .copilot: return CopilotAuth.issuer; case .cursor: return CursorAuth.issuer; case .cline: return ClineAuth.issuer; case .kimi: return KimiAuth.Region.global.issuer; case .perplexity: return PerplexityAuth.issuer }
     }
     static func authorizationEndpoint(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize"; case .gemini: return "https://accounts.google.com/o/oauth2/v2/auth"; case .copilot: return CopilotAuth.issuer + "/login/device"; case .cursor: return "https://cursor.com/loginDeepControl"; case .cline: return "https://authkit.cline.bot/device"; case .kimi: return "https://www.kimi.ai/code/authorize_device" }
+        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize"; case .gemini: return "https://accounts.google.com/o/oauth2/v2/auth"; case .copilot: return CopilotAuth.issuer + "/login/device"; case .cursor: return "https://cursor.com/loginDeepControl"; case .cline: return "https://authkit.cline.bot/device"; case .kimi: return "https://www.kimi.ai/code/authorize_device"; case .perplexity: return PerplexityAuth.issuer + "/auth/signin" }
     }
     static func scopes(_ provider: Provider) -> String {
         switch provider {
@@ -24,11 +24,11 @@ enum ProviderAuth {
         case .gemini: return GeminiAuth.scopes
         case .copilot: return "read:user"
         case .kimi: return "kimi-code"
-        case .cursor, .cline: return ""
+        case .cursor, .cline, .perplexity: return ""
         }
     }
     static func exchange(callback: URL, attempt: OAuthAttempt) async throws -> AccountCredential {
-        guard attempt.provider != .copilot && attempt.provider != .cursor && attempt.provider != .cline && attempt.provider != .kimi else { throw AuthError.invalidCallback }
+        guard attempt.provider != .copilot && attempt.provider != .cursor && attempt.provider != .cline && attempt.provider != .kimi && attempt.provider != .perplexity else { throw AuthError.invalidCallback }
         if attempt.provider == .gemini { return try await GeminiAuth.exchange(callback: callback, attempt: attempt) }
         if attempt.provider == .codex { return try await OpenAIAuth.exchange(callback: callback, attempt: attempt) }
         let verified = try attempt.validateCallback(callback)
@@ -40,6 +40,7 @@ enum ProviderAuth {
         return try await credential(raw, provider: attempt.provider, previous: attempt.previous, hostID: attempt.hostID, nonce: attempt.nonce)
     }
     static func refresh(_ previous: AccountCredential) async throws -> AccountCredential {
+        if previous.provider == .perplexity { return try await PerplexityAuth.refresh(previous) }
         if previous.provider == .kimi { return try await KimiAuth.refresh(previous) }
         if previous.provider == .cline { return try await ClineAuth.refresh(previous) }
         if previous.provider == .cursor { throw UsageError.signedOut }
