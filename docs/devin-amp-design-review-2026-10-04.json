@@ -23,5 +23,14 @@
     "Show one structured personal-credit panel instead of duplicate balances",
     "Normalize Amp SVG fill and centre its margins; retain the official wide wordmark with per-account tint"
   ],
-  "verification": "Native balance layouts and detail cleanup passed. Final widget recheck and final visual review are in progress."
+  "verification": "Final Opus recheck found no unresolved blocking bugs in the reviewed files. Native checks passed for all three Devin/Amp layouts, the simplified Amp detail, and six-account widget alignment, app-termination persistence and Amp row links.",
+  "validation_limits": [
+    "Circular and rectangular Lock Screen balance branches were inspected and compiled, not visually checked in a live Lock Screen configuration.",
+    "Balance-only stale/reconnect styling was inspected in source; the screenshots show fresh sample readings.",
+    "The native formatter follows the current locale; the demo dollar string is a fixed sample."
+  ],
+  "followup_checks": [
+    "Missing tier windows remain entries in readings(settings:), so their indices and saved display choices are preserved.",
+    "Amp snapshots leave remainingAllowances nil; the reviewer\u2019s hypothetical empty-array branch does not apply to the verified Amp response."
+  ]
 }

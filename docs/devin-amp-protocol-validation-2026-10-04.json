@@ -65,7 +65,7 @@
       "Workspace analytics and free-allowance totals are not part of the verified personal-balance protocol",
       "Only the free account has been live-validated"
     ],
-    "native_urlsession_live_test": "Passed: native form-encoded refresh, authenticated profile and personal credit balance retrieval; final presentation cleanup does not change the balance value"
+    "native_urlsession_live_test": "Passed against the packaged source: native form-encoded refresh, authenticated profile and personal credit balance retrieval"
   },
   "scope": {
     "browser_cookies_imported": false,
@@ -87,10 +87,11 @@
       "Six-account widget with Devin and Amp, app-termination persistence and Amp row deep link",
       "Amp balance cards, compact rows, tiles and detail"
     ],
-    "remaining_check": "Final regression of dense widget alignment, Lock Screen widget compilation and common balance-only detail cleanup",
     "limitations": [
-      "Completed independent browser/API grants and native URLSession tests are separate from browser-presentation checks; completed sign-in through the iPhone UI remains a manual check."
-    ]
+      "Completed independent browser/API grants and native URLSession tests are separate from browser-presentation checks; completed sign-in through the iPhone UI remains a manual check.",
+      "Lock Screen balance rendering has source/compile validation; on-device Lock Screen layout testing remains outstanding."
+    ],
+    "final_regression": "141 unit tests and three native UI checks passed; Devin/Amp sign-in presentation/cancellation and Demo restoration passed earlier in this build\u2019s validation."
   },
   "logos": {
     "devin": "https://devin.ai/favicon.svg",

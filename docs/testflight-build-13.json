@@ -1,0 +1,51 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "13",
+  "source_commit": "bed68a3f6478db5454487911c9333d30aa19db96",
+  "source_tag": "testflight/1.0-13",
+  "build_id": "ca00e0c3-83a7-4525-a909-f2b2516f4558",
+  "ipa_sha256": "96ad846c5697f3b7c74e9265f0960d334f751931cef87838f8b36fb165ab9c58",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true
+  },
+  "apple_status_checked_at_utc": "2026-10-03T23:41:17.094616+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "build": "13",
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 141,
+    "opt_in_native_live_tests_passed": 2,
+    "native_ui_checks_passed": 6,
+    "native_ui_checks": [
+      "Devin system-browser presentation and cancellation",
+      "Amp system-browser presentation and cancellation",
+      "Devin quota cards, compact rows, tiles and detail",
+      "Release Demo restoration",
+      "Six-account widget with Devin and Amp, app-termination persistence and Amp row deep link",
+      "Amp balance cards, compact rows, tiles and detail"
+    ],
+    "review_model": "claude-opus-5-5",
+    "review_details": "devin-amp-design-review-2026-10-04.json",
+    "live_protocol_details": "devin-amp-protocol-validation-2026-10-04.json",
+    "limits": [
+      "Completed independent browser/API grants and native URLSession tests are separate from browser-presentation checks; completed sign-in through the iPhone UI remains a manual check.",
+      "Lock Screen balance rendering has source/compile validation; on-device Lock Screen layout testing remains outstanding.",
+      "Devin paid-plan credit/ACU statistics and legacy Windsurf enterprise accounts remain unverified.",
+      "Amp reports personal USD credits; free-allowance totals and workspace analytics are not included.",
+      "Muse is absent from this build; the tested UK account reaches the regional waitlist before usage access."
+    ]
+  }
+}

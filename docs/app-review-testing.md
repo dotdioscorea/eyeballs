@@ -1,6 +1,6 @@
 # App Review testing
 
-Build 8’s first external TestFlight review was approved on 3 October 2026. Builds 11 and 12 are also approved and available externally, with the Demo instructions below supplied in their review notes. Build 8 has no release Demo mode.
+Build 8’s first external TestFlight review was approved on 3 October 2026. Builds 11, 12 and 13 are also approved and available externally, with the Demo instructions below supplied in their review notes. Build 8 has no release Demo mode.
 
 ## Demo in builds 9 and later
 
