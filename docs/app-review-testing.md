@@ -1,6 +1,6 @@
 # App Review testing
 
-Build 8 is already queued for its first external TestFlight review. It has no release Demo mode. The published privacy policy was added to its beta localization on 2 October 2026. Do not describe the following Demo instructions as available in build 8.
+Build 8’s first external TestFlight review was approved on 3 October 2026. Build 11 is also approved and available externally, with the Demo instructions below supplied in its review notes. Build 8 has no release Demo mode.
 
 ## Demo in builds 9 and later
 

@@ -46,5 +46,24 @@
     "Perplexity subscription login and usage",
     "Devin / Windsurf login and quota protocol",
     "Meta Muse read-only quota access"
-  ]
+  ],
+  "perplexity": {
+    "primary_sources": [
+      "https://github.com/perplexityai/perplexity-cli",
+      "https://www.perplexity.ai/"
+    ],
+    "completed_free_browser_sign_in": true,
+    "feature_allowances_endpoint": "/rest/rate-limit/all",
+    "feature_allowances_live_shape": {
+      "remaining_pro": "integer",
+      "remaining_research": "integer",
+      "remaining_labs": "integer",
+      "remaining_agentic_research": "integer",
+      "model_specific_limits": "object"
+    },
+    "subscription_quota_endpoint": "/rest/billing/quota",
+    "free_subscription_quota_result": "USAGE_QUOTA_FEATURE_DISABLED",
+    "native_login_validation": "Independent API session received providers, CSRF and email-sign-in responses with HTTP 200; completed native credential lifecycle remains unverified",
+    "app_connection_shipped": false
+  }
 }
