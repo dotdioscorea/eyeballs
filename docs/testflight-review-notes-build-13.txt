@@ -1,0 +1,8 @@
+Requota monitors usage for independently connected third-party AI accounts. It has no Requota account or developer backend. Browser providers use iOS system sign-in; Perplexity uses a native email-code form. Users supply their own provider accounts.
+
+Open Settings → Demo for isolated sample access. Thirteen labelled sample accounts cover cards, tiles, compact rows, display settings, widgets, history, charts and reset events. Build 13 adds Devin daily/weekly quota and Amp personal-credit examples. Settings can simulate an early reset, restore samples and send a labelled test notification. Exit demo restores real accounts. Demo does not contact providers or verify live authentication.
+
+We request acceptance of this demonstration path because sharing third-party credentials would expose unrelated private accounts. We can respond to requests for additional testing access.
+
+Privacy: https://dotdioscorea.github.io/eyeballs/
+Source and support: https://github.com/dotdioscorea/eyeballs

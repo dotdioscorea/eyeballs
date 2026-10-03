@@ -1,7 +1,7 @@
 {
   "date": "2026-10-03",
   "provider": "Meta Muse personal agent",
-  "implementationStatus": "Research; not included in TestFlight build 12",
+  "implementationStatus": "Not included in build 13: authenticated UK account reaches the consumer regional waitlist",
   "sources": [
     "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/",
     "https://muse.ai/",
@@ -44,7 +44,31 @@
       "settings_usage",
       "settings_subscription",
       "settings_subscription_additional_usage"
-    ]
+    ],
+    "completedFirstPartyFacebookSignIn": true,
+    "authenticatedLandingPath": "/access",
+    "authenticatedAccessMessage": "Muse isn't available in your country or region yet.",
+    "independentNativeBootstrap": {
+      "path": "/api/auth/native/bootstrap?resume_provider_completion=1",
+      "status": 200,
+      "browserCookiesImported": false
+    },
+    "independentNativeRestart": {
+      "status": 201
+    },
+    "independentEmailOtpRequest": {
+      "path": "/api/auth/native/send-otp",
+      "status": 201,
+      "region": "GB",
+      "confirmationCompleted": false
+    },
+    "independentProviderSsoStart": {
+      "path": "/api/auth/provider-sso/start",
+      "status": 200,
+      "provider": "facebook",
+      "action": "/oidc/start",
+      "browserCallbackCompletedWithSameSession": false
+    }
   },
   "anonymousNativeAuthProbes": [
     {
@@ -66,10 +90,9 @@
       "error": "Forbidden"
     }
   ],
-  "interpretation": "Public source confirms a native JSON sign-in flow. Anonymous requests without a completed bootstrap were rejected; this does not establish that authenticated native access is unavailable.",
+  "interpretation": "Native bootstrap, restart and email-code requests succeeded with their own session and CSRF protection. This supersedes the earlier anonymous 403 probes. Normal first-party Facebook sign-in completed, but the tested UK account reaches a regional waitlist before usage settings. An SSO broker session started outside the browser did not complete in the browser, so independent iPhone SSO is not claimed.",
   "notYetVerified": [
-    "Completed consumer Muse sign-in",
-    "Independent native iPhone authentication bootstrap and callback",
+    "Completed independent native authentication and callback",
     "Authenticated identity, session renewal and account switching",
     "Consumer allowance endpoint and live usage payload",
     "Weekly allowances, reserve credits, reset dates and subscription tier fields"
@@ -80,5 +103,6 @@
     "browserCookiesImported": false,
     "usageScrapingImplemented": false,
     "providerAddedToApp": false
-  }
+  },
+  "lastChecked": "2026-10-04"
 }

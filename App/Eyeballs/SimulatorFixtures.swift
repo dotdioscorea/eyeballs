@@ -7,6 +7,11 @@ enum SimulatorFixtures {
     static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled }
     static func accounts(now: Date = .now) -> [AgentAccount] {
         (0..<8).map { index in
+            if ProcessInfo.processInfo.arguments.contains("--native-provider-fixture"), index == 4 || index == 5 {
+                let provider: Provider = index == 4 ? .devin : .amp
+                let windows: [UsageWindow] = index == 4 ? [.init(id: "daily", title: "Daily", usedPercent: 35, resetsAt: now.addingTimeInterval(8 * 3600), duration: 86400), .init(id: "weekly", title: "Weekly", usedPercent: 62, resetsAt: now.addingTimeInterval(3 * 86400), duration: 604800)] : []
+                return AgentAccount(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index + 1))!, provider: provider, label: index == 4 ? "Travel" : "Studio", snapshot: UsageSnapshot(windows: windows, plan: index == 4 ? "Free" : nil, creditBalance: index == 5 ? "$5.00" : nil, updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture"), addedAt: now)
+            }
             if index == 5, ProcessInfo.processInfo.arguments.contains("--perplexity-count-fixture") {
                 return AgentAccount(id: UUID(uuidString: "00000000-0000-0000-0000-000000000006")!, provider: .perplexity, label: "Studio", snapshot: UsageSnapshot(windows: [], plan: "Free", updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture", remainingAllowances: [.init(id: "pro_search", title: "Pro searches", remaining: 3, available: true)]), addedAt: now)
             }

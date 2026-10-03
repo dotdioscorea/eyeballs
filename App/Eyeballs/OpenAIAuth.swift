@@ -40,6 +40,14 @@ struct OAuthAttempt {
         return Data(bytes).base64URL
     }
     var authorizationURL: URL {
+        if provider == .devin {
+            var parts = URLComponents(string: DevinAuth.authorizationEndpoint)!
+            parts.queryItems = [URLQueryItem(name: "redirect_uri", value: redirectURI.absoluteString),
+                                URLQueryItem(name: "state", value: state), URLQueryItem(name: "prompt", value: "select_account"),
+                                URLQueryItem(name: "code_challenge", value: Data(SHA256.hash(data: Data(verifier.utf8))).base64URL),
+                                URLQueryItem(name: "code_challenge_method", value: "S256"), URLQueryItem(name: "cli_pkce_marker", value: "1")]
+            return parts.url!
+        }
         if provider != .codex {
             var parts = URLComponents(string: ProviderAuth.authorizationEndpoint(provider))!
             parts.queryItems = [

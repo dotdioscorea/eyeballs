@@ -17,6 +17,7 @@ final class SignInModel: ObservableObject {
     private let browser = OAuthBrowser()
     private let copilotBrowser = CopilotBrowser()
     private let cursorBrowser = CursorBrowser()
+    private let ampBrowser = AmpBrowser()
     private let clineBrowser = ClineBrowser()
     private let kimiBrowser = KimiBrowser()
     private let signer: ((AccountCredential?) async throws -> AccountCredential)?
@@ -43,6 +44,9 @@ final class SignInModel: ObservableObject {
                 else if account.provider == .perplexity { throw UsageError.unsupportedLogin }
                 else if account.provider == .kimi {
                     connection = try await kimiBrowser.signIn(previous: previous, privateSession: usePrivateSession, region: kimiRegion)
+                }
+                else if account.provider == .amp {
+                    connection = try await ampBrowser.signIn(previous: previous, privateSession: usePrivateSession)
                 }
                 else if account.provider == .cline {
                     connection = try await clineBrowser.signIn(previous: previous, privateSession: usePrivateSession)
@@ -131,7 +135,7 @@ final class SignInModel: ObservableObject {
         }
     }
     func changeEmail() { guard !working else { return }; emailAttempt = nil; inputCode = ""; awaitingEmailCode = false; message = nil }
-    func cancel() { task?.cancel(); task = nil; emailAttempt = nil; inputCode = ""; awaitingEmailCode = false; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); clineBrowser.cancel(); kimiBrowser.cancel(); verificationCode = nil }
+    func cancel() { task?.cancel(); task = nil; emailAttempt = nil; inputCode = ""; awaitingEmailCode = false; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); clineBrowser.cancel(); ampBrowser.cancel(); kimiBrowser.cancel(); verificationCode = nil }
 }
 
 struct SignInView: View {

@@ -21,11 +21,14 @@ enum DiagnosticFailure: String, Codable {
 enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedResets, identityKeys, deviceAuthorization, other
     static func identify(_ url: URL?) -> Self {
         guard let url else { return .other }
+        if url.host == "ampcode.com", url.path == "/api/internal" {
+            return url.query == "getUserInfo" ? .identity : url.query == "userDisplayBalanceInfo" ? .usage : .other
+        }
         switch url.path {
-        case "/api/auth/csrf", "/api/auth/signin/email", "/api/auth/callback/email", "/api/auth/session", "/api/oauth/token", "/api/v1/auth/register", "/api/v1/auth/refresh", "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
+        case "/exa.seat_management_pb.SeatManagementService/ExchangeDevinCLIPKCECode", "/api/auth/csrf", "/api/auth/signin/email", "/api/auth/callback/email", "/api/auth/session", "/api/oauth/token", "/api/v1/auth/register", "/api/v1/auth/refresh", "/token", "/oauth/token", "/api/accounts/oauth/token", "/v1/oauth/token", "/oauth2/token", "/login/oauth/access_token": return .token
         case "/api/oauth/device_authorization", "/user_management/authorize/device", "/user_management/authenticate", "/auth/poll", "/login/device/code": return .deviceAuthorization
         case "/api/user", "/coding/v1/me", "/api/v1/users/me", "/aiserver.v1.DashboardService/GetMe", "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
-        case "/rest/rate-limit/status", "/coding/v1/usages", "/aiserver.v1.DashboardService/GetCurrentPeriodUsage", "/aiserver.v1.DashboardService/GetPlanInfo", "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
+        case "/exa.seat_management_pb.SeatManagementService/GetUserStatus", "/rest/rate-limit/status", "/coding/v1/usages", "/aiserver.v1.DashboardService/GetCurrentPeriodUsage", "/aiserver.v1.DashboardService/GetPlanInfo", "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
         case "/backend-api/wham/rate-limit-reset-credits": return .bankedResets
         case "/.well-known/jwks.json": return .identityKeys
         default: return url.host == "api.cline.bot" && url.path.range(of: "^/api/v1/users/[A-Za-z0-9_-]{1,160}/balance$", options: .regularExpression) != nil ? .usage : .other
@@ -58,6 +61,8 @@ struct UsageParsingDiagnostic: Codable {
         case creditBalance, rateLimit, primaryWindow, secondaryWindow, fiveHour, sevenDay, quotaBuckets, quotaSnapshots, remainingFraction, remainingAmount, quotaResetTime, planUsage, totalPercentUsed, autoPercentUsed, apiPercentUsed, billingCycleStart, billingCycleEnd
         case perplexityModes, remainingDetail, remainingKind, remainingCount, proSearchAvailable
         case kimiUsages, kimiWallet, kimiLegacyUsage
+        case ampUsageText
+        case devinUserStatus, devinPlanStatus, dailyQuotaRemainingPercent, weeklyQuotaRemainingPercent, dailyQuotaResetAtUnix, weeklyQuotaResetAtUnix, overageBalanceMicros, acuConsumed, acuLimit, devinModels
         case credits, spend, modelUsage, additionalRateLimits, extraUsage, scopedLimits, weeklyBreakdown
     }
     enum CodingKeys: String, CodingKey { case fields, calculation, readings }
@@ -115,6 +120,14 @@ struct UsageParsingDiagnostic: Codable {
         case .copilot:
             fields[.quotaSnapshots] = type(object["quota_snapshots"])
             fields[.quotaResetTime] = type(object["quota_reset_date_utc"])
+        case .amp:
+            fields[.ampUsageText] = type((object["result"] as? [String: Any])?["displayText"])
+        case .devin:
+            let user = object["userStatus"] as? [String: Any] ?? [:]
+            let plan = user["planStatus"] as? [String: Any] ?? [:]
+            fields[.devinUserStatus] = type(object["userStatus"]); fields[.devinPlanStatus] = type(user["planStatus"])
+            for field in [KnownUsageField.dailyQuotaRemainingPercent, .weeklyQuotaRemainingPercent, .dailyQuotaResetAtUnix, .weeklyQuotaResetAtUnix, .overageBalanceMicros, .acuConsumed, .acuLimit] { fields[field] = type(plan[field.rawValue]) }
+            fields[.devinModels] = type((user["cascadeModelConfigData"] as? [String: Any])?["clientModelConfigs"])
         case .perplexity:
             fields[.perplexityModes] = type(object["modes"])
             let pro = (object["modes"] as? [String: Any])?["pro_search"] as? [String: Any] ?? [:]

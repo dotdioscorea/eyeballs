@@ -1,6 +1,6 @@
 # Requota
 
-An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot, Cursor, Cline and Kimi Code accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
+An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
 - Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
@@ -18,7 +18,7 @@ TestFlight **1.0 (12)** is available for internal and external testing, built fr
 
 ## Provider connections
 
-Browser sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Perplexity uses a native passwordless email-code form and its own isolated session token. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline uses WorkOS device authorization. Kimi Code uses its device flow, with a choice of international or mainland China services. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
+Browser sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Perplexity uses a native passwordless email-code form and its own isolated session token. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline and Amp use WorkOS device authorization. Devin uses the CLI’s PKCE flow and authenticated quota service. Kimi Code uses its device flow, with a choice of international or mainland China services. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
 
 | Provider | Usage endpoint | Identity |
 | --- | --- | --- |
@@ -31,6 +31,8 @@ Browser sign-in uses `ASWebAuthenticationSession` and the providers’ public na
 | Cline | `api.cline.bot/api/v1/users/{id}/balance` | Authenticated Cline profile API |
 | Kimi Code | `api.kimi.ai/coding/v1/usages` or `api.kimi.com/coding/v1/usages` | Authenticated Kimi Code `/me` API |
 | Perplexity | `www.perplexity.ai/rest/rate-limit/status` | Authenticated Perplexity session and `/api/user` APIs |
+| Devin | `server.codeium.com/.../GetUserStatus` | Authenticated user and Devin organization IDs |
+| Amp | `ampcode.com/api/internal?userDisplayBalanceInfo` | Authenticated Amp profile matching WorkOS identity |
 
 Gemini reports Gemini CLI and Code Assist model quota buckets. It does not report the Gemini chat website's message allowance. Google must supply an existing Code Assist project for the account; the app does not create a Google account or enroll it into a new service. Unknown quota durations stay unknown. Google's system sign-in presentation and cancellation and the quota parser have been tested; a completed live Gemini authorization remains for the owner to test with their existing account.
 
@@ -45,6 +47,12 @@ Five Cline tests cover the live response's expiry format and balance units. The 
 Kimi Code, included in build 11, uses the [official SDK device flow and account APIs](https://github.com/MoonshotAI/kimi-code/tree/main/packages/oauth/src). Both regional services completed device authorization, refresh, profile and quota requests with HTTP 200. The tested Free account reported no Code quota; the app keeps that state distinct from 100% remaining. The parser supports the SDK's 5-hour, weekly and monthly ratios, older amount-based windows and extra-credit wallet/spending units. Paid-plan shapes are covered by fixtures; live paid-plan validation is outstanding. Native system-browser presentation and cancellation were checked separately from completed browser/API authorization.
 
 Perplexity uses six-digit email codes, verifies the selected email and account identity, and renews its own provider-issued session before each refresh. Each connection has a separate Keychain record; no browser cookies are imported. The API reports remaining Pro searches, Research, Labs and Agentic research counts or explicit availability. Counts appear in cards, compact rows, tiles and widgets, and are stored in local history. The tested Free account reported no cap, reset date or billing period, so the app does not manufacture percentages or reset rings. Count history remains separate from percentage comparisons and heatmaps. Paid-plan readings remain to be tested live. See [protocol checks](docs/perplexity-protocol-validation-2026-10-03.json).
+
+Devin uses the CLI/Desktop PKCE flow and Connect quota API. The tested Free account reports daily and weekly percentages, provider reset dates and model availability. Plan changes preserve account display settings and split analysis baselines. Credit/ACU statistics and legacy Windsurf enterprise accounts remain unverified.
+
+Amp uses the CLI’s WorkOS device grant and read-only JSON RPCs. It reports a personal USD credit balance, including zero, without inventing quotas or reset dates. Its native RPC returns a formatted balance line rather than a numeric field; unrecognized formats raise a parsing report and keep the previous reading. Workspace analytics and free-allowance totals remain outside this integration. See [Devin and Amp protocol checks](docs/devin-amp-protocol-validation-2026-10-04.json).
+
+Muse’s normal Facebook sign-in completed, but the tested UK account reaches a regional waitlist before usage settings. Independent native bootstrap and email-code requests succeeded; complete native login, session renewal and usage access remain unverified. Muse is therefore absent from Add account. See [Muse research](docs/muse-consumer-integration-research-2026-10-03.json).
 
 Claude account pages show reported extra spending, credit balances, named model/surface allowances and shares of weekly usage by app. Codex shows credit availability, spending caps, estimated local/cloud message ranges, model access and both periods of additional limits. Additional Codex metrics use stable feature IDs, with unambiguous migration of older saved rings and history. Estimates, usage shares and access flags do not establish actual token consumption or active credit charging. See [protocol validation](docs/provider-stats-research-2026-10-03.json).
 

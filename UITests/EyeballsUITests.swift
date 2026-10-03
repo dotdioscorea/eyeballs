@@ -97,6 +97,51 @@ final class EyeballsUITests: XCTestCase {
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
         XCTAssertTrue(app.buttons["connect-first"].waitForExistence(timeout: 5))
     }
+    func testDevinPresentsSystemSignInAndCancelsWithoutSaving() {
+        let app = XCUIApplication(); app.launchArguments = ["--exit-demo-test"]; app.launch()
+        XCTAssertTrue(app.buttons["connect-first"].waitForExistence(timeout: 10)); app.buttons["connect-first"].tap()
+        for _ in 0..<4 { if app.buttons["connect-devin"].isHittable { break }; app.swipeUp() }
+        app.buttons["connect-devin"].tap(); app.buttons["Continue with Devin"].tap(); allowSystemSignIn()
+        let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+        XCTAssertTrue(service.buttons["Cancel"].waitForExistence(timeout: 20))
+        XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 20))
+        let url = service.buttons["URL"].value as? String ?? ""
+        XCTAssertTrue(url.contains("devin.ai"), url)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Devin native system sign-in"; shot.lifetime = .keepAlways; add(shot)
+        service.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Save connection"].exists)
+    }
+    func testDevinDailyAndWeeklyAcrossLayouts() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap(); app.tabBars.buttons["Accounts"].tap()
+        app.textFields["search-accounts"].tap(); app.textFields["search-accounts"].typeText("Devin\n")
+        XCTAssertTrue(app.buttons["account-Demo · Devin"].waitForExistence(timeout: 5))
+        for layout in ["layout-cards", "compact-mode", "layout-tiles"] {
+            app.buttons[layout].tap()
+            let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Devin daily and weekly " + layout; shot.lifetime = .keepAlways; add(shot)
+        }
+        app.buttons["account-Demo · Devin"].tap()
+        XCTAssertTrue(app.staticTexts["Daily"].exists); XCTAssertTrue(app.staticTexts["Weekly"].exists)
+        XCTAssertTrue(app.staticTexts["Weekly time"].exists)
+        XCTAssertFalse(app.tabBars.firstMatch.isHittable)
+    }
+    func testAmpPresentsSystemSignInAndCancelsWithoutSaving() {
+        let app = XCUIApplication(); app.launchArguments = ["--exit-demo-test"]; app.launch()
+        app.buttons["connect-first"].tap()
+        for _ in 0..<4 { if app.buttons["connect-amp"].isHittable { break }; app.swipeUp() }
+        app.buttons["connect-amp"].tap(); app.buttons["Continue with Amp"].tap(); allowSystemSignIn()
+        let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+        XCTAssertTrue(service.buttons["Cancel"].waitForExistence(timeout: 20))
+        XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 20))
+        let url = service.buttons["URL"].value as? String ?? ""
+        XCTAssertTrue(url.contains("ampcode.com"), url)
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Amp native system sign-in"; shot.lifetime = .keepAlways; add(shot)
+        service.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Save connection"].exists)
+    }
     func testPerplexityCountsAndHistoryAcrossLayouts() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
         app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
@@ -114,6 +159,29 @@ final class EyeballsUITests: XCTestCase {
         for _ in 0..<3 { if app.descendants(matching: .any)["history-plot"].firstMatch.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(app.descendants(matching: .any)["history-plot"].firstMatch.waitForExistence(timeout: 5))
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Perplexity remaining search history"; shot.lifetime = .keepAlways; add(shot)
+    }
+    func testAmpBalanceAcrossLayoutsAndDetail() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap(); app.tabBars.buttons["Accounts"].tap()
+        app.textFields["search-accounts"].tap(); app.textFields["search-accounts"].typeText("Demo · Amp\n")
+        XCTAssertTrue(app.buttons["account-Demo · Amp"].waitForExistence(timeout: 5))
+        for layout in ["layout-cards", "compact-mode", "layout-tiles"] {
+            app.buttons[layout].tap()
+            let account = app.buttons["account-Demo · Amp"]
+            XCTAssertTrue(account.label.contains("$5.00"), account.debugDescription)
+            XCTAssertFalse(account.label.contains("No quota reported"))
+            XCTAssertFalse(account.label.contains("—%"))
+            let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Amp credit balance " + layout; shot.lifetime = .keepAlways; add(shot)
+        }
+        app.buttons["account-Demo · Amp"].tap()
+        XCTAssertTrue(app.staticTexts["US$5.00"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Personal credits"].exists)
+        XCTAssertFalse(app.staticTexts["No usage limit reported."].exists)
+        XCTAssertFalse(app.staticTexts["Choose a metric."].exists)
+        XCTAssertFalse(app.staticTexts["Usage history"].exists)
+        XCTAssertFalse(app.tabBars.firstMatch.isHittable)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Amp personal credit details"; shot.lifetime = .keepAlways; add(shot)
     }
     func testHistorySelectionEventsAndCalendar() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
@@ -398,7 +466,13 @@ final class EyeballsUITests: XCTestCase {
         let face = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); face.name = "Small widget four rings 100 percent"; face.lifetime = .keepAlways; add(face)
     }
     func testDenseRowsWidgetRetainsSixAccountsAndOpensAccount() {
-        let app = XCUIApplication(); app.launchArguments = ["--widget-fixture", "--perplexity-count-fixture"]; app.launch()
+        checkDenseRowsWidget(nativeProviders: false)
+    }
+    func testDenseRowsWidgetWithDevinAndAmp() {
+        checkDenseRowsWidget(nativeProviders: true)
+    }
+    private func checkDenseRowsWidget(nativeProviders: Bool) {
+        let app = XCUIApplication(); app.launchArguments = ["--widget-fixture", nativeProviders ? "--native-provider-fixture" : "--perplexity-count-fixture"]; app.launch()
         XCTAssertTrue(app.buttons["compact-mode"].waitForExistence(timeout: 10))
         XCUIDevice.shared.press(.home)
         let home = XCUIApplication(bundleIdentifier: "com.apple.springboard")
@@ -451,12 +525,12 @@ final class EyeballsUITests: XCTestCase {
         app.terminate()
         let studio = home.staticTexts["Studio"].firstMatch
         XCTAssertTrue(studio.waitForExistence(timeout: 15))
-        XCTAssertTrue(home.staticTexts["3 left"].firstMatch.waitForExistence(timeout: 15))
+        XCTAssertTrue(home.staticTexts[nativeProviders ? "Credits: $5.00" : "3 left"].firstMatch.waitForExistence(timeout: 15))
         XCTAssertFalse(home.staticTexts["No accounts"].isHittable)
-        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Six account rows with Perplexity count after app termination"; shot.lifetime = .keepAlways; add(shot)
-        home.staticTexts["Work"].firstMatch.tap()
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = nativeProviders ? "Six account rows with Devin and Amp after app termination" : "Six account rows with Perplexity count after app termination"; shot.lifetime = .keepAlways; add(shot)
+        home.staticTexts[nativeProviders ? "Studio" : "Work"].firstMatch.tap()
         XCTAssertTrue(app.buttons["configure-display"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.navigationBars["Work"].exists)
+        XCTAssertTrue(app.navigationBars[nativeProviders ? "Studio" : "Work"].exists)
         XCTAssertFalse(app.tabBars.firstMatch.isHittable)
 
     }

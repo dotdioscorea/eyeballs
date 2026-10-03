@@ -2,19 +2,19 @@ import Foundation
 import SwiftUI
 
 enum Provider: String, CaseIterable, Codable, Identifiable, Sendable {
-    case codex, claude, grok, gemini, copilot, cursor, cline, kimi, perplexity
+    case codex, claude, grok, gemini, copilot, cursor, cline, kimi, perplexity, devin, amp
     var id: String { rawValue }
     var name: String {
-        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .grok: return "Grok"; case .gemini: return "Gemini"; case .copilot: return "Copilot"; case .cursor: return "Cursor"; case .cline: return "Cline"; case .kimi: return "Kimi Code"; case .perplexity: return "Perplexity" }
+        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .grok: return "Grok"; case .gemini: return "Gemini"; case .copilot: return "Copilot"; case .cursor: return "Cursor"; case .cline: return "Cline"; case .kimi: return "Kimi Code"; case .perplexity: return "Perplexity"; case .devin: return "Devin"; case .amp: return "Amp" }
     }
     var subtitle: String {
-        switch self { case .codex: return "ChatGPT plans & Codex"; case .claude: return "Claude & Claude Code"; case .grok: return "SuperGrok & Grok Build"; case .gemini: return "Gemini CLI & Code Assist"; case .copilot: return "GitHub Copilot"; case .cursor: return "Cursor plans & agents"; case .cline: return "Cline account credits"; case .kimi: return "Kimi Code quotas & credits"; case .perplexity: return "Search & research allowances" }
+        switch self { case .codex: return "ChatGPT plans & Codex"; case .claude: return "Claude & Claude Code"; case .grok: return "SuperGrok & Grok Build"; case .gemini: return "Gemini CLI & Code Assist"; case .copilot: return "GitHub Copilot"; case .cursor: return "Cursor plans & agents"; case .cline: return "Cline account credits"; case .kimi: return "Kimi Code quotas & credits"; case .perplexity: return "Search & research allowances"; case .devin: return "Devin CLI & Desktop quotas"; case .amp: return "Personal credit balance" }
     }
     var symbol: String {
-        switch self { case .codex: return "command"; case .claude: return "asterisk"; case .grok: return "slash.circle"; case .gemini: return "sparkle"; case .copilot: return "sparkles"; case .cursor: return "cursorarrow"; case .cline: return "terminal"; case .kimi: return "moon"; case .perplexity: return "sparkle.magnifyingglass" }
+        switch self { case .codex: return "command"; case .claude: return "asterisk"; case .grok: return "slash.circle"; case .gemini: return "sparkle"; case .copilot: return "sparkles"; case .cursor: return "cursorarrow"; case .cline: return "terminal"; case .kimi: return "moon"; case .perplexity: return "sparkle.magnifyingglass"; case .devin: return "terminal"; case .amp: return "bolt" }
     }
     var color: Color {
-        switch self { case .codex: return Color(hex: 0x10A37F); case .claude: return Color(hex: 0xD97757); case .grok: return Color(hex: 0xE5E5E5); case .gemini: return Color(hex: 0x4285F4); case .copilot: return Color(hex: 0x8250DF); case .cursor: return Color(hex: 0xE5E5E5); case .cline: return Color(hex: 0xFFFFFF); case .kimi: return Color(hex: 0x6172F3); case .perplexity: return Color(hex: 0x20B8CD) }
+        switch self { case .codex: return Color(hex: 0x10A37F); case .claude: return Color(hex: 0xD97757); case .grok: return Color(hex: 0xE5E5E5); case .gemini: return Color(hex: 0x4285F4); case .copilot: return Color(hex: 0x8250DF); case .cursor: return Color(hex: 0xE5E5E5); case .cline: return Color(hex: 0xFFFFFF); case .kimi: return Color(hex: 0x6172F3); case .perplexity: return Color(hex: 0x20B8CD); case .devin: return Color(hex: 0x73A9E9); case .amp: return Color(hex: 0xA3B18A) }
     }
     var usageURL: URL {
         switch self {
@@ -27,6 +27,8 @@ enum Provider: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cline: return URL(string: "https://app.cline.bot/")!
         case .kimi: return URL(string: "https://www.kimi.ai/code/console")!
         case .perplexity: return URL(string: "https://www.perplexity.ai/account")!
+        case .devin: return URL(string: "https://app.devin.ai/settings/usage")!
+        case .amp: return URL(string: "https://ampcode.com/settings")!
         }
     }
 }

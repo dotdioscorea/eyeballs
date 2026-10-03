@@ -9,8 +9,8 @@ enum DemoData {
     static func id(_ index: Int) -> UUID { UUID(uuidString: String(format: "DE000000-0000-0000-0000-%012d", index + 1))! }
     static func contains(_ id: UUID) -> Bool { id.uuidString.hasPrefix("DE000000-") }
     static func accounts(now: Date = .now) -> [AgentAccount] {
-        let providers: [Provider] = [.codex, .claude, .grok, .codex, .claude, .copilot, .cursor, .gemini, .cline, .kimi, .perplexity]
-        let names = ["Personal", "Work", "Research", "Mac mini", "Studio", "Copilot", "Cursor", "Gemini", "Cline", "Kimi Code", "Perplexity"]
+        let providers: [Provider] = [.codex, .claude, .grok, .codex, .claude, .copilot, .cursor, .gemini, .cline, .kimi, .perplexity, .devin, .amp]
+        let names = ["Personal", "Work", "Research", "Mac mini", "Studio", "Copilot", "Cursor", "Gemini", "Cline", "Kimi Code", "Perplexity", "Devin", "Amp"]
         return providers.enumerated().map { index, provider in
             let used = Double(23 + index * 8)
             let weekly = UsageWindow(id: "week", title: "Weekly", usedPercent: used, resetsAt: now.addingTimeInterval(Double(2 + index % 4) * 86400), duration: 604800)
@@ -22,15 +22,17 @@ enum DemoData {
             } else if provider == .gemini {
                 windows = [UsageWindow(id: "daily", title: "Daily requests", usedPercent: used, resetsAt: now.addingTimeInterval(10 * 3600), duration: 86400, usedAmount: used * 10, limitAmount: 1000, amountUnit: "requests")]
             }
-            if provider == .cline || provider == .perplexity { windows = [] }
+            if provider == .cline || provider == .perplexity || provider == .amp { windows = [] }
+            if provider == .devin { windows = [.init(id: "daily", title: "Daily", usedPercent: 35, resetsAt: now.addingTimeInterval(8 * 3600), duration: 86400), .init(id: "weekly", title: "Weekly", usedPercent: 62, resetsAt: now.addingTimeInterval(3 * 86400), duration: 604800)] }
             if provider == .kimi { windows = [UsageWindow(id: "limit_5h", title: "5-hour window", usedPercent: 12, resetsAt: now.addingTimeInterval(10800), duration: 18000), UsageWindow(id: "limit_7d", title: "Weekly", usedPercent: 65, resetsAt: now.addingTimeInterval(3 * 86400), duration: 604800)] }
             var details: ProviderDetails?
             if provider == .codex { details = ProviderDetails(credits: CreditDetails(available: true, localMessages: MessageEstimate(lower: 200, upper: 1000)), models: [ModelAccess(id: "demo-model", title: "Example model", available: true)]) }
             if provider == .claude { details = ProviderDetails(spending: [SpendingDetails(id: "claude-spend", title: "Usage credits", used: 3.5, limit: 20, balance: 12, currency: "USD", enabled: true)], breakdowns: [UsageBreakdown(id: "claude-weekly-apps", title: "Share of weekly usage", rows: [.init(id: "code", title: "Claude Code", percent: 70), .init(id: "chats", title: "Chats", percent: 30)])]) }
             if provider == .kimi { details = ProviderDetails(spending: [SpendingDetails(id: "kimi-booster", title: "Extra credits", balance: 5, currency: "USD")]) }
+            if provider == .amp { details = ProviderDetails(spending: [SpendingDetails(id: "amp-personal-credits", title: "Personal credits", balance: 5, currency: "USD")]) }
             let banked: [BankedReset]? = index == 0 ? [BankedReset(id: "demo-weekly", title: "Weekly", expiresAt: now.addingTimeInterval(2 * 86400), firstDetectedAt: now.addingTimeInterval(-3 * 86400))] : nil
             let allowances: [RemainingAllowance]? = provider == .perplexity ? [.init(id: "pro_search", title: "Pro searches", remaining: 3, available: true), .init(id: "research", title: "Research", remaining: 0, available: false), .init(id: "labs", title: "Labs", remaining: 0, available: false)] : nil
-            return AgentAccount(id: id(index), provider: provider, label: "Demo · " + names[index], workstream: index < 5 ? "Sample account" : "", snapshot: UsageSnapshot(windows: windows, plan: "Sample plan", creditBalance: provider == .cline ? "0.5000" : nil, billingEndsAt: provider == .cline || provider == .perplexity ? nil : now.addingTimeInterval(12 * 86400), updatedAt: now, source: "Demo", bankedResets: banked, details: details, remainingAllowances: allowances), addedAt: now.addingTimeInterval(-30 * 86400))
+            return AgentAccount(id: id(index), provider: provider, label: "Demo · " + names[index], workstream: index < 5 ? "Sample account" : "", snapshot: UsageSnapshot(windows: windows, plan: "Sample plan", creditBalance: provider == .cline ? "0.5000" : provider == .amp ? "$5.00" : nil, billingEndsAt: [.cline, .perplexity, .devin, .amp].contains(provider) ? nil : now.addingTimeInterval(12 * 86400), updatedAt: now, source: "Demo", bankedResets: banked, details: details, remainingAllowances: allowances), addedAt: now.addingTimeInterval(-30 * 86400))
         }
     }
     static func history(for account: AgentAccount, now: Date = .now) -> [UsageHistorySample] {

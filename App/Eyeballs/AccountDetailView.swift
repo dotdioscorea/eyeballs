@@ -18,11 +18,11 @@ struct AccountDetailView: View {
                             VStack(spacing: 22) {
                                 if !account.readings().isEmpty { UsageRing(readings: account.readings(at: context.date), color: account.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13) }
                                 Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary)
-                                MetricLegend(readings: account.readings(at: context.date), color: account.color)
-                            }.padding(.vertical, 16)
+                                if !account.readings().isEmpty { MetricLegend(readings: account.readings(at: context.date), color: account.color) }
+                            }.padding(.vertical, account.readings().isEmpty ? 0 : 16)
                         }
                         Button("Configure display") { configuring = true }.font(.subheadline.weight(.medium)).accessibilityIdentifier("configure-display")
-                        if let snapshot = account.snapshot {
+                        if let snapshot = account.snapshot, !snapshot.windows.isEmpty || snapshot.remainingAllowances?.isEmpty == false || snapshot.creditBalance == nil {
                             VStack(alignment: .leading, spacing: 18) {
                                 ForEach(snapshot.windows) { window in
                                     let reading = MetricReading(definition: RingDefinition(windowID: window.id), window: window, direction: account.displaySettings.direction, date: .now)
@@ -37,7 +37,7 @@ struct AccountDetailView: View {
                                 else if snapshot.windows.isEmpty { Text("No usage limit reported.").font(.subheadline).foregroundStyle(.secondary) }
                             }.panel()
                         }
-                        if account.snapshot?.creditBalance != nil || account.snapshot?.details?.credits != nil {
+                        if account.snapshot?.details?.credits != nil || (account.snapshot?.creditBalance != nil && account.snapshot?.details?.spending.contains(where: { $0.balance != nil }) != true) {
                             VStack(alignment: .leading, spacing: 8) {
                                 if let credit = account.snapshot?.creditBalance { info("Credits", value: credit) }
                                 else { Text("Credits").font(.subheadline.weight(.semibold)) }
@@ -63,7 +63,9 @@ struct AccountDetailView: View {
                         }
                         if account.snapshot?.remainingAllowances?.isEmpty == false {
                             RemainingAllowanceHistoryView(samples: store.histories[id] ?? [], account: account)
-                        } else { UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id }) }
+                        } else if account.snapshot?.windows.isEmpty == false || (store.histories[id] ?? []).contains(where: { !$0.windows.isEmpty }) {
+                            UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id })
+                        }
                         if let issue = account.issue { VStack(alignment: .leading, spacing: 10) { Text(issue).font(.subheadline).foregroundStyle(.orange); if account.needsReport == true { Button("Report problem") { reporting = true } } }.frame(maxWidth: .infinity, alignment: .leading).panel() }
                         VStack(alignment: .leading, spacing: 16) {
                             if !account.workstream.isEmpty { info("Workstream", value: account.workstream) }

@@ -75,6 +75,12 @@ struct UsageClient {
         case .gemini:
             expectedIssuer = GeminiAuth.issuer
             endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+        case .amp:
+            guard credential.issuer == AmpAuth.issuer, credential.clientID == AmpAuth.clientID else { throw UsageError.wrongAccount }
+            return try AmpAuth.request("userDisplayBalanceInfo", token: credential.accessToken)
+        case .devin:
+            guard credential.issuer == DevinAuth.issuer, credential.clientID == DevinAuth.clientID else { throw UsageError.wrongAccount }
+            return try DevinAuth.request("GetUserStatus", token: credential.accessToken)
         case .perplexity:
             return try PerplexityAuth.sessionRequest("/rest/rate-limit/status", credential: credential)
         case .kimi:
@@ -129,7 +135,7 @@ struct UsageClient {
             tier = assist["paidTier"] as? [String: Any] ?? assist["currentTier"] as? [String: Any]
             let project = try GeminiAuth.quotaProject(assist)
             raw = try await geminiRequest("retrieveUserQuota", body: ["project": project], credential: credential)
-        } else { raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: .usageAccessDenied) }
+        } else { raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: account.provider == .devin ? .signedOut : .usageAccessDenied) }
         var parsed: UsageSnapshot?
         defer { Diagnostics.record(.usageParsed, provider: account.provider, parsing: .make(provider: account.provider, raw: raw, snapshot: parsed)) }
         var snapshot: UsageSnapshot
@@ -145,6 +151,10 @@ struct UsageClient {
         case .perplexity:
             let profile = try await ProviderHTTP.json(PerplexityAuth.sessionRequest("/api/user", credential: credential), unauthorizedError: .usageAccessDenied)
             snapshot = try UsageParser.perplexity(raw, profile: profile, subject: credential.subject)
+        case .amp:
+            let profile = try await ProviderHTTP.json(AmpAuth.request("getUserInfo", token: credential.accessToken), unauthorizedError: .usageAccessDenied)
+            snapshot = try UsageParser.amp(raw, profile: profile, subject: credential.subject)
+        case .devin: snapshot = try UsageParser.devin(raw, subject: credential.subject, accountID: credential.accountID)
         case .copilot: snapshot = try UsageParser.copilot(raw)
         case .cursor:
             snapshot = try UsageParser.cursor(raw)

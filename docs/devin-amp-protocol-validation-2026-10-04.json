@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-04",
+  "build": "13",
+  "devin": {
+    "primary_sources": [
+      "https://devin.ai/cli",
+      "https://cli.devin.ai/install.sh",
+      "https://static.devin.ai/cli/current/manifest.json"
+    ],
+    "cli_version": "3000.11.3",
+    "cli_archive_sha256": "c08cc3f3507d103246b8c601a584fcc719fd77f6cc10f26cc90e9f4186640df2",
+    "authorization": "Independent native PKCE attempt; app.devin.ai/auth/cli/continue; exact 127.0.0.1 callback, state and S256 verifier",
+    "exchange": "server.codeium.com/exa.seat_management_pb.SeatManagementService/ExchangeDevinCLIPKCECode",
+    "usage": "server.codeium.com/exa.seat_management_pb.SeatManagementService/GetUserStatus",
+    "credential_binding": "Authenticated user ID and Devin organization ID; no identity from browser labels",
+    "live_exchange_status": 200,
+    "live_profile_and_usage_status": 200,
+    "live_plan": "Free",
+    "reported_metrics": [
+      "daily quota remaining percentage",
+      "weekly quota remaining percentage",
+      "Unix reset timestamps",
+      "model availability"
+    ],
+    "expiration": "The native exchange reports no expiry or refresh token; authenticated revocation prompts reconnection",
+    "zero_handling": "ProtoJSON omitted percentages mean zero only for a recognized quota-billing plan with a reported reset timestamp; otherwise missing stays unknown",
+    "tier_handling": "Reported plan and quota visibility change the analysis baseline without deleting display preferences",
+    "limits": [
+      "CLI/Desktop quotas; legacy Windsurf enterprise accounts not separately validated",
+      "Model availability does not measure token consumption",
+      "Credit spending, ACU use and paid-plan quotas are not live-validated"
+    ],
+    "native_urlsession_live_test": "Passed: authenticated profile, same-identity revalidation and daily/weekly quota retrieval"
+  },
+  "amp": {
+    "primary_sources": [
+      "https://ampcode.com/",
+      "https://ampcode.com/docs/pricing",
+      "https://ampcode.com/api/auth/oauth-config",
+      "https://ampcode.com/api/external",
+      "https://ampcode.com/security"
+    ],
+    "cli_version": "0.0.1791060199-g5bacb8",
+    "authorization": "Independent WorkOS device authorization; native access and refresh tokens; Google basic identity sign-in",
+    "auth_api": "https://authapi.ampcode.com/user_management",
+    "client_id": "client_01JNSEYM3V0J5AXK4YXNXRXTGP",
+    "identity_rpc": "https://ampcode.com/api/internal?getUserInfo",
+    "balance_rpc": "https://ampcode.com/api/internal?userDisplayBalanceInfo",
+    "balance_rpc_params": {
+      "markdown": false,
+      "details": false
+    },
+    "live_authorization_status": 200,
+    "live_refresh_status": 200,
+    "live_identity_status": 200,
+    "live_balance_status": 200,
+    "dashboard_comparison": "Free Hobby dashboard reports the same zero USD personal credit balance",
+    "credential_binding": "Authenticated Amp profile ID must match WorkOS user ID; renewed identity must match the saved connection",
+    "parser": "Explicit anchored USD personal-credit line from the CLI JSON RPC displayText. No HTML, browser-cookie import or page extraction. Unknown text formats raise a parsing report and retain the previous reading.",
+    "reported_metrics": [
+      "personal USD credit balance"
+    ],
+    "limits": [
+      "No percentage quota, reset date or billing period is invented",
+      "Workspace analytics and free-allowance totals are not part of the verified personal-balance protocol",
+      "Only the free account has been live-validated"
+    ],
+    "native_urlsession_live_test": "Passed: native form-encoded refresh, authenticated profile and personal credit balance retrieval; final presentation cleanup does not change the balance value"
+  },
+  "scope": {
+    "browser_cookies_imported": false,
+    "cli_credentials_imported": false,
+    "paid_subscriptions_created": false,
+    "provider_api_keys_created": false,
+    "inference_requests_made": false,
+    "credential_files_committed": false
+  },
+  "validation": {
+    "unit_tests_passed": 141,
+    "opt_in_native_live_tests_passed": 2,
+    "native_ui_checks_passed": 6,
+    "native_ui_checks": [
+      "Devin system-browser presentation and cancellation",
+      "Amp system-browser presentation and cancellation",
+      "Devin quota cards, compact rows, tiles and detail",
+      "Release Demo restoration",
+      "Six-account widget with Devin and Amp, app-termination persistence and Amp row deep link",
+      "Amp balance cards, compact rows, tiles and detail"
+    ],
+    "remaining_check": "Final regression of dense widget alignment, Lock Screen widget compilation and common balance-only detail cleanup",
+    "limitations": [
+      "Completed independent browser/API grants and native URLSession tests are separate from browser-presentation checks; completed sign-in through the iPhone UI remains a manual check."
+    ]
+  },
+  "logos": {
+    "devin": "https://devin.ai/favicon.svg",
+    "amp": "https://ampcode.com/app-icon.svg",
+    "rendering": "Official vector marks without backgrounds, templated for provider defaults and account colour overrides"
+  }
+}

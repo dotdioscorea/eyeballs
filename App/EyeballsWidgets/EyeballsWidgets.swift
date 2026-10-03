@@ -77,9 +77,13 @@ struct AccountWidgetView: View {
                             else { Image(systemName: allowance.available == true ? "checkmark" : allowance.available == false ? "minus" : "questionmark") }
                         }.accessibilityLabel(allowance.summary)
                     }
+                    else if let balance = account.snapshot?.creditBalance {
+                        VStack(spacing: 2) { Text(balance).font(.caption.monospacedDigit()).lineLimit(1).minimumScaleFactor(0.5); Text("Credits").font(.system(size: 9)) }
+                            .accessibilityLabel("Credits: " + balance)
+                    }
                     else { Text("—").accessibilityLabel("Usage unavailable") }
                 } else if family == .accessoryRectangular {
-                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text(account.allowanceSummary ?? "\(readings.primary?.title ?? account.provider.name) · \(readings.primary?.value ?? "—") \(readings.primary?.caption ?? "")").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
+                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text(account.allowanceSummary ?? readings.primary.map { "\($0.title) · \($0.value) \($0.caption)" } ?? account.snapshot?.creditBalance.map { "Credits: " + $0 } ?? "Usage unavailable").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack { ProviderLogo(provider: account.provider, color: account.color, size: 16); Text(account.title).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); if family == .systemMedium { Text(account.provider.name).font(.caption2).foregroundStyle(.secondary) } }
@@ -178,7 +182,11 @@ struct CompactWidgetRow: View {
                     Spacer(minLength: 2)
                     Text(allowance.value).font(.system(size: 10, weight: .semibold)).monospacedDigit().lineLimit(1).fixedSize()
                 }
-            } else if readings.isEmpty { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
+            } else if readings.isEmpty {
+                Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.system(size: 9))
+                    .foregroundStyle(account.needsLogin || account.snapshot?.isStale(at: date) == true ? .orange : .secondary).lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading).accessibilityHint(widgetStatus(account, at: date, readings: readings))
+            }
             else {
                 HStack(spacing: 7) {
                     ForEach(Array(readings.prefix(small ? 2 : 4).enumerated()), id: \.element.id) { index, reading in

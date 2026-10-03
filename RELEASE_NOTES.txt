@@ -1,3 +1,2 @@
-- Added Perplexity email-code sign-in and remaining search allowances.
-- Added Perplexity count history and app/widget displays.
-- Renewed Perplexity sessions automatically before usage updates.
+- Added Devin sign-in, daily/weekly quotas and model availability.
+- Added Amp sign-in and personal credit balances.

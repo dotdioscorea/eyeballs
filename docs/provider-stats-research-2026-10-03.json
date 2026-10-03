@@ -43,8 +43,9 @@
     "thread_usage": "Official endpoints require task IDs and are not account-wide totals; not collected"
   },
   "pending": [
-    "Devin / Windsurf login and quota protocol",
-    "Meta Muse personal-agent login, session renewal and read-only quota access; Muse Code remains separate"
+    "Meta Muse consumer usage access and independent native sign-in; tested UK account is on the regional waitlist",
+    "Devin paid-plan credit/ACU statistics and legacy Windsurf enterprise authentication",
+    "Amp personal free-allowance totals and workspace analytics"
   ],
   "perplexity": {
     "primary_sources": [
@@ -65,5 +66,14 @@
     "native_login_validation": "Independent email-code protocol completed and renewed with the same authenticated identity; native URLSession and UI checks recorded separately in perplexity-protocol-validation-2026-10-03.json",
     "app_connection_shipped": true,
     "build": "12"
+  },
+  "last_checked": "2026-10-04",
+  "devin": {
+    "free_native_authorization_and_quota_api_verified": true,
+    "details": "devin-amp-protocol-validation-2026-10-04.json"
+  },
+  "amp": {
+    "free_native_device_authorization_refresh_and_balance_api_verified": true,
+    "details": "devin-amp-protocol-validation-2026-10-04.json"
   }
 }
