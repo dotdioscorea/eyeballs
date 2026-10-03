@@ -12,6 +12,7 @@ final class SignInModel: ObservableObject {
     private let copilotBrowser = CopilotBrowser()
     private let cursorBrowser = CursorBrowser()
     private let clineBrowser = ClineBrowser()
+    private let kimiBrowser = KimiBrowser()
     private let signer: ((AccountCredential?) async throws -> AccountCredential)?
     private let fetcher: (AgentAccount, AccountCredential) async throws -> UsageSnapshot
     private var task: Task<Void, Never>?
@@ -19,7 +20,7 @@ final class SignInModel: ObservableObject {
          fetcher: @escaping (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { try await UsageClient.fetch(account: $0, credential: $1) }) {
         self.signer = signer; self.fetcher = fetcher
     }
-    func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false) {
+    func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false, kimiRegion: KimiAuth.Region = .global) {
         guard !working else { return }
         working = true; reportSuggested = false; message = nil; credential = nil; snapshot = nil; verificationCode = nil
         Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
@@ -31,6 +32,9 @@ final class SignInModel: ObservableObject {
             do {
                 let connection: AccountCredential
                 if let signer { connection = try await signer(previous) }
+                else if account.provider == .kimi {
+                    connection = try await kimiBrowser.signIn(previous: previous, privateSession: usePrivateSession, region: kimiRegion)
+                }
                 else if account.provider == .cline {
                     connection = try await clineBrowser.signIn(previous: previous, privateSession: usePrivateSession)
                 }
@@ -54,7 +58,7 @@ final class SignInModel: ObservableObject {
         }
     }
     func openGitHub() { copilotBrowser.open() }
-    func cancel() { task?.cancel(); task = nil; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); clineBrowser.cancel(); verificationCode = nil }
+    func cancel() { task?.cancel(); task = nil; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); clineBrowser.cancel(); kimiBrowser.cancel(); verificationCode = nil }
 }
 
 struct SignInView: View {
@@ -65,6 +69,7 @@ struct SignInView: View {
     @State private var name = ""
     @State private var workstream = ""
     @State private var reporting = false
+    @State private var kimiRegion: KimiAuth.Region = .global
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -82,6 +87,8 @@ struct SignInView: View {
                                     Text(balance).font(.title2.monospacedDigit())
                                     Text("Credits").font(.caption).foregroundStyle(.secondary)
                                 }.frame(width: 100, height: 100)
+                            } else if readings.isEmpty {
+                                Text(account.provider == .kimi ? "No Code quota reported" : "No quota reported").font(.caption).foregroundStyle(.secondary).frame(width: 100)
                             } else {
                                 UsageRing(readings: readings, color: account.provider.color, size: 100)
                             }
@@ -110,6 +117,9 @@ struct SignInView: View {
                             Text("Sign in with \(account.provider == .codex ? "ChatGPT" : account.provider.name).").font(.subheadline).foregroundStyle(.secondary)
                         }
                         if account.provider == .gemini { Text("Shows Gemini CLI and Code Assist quotas.").font(.caption).foregroundStyle(.secondary) }
+                        if account.provider == .kimi, account.snapshot == nil {
+                            Picker("Region", selection: $kimiRegion) { ForEach(KimiAuth.Region.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented).disabled(model.working)
+                        }
                         if let code = model.verificationCode {
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("GitHub requires a one-time code.").font(.subheadline)
@@ -122,13 +132,13 @@ struct SignInView: View {
                             Text("Reconnect only this account. Choose Add account to connect a different one.").font(.subheadline).foregroundStyle(.secondary).panel()
                         }
                         Button {
-                            do { model.start(account: account, previous: try store.savedCredential(for: account.id)) }
+                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), kimiRegion: kimiRegion) }
                             catch { model.message = error.localizedDescription }
                         } label: {
                             HStack { if model.working { ProgressView() }; Text(model.working ? "Connecting…" : "Continue with \(account.provider == .codex ? "ChatGPT" : account.provider.name)") }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(model.working)
                         Button(account.snapshot == nil ? "Use another account" : "Choose a different sign-in") {
-                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true) }
+                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true, kimiRegion: kimiRegion) }
                             catch { model.message = error.localizedDescription }
                         }.font(.subheadline.weight(.medium)).tint(Theme.accent)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)

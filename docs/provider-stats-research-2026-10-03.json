@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-03",
+  "kimi": {
+    "primary_source": "https://github.com/MoonshotAI/kimi-code/tree/main/packages/oauth/src",
+    "client_id": "17e5f671-d194-4dfb-9706-5516cb48c098",
+    "regions": [
+      "auth.kimi.ai / api.kimi.ai",
+      "auth.kimi.com / api.kimi.com"
+    ],
+    "live_authorization_status": [
+      200,
+      200
+    ],
+    "live_refresh_status": [
+      200,
+      200
+    ],
+    "live_profile_status": [
+      200,
+      200
+    ],
+    "live_usage_status": [
+      200,
+      200
+    ],
+    "live_plan": "Free",
+    "live_quota_shape": "empty object",
+    "paid_plan_readings": "Official SDK schema fixtures; paid-plan live validation is outstanding",
+    "credentials_imported_from_cli": false
+  },
+  "claude": {
+    "live_usage_status": 200,
+    "modern_spend": "Reported currency and minor-unit exponent",
+    "legacy_extra_usage": "Reported currency and decimal_places; unknown currency remains credits",
+    "weekly_breakdown": "Shares of weekly usage by app, not allowance remaining",
+    "scoped_limits": "Provider-supplied model and surface names; no guesses for opaque fields"
+  },
+  "codex": {
+    "live_usage_status": 200,
+    "credit_estimates": "Provider estimates of local and cloud message counts",
+    "model_access": "Availability and whether credits would enable access; not per-model token consumption",
+    "additional_limits": "Both windows, stable provider feature IDs",
+    "thread_usage": "Official endpoints require task IDs and are not account-wide totals; not collected"
+  },
+  "pending": [
+    "Perplexity subscription login and usage",
+    "Devin / Windsurf login and quota protocol",
+    "Meta Muse read-only quota access"
+  ]
+}

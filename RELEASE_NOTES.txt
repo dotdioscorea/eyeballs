@@ -1,4 +1,4 @@
-- Renamed to Requota; existing accounts and widgets are preserved.
-- Improved ring percentages, tiles and dense widgets; added 5-hour time presets.
-- Redesigned charts, consumption heatmaps and event markers; added recent burn-rate estimates.
-- Added Cline credit balances, clearer credit displays and handling for plan/allowance changes.
+- Added Kimi Code sign-in, regional account support and quota tracking.
+- Added Claude extra spending, named allowances and weekly usage shares.
+- Added Codex credit estimates, spending caps and model access.
+- Preserved saved rings and history when additional Codex limits change order.

@@ -35,6 +35,7 @@ final class EyeballsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["exit-demo"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
         app.tabBars.buttons["Accounts"].tap()
+        app.buttons["sort-accounts"].tap(); app.buttons["Custom order"].tap()
         XCTAssertTrue(app.buttons["account-Demo · Personal"].waitForExistence(timeout: 5))
         app.buttons["layout-cards"].tap()
         let cards = XCTAttachment(screenshot: app.screenshot()); cards.name = "Release demo cards"; cards.lifetime = .keepAlways; add(cards)
@@ -44,7 +45,7 @@ final class EyeballsUITests: XCTestCase {
         let dashboard = XCTAttachment(screenshot: app.screenshot()); dashboard.name = "Release demo tiles"; dashboard.lifetime = .keepAlways; add(dashboard)
         app.buttons["account-Demo · Personal"].tap()
         XCTAssertTrue(app.staticTexts["Banked resets"].waitForExistence(timeout: 5))
-        app.swipeUp()
+        for _ in 0..<4 { if app.staticTexts["Usage history"].exists { break }; app.swipeUp() }
         XCTAssertTrue(app.staticTexts["Usage history"].waitForExistence(timeout: 5))
         let history = XCTAttachment(screenshot: app.screenshot()); history.name = "Release demo history"; history.lifetime = .keepAlways; add(history)
         app.navigationBars.buttons["Requota"].tap()
@@ -261,6 +262,43 @@ final class EyeballsUITests: XCTestCase {
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Cline system sign-in"; shot.lifetime = .keepAlways; add(shot)
         service.buttons["Cancel"].tap()
         XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+    }
+    func testKimiPresentsRegionalSystemSignInAndCancelsWithoutSaving() {
+        let app = XCUIApplication(); app.launch()
+        app.buttons["connect-first"].tap()
+        app.swipeUp(); app.buttons["connect-kimi"].tap()
+        XCTAssertTrue(app.buttons["International"].exists)
+        app.buttons["Continue with Kimi Code"].tap(); allowSystemSignIn()
+        let service = XCUIApplication(bundleIdentifier: "com.apple.SafariViewService")
+        XCTAssertTrue(service.buttons["Cancel"].waitForExistence(timeout: 20))
+        XCTAssertTrue(service.webViews.firstMatch.waitForExistence(timeout: 20))
+        let url = service.buttons["URL"].value as? String ?? ""
+        XCTAssertTrue(url.contains("kimi.ai"), url)
+        XCTAssertTrue(service.buttons["Continue with Google"].waitForExistence(timeout: 30))
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Kimi international system sign-in"; shot.lifetime = .keepAlways; add(shot)
+        service.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Save connection"].exists)
+    }
+    func testProviderStatisticsPanels() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
+        app.tabBars.buttons["Accounts"].tap(); app.buttons["layout-cards"].tap()
+        app.buttons["sort-accounts"].tap(); app.buttons["Custom order"].tap()
+        if !app.buttons["account-Demo · Work"].exists { app.swipeUp() }
+        app.buttons["account-Demo · Work"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)))
+        XCTAssertTrue(app.staticTexts["Usage credits"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Share of weekly usage"].exists)
+        XCTAssertTrue(app.staticTexts["Claude Code"].exists)
+        let claude = XCTAttachment(screenshot: app.screenshot()); claude.name = "Claude spending and app breakdown"; claude.lifetime = .keepAlways; add(claude)
+        app.navigationBars.buttons["Requota"].tap()
+        app.buttons["account-Demo · Personal"].tap()
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)))
+        XCTAssertTrue(app.staticTexts["Estimated local messages"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Model access"].exists)
+        let codex = XCTAttachment(screenshot: app.screenshot()); codex.name = "Codex credits and model access"; codex.lifetime = .keepAlways; add(codex)
     }
     func testCursorPresentsSystemSignInAndCancelsWithoutSaving() {
         let app = XCUIApplication(); app.launch()

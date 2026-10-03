@@ -9,8 +9,8 @@ enum DemoData {
     static func id(_ index: Int) -> UUID { UUID(uuidString: String(format: "DE000000-0000-0000-0000-%012d", index + 1))! }
     static func contains(_ id: UUID) -> Bool { id.uuidString.hasPrefix("DE000000-") }
     static func accounts(now: Date = .now) -> [AgentAccount] {
-        let providers: [Provider] = [.codex, .claude, .grok, .codex, .claude, .copilot, .cursor, .gemini, .cline]
-        let names = ["Personal", "Work", "Research", "Mac mini", "Studio", "Copilot", "Cursor", "Gemini", "Cline"]
+        let providers: [Provider] = [.codex, .claude, .grok, .codex, .claude, .copilot, .cursor, .gemini, .cline, .kimi]
+        let names = ["Personal", "Work", "Research", "Mac mini", "Studio", "Copilot", "Cursor", "Gemini", "Cline", "Kimi Code"]
         return providers.enumerated().map { index, provider in
             let used = Double(23 + index * 8)
             let weekly = UsageWindow(id: "week", title: "Weekly", usedPercent: used, resetsAt: now.addingTimeInterval(Double(2 + index % 4) * 86400), duration: 604800)
@@ -23,8 +23,13 @@ enum DemoData {
                 windows = [UsageWindow(id: "daily", title: "Daily requests", usedPercent: used, resetsAt: now.addingTimeInterval(10 * 3600), duration: 86400, usedAmount: used * 10, limitAmount: 1000, amountUnit: "requests")]
             }
             if provider == .cline { windows = [] }
+            if provider == .kimi { windows = [UsageWindow(id: "limit_5h", title: "5-hour window", usedPercent: 12, resetsAt: now.addingTimeInterval(10800), duration: 18000), UsageWindow(id: "limit_7d", title: "Weekly", usedPercent: 65, resetsAt: now.addingTimeInterval(3 * 86400), duration: 604800)] }
+            var details: ProviderDetails?
+            if provider == .codex { details = ProviderDetails(credits: CreditDetails(available: true, localMessages: MessageEstimate(lower: 200, upper: 1000)), models: [ModelAccess(id: "demo-model", title: "Example model", available: true)]) }
+            if provider == .claude { details = ProviderDetails(spending: [SpendingDetails(id: "claude-spend", title: "Usage credits", used: 3.5, limit: 20, balance: 12, currency: "USD", enabled: true)], breakdowns: [UsageBreakdown(id: "claude-weekly-apps", title: "Share of weekly usage", rows: [.init(id: "code", title: "Claude Code", percent: 70), .init(id: "chats", title: "Chats", percent: 30)])]) }
+            if provider == .kimi { details = ProviderDetails(spending: [SpendingDetails(id: "kimi-booster", title: "Extra credits", balance: 5, currency: "USD")]) }
             let banked: [BankedReset]? = index == 0 ? [BankedReset(id: "demo-weekly", title: "Weekly", expiresAt: now.addingTimeInterval(2 * 86400), firstDetectedAt: now.addingTimeInterval(-3 * 86400))] : nil
-            return AgentAccount(id: id(index), provider: provider, label: "Demo · " + names[index], workstream: index < 5 ? "Sample account" : "", snapshot: UsageSnapshot(windows: windows, plan: "Sample plan", creditBalance: provider == .cline ? "0.5000" : nil, billingEndsAt: provider == .cline ? nil : now.addingTimeInterval(12 * 86400), updatedAt: now, source: "Demo", bankedResets: banked), addedAt: now.addingTimeInterval(-30 * 86400))
+            return AgentAccount(id: id(index), provider: provider, label: "Demo · " + names[index], workstream: index < 5 ? "Sample account" : "", snapshot: UsageSnapshot(windows: windows, plan: "Sample plan", creditBalance: provider == .cline ? "0.5000" : nil, billingEndsAt: provider == .cline ? nil : now.addingTimeInterval(12 * 86400), updatedAt: now, source: "Demo", bankedResets: banked, details: details), addedAt: now.addingTimeInterval(-30 * 86400))
         }
     }
     static func history(for account: AgentAccount, now: Date = .now) -> [UsageHistorySample] {

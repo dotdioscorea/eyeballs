@@ -99,6 +99,7 @@ final class AccountStore: ObservableObject {
         if let exact, let saved = accounts[exact].snapshot?.identity, saved != identity { throw UsageError.wrongAccount }
         let existing = exact ?? accounts.firstIndex(where: { $0.provider == account.provider && $0.snapshot?.identity == identity })
         if let existing {
+            if let snapshot = account.snapshot { migrateMetrics(at: existing, matching: snapshot) }
             var merged = accounts[existing]
             try vault.save(credential, id: merged.id)
             merged.retainMetricNames()
@@ -123,6 +124,27 @@ final class AccountStore: ObservableObject {
         accounts[index].notes = account.notes; accounts[index].renewalReminder = account.renewalReminder
         accounts[index].favorite = account.favorite; accounts[index].display = account.display; accounts[index].colorHex = account.colorHex
         accounts[index].retainMetricNames(); persist()
+    }
+    private func migrateMetrics(at index: Int, matching snapshot: UsageSnapshot) {
+        let original = accounts[index]
+        guard original.provider == .codex,
+              (original.snapshot?.windows.contains { $0.id.range(of: "^additional-[0-9]+$", options: .regularExpression) != nil } == true || original.display?.rings.contains { $0.windowID.range(of: "^additional-[0-9]+$", options: .regularExpression) != nil } == true) else { return }
+        let migrated = MetricIdentityMigration.account(original, matching: snapshot.windows)
+        guard migrated != original else { return }
+        accounts[index] = migrated
+        let id = original.id
+        if let samples = histories[id] {
+            let updated = samples.map { sample in
+                var copy = sample; copy.windows = MetricIdentityMigration.windows(sample.windows, matching: snapshot.windows); return copy
+            }
+            do { try historyStore.write(updated, id: id); histories[id] = updated }
+            catch { self.error = "Usage history could not be saved." }
+        }
+        for eventIndex in events.indices where events[eventIndex].accountID == id {
+            if let windowID = events[eventIndex].windowID, let old = original.snapshot?.windows.first(where: { $0.id == windowID }),
+               let replacement = MetricIdentityMigration.replacement(old, in: snapshot.windows) { events[eventIndex].windowID = replacement }
+        }
+        saveEvents()
     }
     func reorder(_ ids: [UUID]) {
         let ranks = Dictionary(uniqueKeysWithValues: Array(Set(ids)).map { ($0, ids.firstIndex(of: $0)!) })
@@ -222,6 +244,7 @@ final class AccountStore: ObservableObject {
                 snapshot = try await fetcher(account, credential)
             }
             guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return }
+            migrateMetrics(at: index, matching: snapshot)
             recordHistory(snapshot, id: id)
             accounts[index].retainMetricNames()
             accounts[index].snapshot = observe(snapshot, previous: accounts[index].snapshot, id: id); accounts[index].issue = nil; accounts[index].needsLogin = false; accounts[index].needsReport = nil

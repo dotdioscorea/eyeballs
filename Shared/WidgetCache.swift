@@ -18,6 +18,7 @@ enum WidgetCache {
             copy.notes = ""
             copy.snapshot?.email = nil
             copy.snapshot?.identity = nil
+            copy.snapshot?.details = nil
             copy.issue = copy.needsLogin ? "Reconnect in Requota" : nil
             return copy
         }

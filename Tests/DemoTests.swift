@@ -18,7 +18,7 @@ final class DemoTests: XCTestCase {
         let session = AccountSession(live: live, demoLocation: directory.appendingPathComponent("demo/accounts.json"), restoresMode: false, integratesWithSystem: false, publishMode: { modes.append($0) })
         session.startDemo()
         let demo = try XCTUnwrap(session.demo)
-        XCTAssertEqual(demo.accounts.count, 9); XCTAssertEqual(demo.histories.count, 9); XCTAssertFalse(demo.events.isEmpty)
+        XCTAssertEqual(demo.accounts.count, 10); XCTAssertEqual(demo.histories.count, 10); XCTAssertFalse(demo.events.isEmpty)
         var sample = demo.accounts[0]; sample.label = "Edited demo"; demo.update(sample)
         try demo.remove(sample.id)
         demo.addDemoAccount(provider: .claude, name: "Extra")
@@ -29,7 +29,7 @@ final class DemoTests: XCTestCase {
         session.endDemo()
         XCTAssertTrue(session.current === live); XCTAssertEqual(live.accounts, [real]); XCTAssertEqual(modes, [true, false])
         session.startDemo()
-        XCTAssertEqual(session.demo?.accounts.count, 9)
+        XCTAssertEqual(session.demo?.accounts.count, 10)
         XCTAssertFalse(session.demo!.accounts.contains { $0.id == sample.id })
         XCTAssertEqual(try Data(contentsOf: path), before)
     }

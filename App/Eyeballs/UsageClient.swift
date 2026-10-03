@@ -75,6 +75,9 @@ struct UsageClient {
         case .gemini:
             expectedIssuer = GeminiAuth.issuer
             endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
+        case .kimi:
+            guard credential.clientID == KimiAuth.clientID else { throw UsageError.wrongAccount }
+            return try KimiAuth.request("/usages", region: KimiAuth.Region.matching(credential.issuer), accessToken: credential.accessToken)
         case .cline:
             expectedIssuer = ClineAuth.issuer
             endpoint = ClineAuth.issuer + "/api/v1/users/" + credential.subject + "/balance"
@@ -134,6 +137,9 @@ struct UsageClient {
         case .grok: snapshot = try UsageParser.grok(raw)
         case .gemini: snapshot = try UsageParser.gemini(raw); snapshot.plan = tier?["name"] as? String ?? tier?["id"] as? String
         case .cline: snapshot = try UsageParser.cline(raw, subject: credential.subject)
+        case .kimi:
+            let profile = try await ProviderHTTP.json(KimiAuth.request("/me", region: KimiAuth.Region.matching(credential.issuer), accessToken: credential.accessToken), unauthorizedError: .usageAccessDenied)
+            snapshot = try UsageParser.kimi(raw, profile: profile, subject: credential.subject)
         case .copilot: snapshot = try UsageParser.copilot(raw)
         case .cursor:
             snapshot = try UsageParser.cursor(raw)
@@ -216,20 +222,16 @@ enum UsageParser {
             let title = duration.map { $0 <= 21600 ? "\(Int($0 / 3600))-hour window" : $0 >= 604800 ? "Weekly" : fallback } ?? fallback
             windows.append(UsageWindow(id: key, title: title, usedPercent: percent(value["used_percent"]), resetsAt: date(value["reset_at"]), duration: duration))
         }
-        for (index, entry) in (object["additional_rate_limits"] as? [[String: Any]] ?? []).enumerated() {
-            guard let limit = entry["rate_limit"] as? [String: Any], let window = limit["primary_window"] as? [String: Any] else { continue }
-            let label = entry["limit_name"] as? String ?? entry["metered_feature"] as? String ?? "Additional limit"
-            windows.append(UsageWindow(id: "additional-\(index)", title: label, usedPercent: percent(window["used_percent"]), resetsAt: date(window["reset_at"]), duration: percent(window["limit_window_seconds"])))
-        }
+        windows.append(contentsOf: codexAdditionalWindows(object))
         if let limit = object["code_review_rate_limit"] as? [String: Any], let window = limit["primary_window"] as? [String: Any] {
             windows.append(UsageWindow(id: "code-review", title: "Code review", usedPercent: percent(window["used_percent"]), resetsAt: date(window["reset_at"]), duration: percent(window["limit_window_seconds"])))
         }
         let credits = object["credits"] as? [String: Any]
         let balance = credits?["balance"]
-        let creditBalance = (balance as? String) ?? percent(balance).map { String($0) }
+        let creditBalance = decimal(balance).map { value in (balance as? String) ?? String(value) }
         let count = percent((object["rate_limit_reset_credits"] as? [String: Any])?["available_count"]).map { Int(min($0, 10000)) }
         let resets = count.map { $0 > 0 ? [BankedReset(id: "summary", title: "Usage reset", count: $0)] : [] }
-        return UsageSnapshot(windows: windows, plan: (object["plan_type"] as? String)?.capitalized, identity: object["account_id"] as? String, creditBalance: creditBalance, bankedResets: resets)
+        return UsageSnapshot(windows: windows, plan: (object["plan_type"] as? String)?.capitalized, identity: object["account_id"] as? String, creditBalance: creditBalance, bankedResets: resets, details: codexDetails(object))
     }
     static func codexResets(_ raw: Any, now: Date = .now) -> [BankedReset]? {
         guard let object = raw as? [String: Any], let credits = object["credits"] as? [[String: Any]] else { return nil }
@@ -249,7 +251,9 @@ enum UsageParser {
             guard let value = object[key] as? [String: Any] else { continue }
             windows.append(UsageWindow(id: key, title: title, usedPercent: percent(value["utilization"]), resetsAt: date(value["resets_at"]), duration: duration))
         }
-        return UsageSnapshot(windows: windows)
+        claudeScopedWindows(object, windows: &windows)
+        let details = claudeDetails(object, windows: &windows)
+        return UsageSnapshot(windows: windows, details: details)
     }
     static func claudePlan(_ raw: Any) -> (plan: String?, context: String?) {
         guard let object = raw as? [String: Any], let organization = object["organization"] as? [String: Any],

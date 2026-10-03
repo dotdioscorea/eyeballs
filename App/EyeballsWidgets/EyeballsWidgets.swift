@@ -79,7 +79,7 @@ struct AccountWidgetView: View {
                         HStack { ProviderLogo(provider: account.provider, color: account.color, size: 16); Text(account.title).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); if family == .systemMedium { Text(account.provider.name).font(.caption2).foregroundStyle(.secondary) } }
                         HStack(spacing: 16) {
                             if !readings.isEmpty { UsageRing(readings: readings, color: account.color, size: family == .systemSmall ? 75 : 92, lineWidth: readings.count > 2 ? 4 : 6) }
-                            else { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? "No metrics selected").font(.caption).foregroundStyle(.secondary) }
+                            else { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
                             if family == .systemMedium { MetricLegend(readings: readings, color: account.color) }
                         }.frame(maxWidth: .infinity)
                         Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
@@ -164,7 +164,7 @@ struct CompactWidgetRow: View {
     }
     private var bars: some View {
         Group {
-            if readings.isEmpty { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? "No metrics selected").font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
+            if readings.isEmpty { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
             else {
                 HStack(spacing: 7) {
                     ForEach(Array(readings.prefix(small ? 2 : 4).enumerated()), id: \.element.id) { index, reading in

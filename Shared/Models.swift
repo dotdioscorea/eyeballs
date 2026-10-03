@@ -2,19 +2,19 @@ import Foundation
 import SwiftUI
 
 enum Provider: String, CaseIterable, Codable, Identifiable, Sendable {
-    case codex, claude, grok, gemini, copilot, cursor, cline
+    case codex, claude, grok, gemini, copilot, cursor, cline, kimi
     var id: String { rawValue }
     var name: String {
-        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .grok: return "Grok"; case .gemini: return "Gemini"; case .copilot: return "Copilot"; case .cursor: return "Cursor"; case .cline: return "Cline" }
+        switch self { case .codex: return "Codex"; case .claude: return "Claude"; case .grok: return "Grok"; case .gemini: return "Gemini"; case .copilot: return "Copilot"; case .cursor: return "Cursor"; case .cline: return "Cline"; case .kimi: return "Kimi Code" }
     }
     var subtitle: String {
-        switch self { case .codex: return "ChatGPT plans & Codex"; case .claude: return "Claude & Claude Code"; case .grok: return "SuperGrok & Grok Build"; case .gemini: return "Gemini CLI & Code Assist"; case .copilot: return "GitHub Copilot"; case .cursor: return "Cursor plans & agents"; case .cline: return "Cline account credits" }
+        switch self { case .codex: return "ChatGPT plans & Codex"; case .claude: return "Claude & Claude Code"; case .grok: return "SuperGrok & Grok Build"; case .gemini: return "Gemini CLI & Code Assist"; case .copilot: return "GitHub Copilot"; case .cursor: return "Cursor plans & agents"; case .cline: return "Cline account credits"; case .kimi: return "Kimi Code quotas & credits" }
     }
     var symbol: String {
-        switch self { case .codex: return "command"; case .claude: return "asterisk"; case .grok: return "slash.circle"; case .gemini: return "sparkle"; case .copilot: return "sparkles"; case .cursor: return "cursorarrow"; case .cline: return "terminal" }
+        switch self { case .codex: return "command"; case .claude: return "asterisk"; case .grok: return "slash.circle"; case .gemini: return "sparkle"; case .copilot: return "sparkles"; case .cursor: return "cursorarrow"; case .cline: return "terminal"; case .kimi: return "moon" }
     }
     var color: Color {
-        switch self { case .codex: return Color(hex: 0x10A37F); case .claude: return Color(hex: 0xD97757); case .grok: return Color(hex: 0xE5E5E5); case .gemini: return Color(hex: 0x4285F4); case .copilot: return Color(hex: 0x8250DF); case .cursor: return Color(hex: 0xE5E5E5); case .cline: return Color(hex: 0xFFFFFF) }
+        switch self { case .codex: return Color(hex: 0x10A37F); case .claude: return Color(hex: 0xD97757); case .grok: return Color(hex: 0xE5E5E5); case .gemini: return Color(hex: 0x4285F4); case .copilot: return Color(hex: 0x8250DF); case .cursor: return Color(hex: 0xE5E5E5); case .cline: return Color(hex: 0xFFFFFF); case .kimi: return Color(hex: 0x6172F3) }
     }
     var usageURL: URL {
         switch self {
@@ -25,6 +25,7 @@ enum Provider: String, CaseIterable, Codable, Identifiable, Sendable {
         case .copilot: return URL(string: "https://github.com/settings/copilot")!
         case .cursor: return URL(string: "https://cursor.com/dashboard")!
         case .cline: return URL(string: "https://app.cline.bot/")!
+        case .kimi: return URL(string: "https://www.kimi.ai/code/console")!
         }
     }
 }
@@ -57,6 +58,7 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
     var source: String = "Provider"
     var bankedResets: [BankedReset]?
     var allowanceContext: String?
+    var details: ProviderDetails?
     var nextReset: Date? { windows.compactMap(\.resetsAt).filter { $0 > .now }.min() }
     func isStale(at date: Date = .now) -> Bool {
         date.timeIntervalSince(updatedAt) > 30 * 60 || windows.contains { $0.resetDue(at: date) }
@@ -89,6 +91,11 @@ struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
     var title: String { label.isEmpty ? provider.name : label }
     var nextReset: Date? { snapshot?.nextReset }
     var color: Color { colorHex.map { Color(hex: $0) } ?? provider.color }
+    var emptyMetricMessage: String { snapshot?.windows.isEmpty == true ? "No quota reported" : "No metrics selected" }
+    var usageURL: URL {
+        if provider == .kimi, snapshot?.identity?.hasPrefix("https://auth.kimi.com|") == true { return URL(string: "https://www.kimi.com/code/console")! }
+        return provider.usageURL
+    }
 }
 
 extension Color {

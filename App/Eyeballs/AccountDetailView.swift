@@ -22,12 +22,29 @@ struct AccountDetailView: View {
                             }.padding(.vertical, 16)
                         }
                         Button("Configure display") { configuring = true }.font(.subheadline.weight(.medium)).accessibilityIdentifier("configure-display")
-                        if let credit = account.snapshot?.creditBalance {
+                        if let snapshot = account.snapshot {
+                            VStack(alignment: .leading, spacing: 18) {
+                                ForEach(snapshot.windows) { window in
+                                    let reading = MetricReading(definition: RingDefinition(windowID: window.id), window: window, direction: account.displaySettings.direction, date: .now)
+                                    VStack(alignment: .leading, spacing: 7) {
+                                        MetricBars(readings: [reading], color: account.usageColor(for: window.id))
+                                        if let reset = window.resetsAt {
+                                            Text(reset <= .now ? "Reset due" : "Resets \(reset.formatted(.dateTime.weekday(.abbreviated).hour().minute()))").font(.caption).foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                if snapshot.windows.isEmpty { Text("No usage limit reported.").font(.subheadline).foregroundStyle(.secondary) }
+                            }.panel()
+                        }
+                        if account.snapshot?.creditBalance != nil || account.snapshot?.details?.credits != nil {
                             VStack(alignment: .leading, spacing: 8) {
-                                info("Credits", value: credit)
+                                if let credit = account.snapshot?.creditBalance { info("Credits", value: credit) }
+                                else { Text("Credits").font(.subheadline.weight(.semibold)) }
+                                if let details = account.snapshot?.details?.credits { CreditDetailsView(details: details) }
                                 if !account.exhaustedWindows.isEmpty { Text(account.exhaustedWindows.map(\.shortTitle).joined(separator: ", ") + " allowance exhausted").font(.caption).foregroundStyle(.secondary) }
                             }.panel()
                         }
+                        if let details = account.snapshot?.details { ProviderDetailsView(details: details, breakdownColor: account.usageColor(for: account.window(for: .weekly)?.id ?? "")) }
                         if let resets = account.snapshot?.bankedResets, !resets.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Banked resets").font(.subheadline.weight(.semibold))
@@ -43,20 +60,6 @@ struct AccountDetailView: View {
                                 }
                             }.frame(maxWidth: .infinity, alignment: .leading).panel()
                         }
-                        if let snapshot = account.snapshot {
-                            VStack(alignment: .leading, spacing: 18) {
-                                ForEach(snapshot.windows) { window in
-                                    let reading = MetricReading(definition: RingDefinition(windowID: window.id), window: window, direction: account.displaySettings.direction, date: .now)
-                                    VStack(alignment: .leading, spacing: 7) {
-                                        MetricBars(readings: [reading], color: account.usageColor(for: window.id))
-                                        if let reset = window.resetsAt {
-                                            Text(reset <= .now ? "Reset due" : "Resets \(reset.formatted(.dateTime.weekday(.abbreviated).hour().minute()))").font(.caption).foregroundStyle(.secondary)
-                                        }
-                                    }
-                                }
-                                if snapshot.windows.isEmpty { Text("No usage limit reported.").font(.subheadline).foregroundStyle(.secondary) }
-                            }.panel()
-                        }
                         UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id })
                         if let issue = account.issue { VStack(alignment: .leading, spacing: 10) { Text(issue).font(.subheadline).foregroundStyle(.orange); if account.needsReport == true { Button("Report problem") { reporting = true } } }.frame(maxWidth: .infinity, alignment: .leading).panel() }
                         VStack(alignment: .leading, spacing: 16) {
@@ -68,7 +71,7 @@ struct AccountDetailView: View {
                             Button("Edit account") { editing = true }.font(.subheadline.weight(.medium))
                         }.panel()
                         if account.needsLogin { Button("Reconnect account") { connecting = true }.buttonStyle(PrimaryButtonStyle()) }
-                        Link("Provider usage page", destination: account.provider.usageURL).font(.subheadline)
+                        Link("Provider usage page", destination: account.usageURL).font(.subheadline)
                         if let updated = account.snapshot?.updatedAt { Text("Last updated \(updated.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }
                         Button("Remove account", role: .destructive) { removing = true }.font(.subheadline).padding(.top, 8).accessibilityIdentifier("remove-connection")
                     }.padding(22).frame(maxWidth: 600).frame(maxWidth: .infinity)

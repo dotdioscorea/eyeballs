@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-03",
+  "reviewer": "claude-opus-5-5",
+  "scope": [
+    "Codex account statistics",
+    "Claude spending and weekly shares"
+  ],
+  "evidence": "Anonymous native simulator screenshots",
+  "changes": [
+    "Show weekly shares as a single stacked breakdown, labelled Share of weekly usage",
+    "Use explicit credit status and provider message-estimate labels",
+    "Distinguish spending caps from independently reported credit balances",
+    "Place quota bars before optional provider statistics"
+  ],
+  "verification": "Updated native screenshots reviewed; provider-statistics UI check passed"
+}

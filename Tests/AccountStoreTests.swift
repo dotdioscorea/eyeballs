@@ -10,6 +10,26 @@ final class MemoryVault: CredentialStorage {
 
 @MainActor
 final class AccountStoreTests: XCTestCase {
+    func testRefreshingAdditionalCodexLimitsMigratesSavedDisplayAndHistory() async throws {
+        let path = directory.appendingPathComponent("accounts.json")
+        let vault = MemoryVault()
+        let credential = Fixture.credential("codex")
+        let old = UsageWindow(id: "additional-0", title: "Fast", usedPercent: 10, duration: 18000)
+        let updated = try UsageParser.codex(["rate_limit": [:], "additional_rate_limits": [["limit_name": "Fast", "metered_feature": "fast", "rate_limit": ["primary_window": ["used_percent": 20, "limit_window_seconds": 18000]]]]])
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, _ in updated })
+        var account = Fixture.account(credential)
+        account.snapshot = UsageSnapshot(windows: [old], identity: credential.registrationIdentity, updatedAt: .now.addingTimeInterval(-3600))
+        account.display = AccountDisplay(rings: [RingDefinition(windowID: old.id, kind: .time, direction: .used)])
+        try store.connect(account, credential: credential)
+        await store.refresh(account.id)
+        let expectedID = try XCTUnwrap(updated.windows.first?.id)
+        XCTAssertEqual(store.accounts[0].display?.rings[0].windowID, expectedID)
+        XCTAssertEqual(store.accounts[0].display?.rings[0].direction, .used)
+        XCTAssertTrue(store.histories[account.id]!.allSatisfy { $0.windows.first?.id == expectedID })
+        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false)
+        XCTAssertEqual(restored.accounts[0].display?.rings[0].windowID, expectedID)
+        XCTAssertTrue(restored.histories[account.id]!.allSatisfy { $0.windows.first?.id == expectedID })
+    }
     var directory: URL!
     override func setUp() {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

@@ -1,6 +1,6 @@
 # Requota
 
-An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot, Cursor and Cline accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
+An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot, Cursor, Cline and Kimi Code accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
 - Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
@@ -14,11 +14,11 @@ An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Co
 - Pull-to-refresh, timestamps, configurable reset/expiry/unused-allowance reminders and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (10)** is available for internal testing, built from commit `809481d` and tagged `testflight/1.0-10`. It introduces the Requota name, improves charts and widgets, adds recent burn-rate estimates and Cline balances, and preserves display choices through plan changes. Build 8 remains queued for its first external beta review; tester notifications are enabled after approval. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt), with [build 10 validation](docs/testflight-build-10.json).
+TestFlight **1.0 (10)** is available for internal testing, built from commit `809481d` and tagged `testflight/1.0-10`. It introduces the Requota name, improves charts and widgets, adds recent burn-rate estimates and Cline balances, and preserves display choices through plan changes. Apple approved build 8 for external testing on 3 October; the requested external tester invitation has been sent. All source is public on the feature branches; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. TestFlight notes are in [RELEASE_NOTES.txt](RELEASE_NOTES.txt), with [build 10 validation](docs/testflight-build-10.json).
 
 ## Provider connections
 
-Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline uses WorkOS device authorization. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
+Sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline uses WorkOS device authorization. Kimi Code uses its device flow, with a choice of international or mainland China services. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
 
 | Provider | Usage endpoint | Identity |
 | --- | --- | --- |
@@ -29,6 +29,7 @@ Sign-in uses `ASWebAuthenticationSession` and the providers’ public native cli
 | GitHub Copilot | `api.github.com/copilot_internal/user` | Authenticated GitHub user API |
 | Cursor | `api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage` | Authenticated Cursor GetMe API |
 | Cline | `api.cline.bot/api/v1/users/{id}/balance` | Authenticated Cline profile API |
+| Kimi Code | `api.kimi.ai/coding/v1/usages` or `api.kimi.com/coding/v1/usages` | Authenticated Kimi Code `/me` API |
 
 Gemini reports Gemini CLI and Code Assist model quota buckets. It does not report the Gemini chat website's message allowance. Google must supply an existing Code Assist project for the account; the app does not create a Google account or enroll it into a new service. Unknown quota durations stay unknown. Google's system sign-in presentation and cancellation and the quota parser have been tested; a completed live Gemini authorization remains for the owner to test with their existing account.
 
@@ -40,11 +41,15 @@ Cline uses the SDK's WorkOS device flow, native token registration and authentic
 
 Five Cline tests cover the live response's expiry format and balance units. The simulator loaded Cline's system sign-in page and cancelled without saving a connection; a completed native iPhone sign-in remains a separate manual check. Cline is included in TestFlight build 10.
 
+Kimi Code uses the [official SDK device flow and account APIs](https://github.com/MoonshotAI/kimi-code/tree/main/packages/oauth/src). Both regional services completed device authorization, refresh, profile and quota requests with HTTP 200. The tested Free account reported no Code quota; the app keeps that state distinct from 100% remaining. The parser supports the SDK's 5-hour, weekly and monthly ratios, older amount-based windows and extra-credit wallet/spending units. Paid-plan shapes are covered by fixtures; live paid-plan validation is outstanding. Native system-browser presentation and cancellation were checked separately from completed browser/API authorization.
+
+Claude account pages show reported extra spending, credit balances, named model/surface allowances and shares of weekly usage by app. Codex shows credit availability, spending caps, estimated local/cloud message ranges, model access and both periods of additional limits. Additional Codex metrics use stable feature IDs, with unambiguous migration of older saved rings and history. Estimates, usage shares and access flags do not establish actual token consumption or active credit charging. See [protocol validation](docs/provider-stats-research-2026-10-03.json).
+
 These integrations use provider-controlled interfaces. Distribution permission is separate from technical access; see the [current permission investigation](docs/provider-integration-permissions-2026-10-02.md). Available metrics vary, and interfaces may change. Missing values remain unknown; reaching an expected reset never invents a new quota reading. There is no webpage scraping, embedded login browser, desktop collector or token import.
 
 Protocol references: [Codex login](https://github.com/openai/codex/blob/main/codex-rs/login/src/server.rs), [Claude authentication](https://code.claude.com/docs/en/authentication), [Grok client configuration](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/config.rs), [Grok OAuth](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-login/src/oidc/protocol.rs), [Grok billing](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-shell/src/extensions/billing.rs), [Gemini Google OAuth](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/oauth2.ts), [Gemini quotas](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/code_assist/server.ts), [GitHub device authorization](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow), [VS Code GitHub authentication client](https://github.com/microsoft/vscode/tree/main/extensions/github-authentication), [Cursor CLI authentication](https://cursor.com/docs/cli/reference/authentication).
 
-The [Opus 5.5 design review](docs/design-review-2026-10-02.json) records the reviewed native views and implementation decisions.
+The [app and widget design review](docs/design-review-2026-10-02.json) and [provider statistics review](docs/design-review-2026-10-03.json) record Opus 5.5’s findings and implementation decisions.
 
 Claude refreshes its authenticated profile to read the current plan and rate-limit tier. A live Max 20× response was checked against the installed Claude client’s profile protocol. New quota fields become available in display settings; saved rings, amount choices, colours and names remain attached to the account if a downgrade removes a metric. Unavailable metrics show a dash and return when reported again. Known plan, cap, duration or amount-unit changes are recorded separately from resets and split history/forecast baselines. Unknown tier metadata never implies an upgrade or downgrade.
 
