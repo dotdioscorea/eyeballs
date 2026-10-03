@@ -12,7 +12,9 @@ Build 8’s first external TestFlight review was approved on 3 October 2026. Bui
 6. Add a Requota widget from the iOS widget gallery. During Demo, its account picker resolves the labelled sample accounts. Try single-account rings and several compact rows. Tapping a row opens its account in Demo.
 7. Use Exit demo to return to real connections. Real credentials, accounts, history, events and notification rules are separate. Widgets return to the real summary cache. Widgets configured for demo-only accounts need a real account selected after leaving Demo.
 
-Sample refreshes do not contact a provider. Add account in Demo adds a labelled sample; it does not pretend to authenticate. Exit Demo to exercise real system-browser sign-in with an account the reviewer is authorized to use. Provider sign-in, live parsing and future background delivery remain live-data-dependent features; sample data does not verify them.
+Build 12 adds a Perplexity sample with remaining search counts and count history; absent percentage limits and reset dates stay absent.
+
+Sample refreshes do not contact a provider. Add account in Demo adds a labelled sample; it does not pretend to authenticate. Exit Demo to exercise real system-browser sign-in or Perplexity email-code sign-in with an account the reviewer is authorized to use. Provider sign-in, live parsing and future background delivery remain live-data-dependent features; sample data does not verify them.
 
 The app has no Requota account, developer backend, purchase flow or shared provider credentials. Privacy information is in Settings → Privacy & storage, including a link to the [published policy](https://dotdioscorea.github.io/eyeballs/). Reports are optional and submitted manually to public GitHub issues.
 

@@ -63,7 +63,7 @@
     "subscription_quota_endpoint": "/rest/billing/quota",
     "free_subscription_quota_result": "USAGE_QUOTA_FEATURE_DISABLED",
     "native_login_validation": "Independent email-code protocol completed and renewed with the same authenticated identity; native URLSession and UI checks recorded separately in perplexity-protocol-validation-2026-10-03.json",
-    "app_connection_shipped": false,
-    "next_build": "12"
+    "app_connection_shipped": true,
+    "build": "12"
   }
 }
