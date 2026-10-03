@@ -2,64 +2,127 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var store: AccountStore
+    @EnvironmentObject private var session: AccountSession
     var body: some View {
         List {
             Section {
-                HStack(spacing: 18) {
-                    EyeballsMark(size: 56)
-                    VStack(alignment: .leading, spacing: 5) { Text("Eyeballs").font(.title3.weight(.semibold)); Text("A little clarity for your AI accounts.").font(.caption).foregroundStyle(.secondary) }
-                }.padding(.vertical, 8)
+                Toggle("Notifications", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value) } }))
+                if store.notificationsEnabled { NavigationLink("Notification settings") { NotificationSettingsView() } }
             }
             Section {
-                Toggle("Reset reminders", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value) } })).disabled(store.isDemo)
-            } header: { Text("Notifications") } footer: { Text("A quiet reminder when a provider-reported reset is due. Usage is confirmed on the next refresh.") }
-            Section {
-                NavigationLink("Add a widget") { WidgetGuideView() }
                 NavigationLink("Privacy & storage") { PrivacyView() }
+                Link("Source code", destination: URL(string: "https://github.com/dotdioscorea/eyeballs")!)
+                NavigationLink("Report a problem") { ProblemReportView() }
             }
             Section {
-                Button(store.isDemo ? "Exit preview" : "Preview with sample accounts") { store.isDemo ? store.endDemo() : store.startDemo() }
-            } footer: { Text("Preview accounts use sample data and never replace your saved connections.") }
-            Section {
-                LabeledContent("Version", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))")
-            }
+                if store.isDemo {
+                    Button("Reset sample data") { store.resetDemo() }
+                    Button("Simulate early reset") { store.simulateDemoReset() }
+                    Button("Test notification") { Task { await session.testNotification() } }
+                    Button("Exit demo") { session.endDemo() }
+                } else {
+                    Button("Demo") { session.startDemo() }.accessibilityIdentifier("start-demo")
+                }
+            } footer: { Text(store.isDemo ? "Sample accounts use separate storage and make no provider requests." : "Explore with sample accounts.") }
+            Section { LabeledContent("Version", value: Diagnostics.version) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings")
     }
 }
-
-struct WidgetGuideView: View {
+struct PrivacyView: View {
+    @State private var cleared = false
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("A glance is enough.").font(.system(size: 32, weight: .semibold)).tracking(-1)
-                HStack(spacing: 25) {
-                    ForEach(DemoAccounts.accounts) { account in
-                        VStack(spacing: 12) { UsageRing(windows: account.snapshot!.windows, color: account.provider.color, size: 76, lineWidth: 6); Text(account.provider.name).font(.caption.weight(.medium)) }
-                    }
-                }.frame(maxWidth: .infinity).panel()
-                Text("Sample widget layout").font(.caption).foregroundStyle(.secondary)
-                ForEach(Array(["Touch and hold your Home Screen, then choose Edit → Add Widget.", "Search for Eyeballs and choose an account or the overview.", "Touch and hold an account widget, then choose Edit Widget to pick its account."].enumerated()), id: \.offset) { index, instruction in
-                    HStack(alignment: .top, spacing: 16) { Text("\(index + 1)").font(.headline).foregroundStyle(Theme.accent).frame(width: 24); Text(instruction).font(.subheadline).foregroundStyle(.secondary) }
+        List {
+            Section {
+                Text("Sign-in uses the iOS system browser. Tokens are stored in this iPhone’s Keychain and don’t sync to iCloud. Requota doesn’t store passwords.")
+                Text("Usage history is kept for up to 90 days. Account names and notes are stored on this device. Widgets receive names and usage, without emails, identities, notes or tokens.")
+                Text("Requests go directly to provider APIs. Requota has no backend, ads or analytics.")
+                Text("Removing an account deletes its local tokens and saved data.")
+            }
+            Section {
+                Text("Diagnostic events record sign-in stages, error categories, HTTP status codes and known usage field types for up to seven days. They exclude credentials and account identities. Nothing is sent automatically.")
+                Button(cleared ? "Diagnostics cleared" : "Clear diagnostics") { Diagnostics.clear(); cleared = true }.disabled(cleared)
+            }
+            Section {
+                Link("Privacy policy", destination: URL(string: "https://dotdioscorea.github.io/eyeballs/")!)
+            }
+        }.font(.subheadline).scrollContentBackground(.hidden).background(Theme.background)
+            .navigationTitle("Privacy & storage").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+    }
+}
+struct ProblemReportView: View {
+    @EnvironmentObject private var store: AccountStore
+    @Environment(\.openURL) private var openURL
+    @State private var title: String
+    @State private var details: String
+    @State private var includeDebug: Bool
+    @State private var debugFile: URL?
+    @State private var debugText = ""
+    @State private var exportError: String?
+    init(title: String = "", details: String = "", includeDebug: Bool = false) {
+        _title = State(initialValue: title); _details = State(initialValue: details); _includeDebug = State(initialValue: includeDebug)
+    }
+    var body: some View {
+        Form {
+            Section {
+                TextField("Problem summary", text: $title)
+                TextField("What happened?", text: $details, axis: .vertical).lineLimit(5...12)
+            }
+            Section {
+                Toggle("Include debug bundle", isOn: $includeDebug).accessibilityIdentifier("include-debug-bundle")
+                if includeDebug {
+                    if let debugFile { ShareLink("Save or share debug bundle", item: debugFile) }
+                    DisclosureGroup("View debug bundle") { Text(debugText).font(.system(.caption, design: .monospaced)).textSelection(.enabled) }
+                    if let exportError { Text(exportError).foregroundStyle(.orange) }
                 }
-                Text("Widgets show your latest saved reading. iOS decides when widgets refresh; opening Eyeballs updates them. Account credentials never go to widgets.").font(.caption).foregroundStyle(.secondary).panel()
-            }.padding(24).frame(maxWidth: 600).frame(maxWidth: .infinity)
-        }.background(Theme.background).navigationTitle("Widgets").navigationBarTitleDisplayMode(.inline)
+            } footer: { Text(includeDebug ? "Save the JSON file, then attach it to your GitHub issue. It excludes tokens, names, emails and notes." : "A debug bundle can help diagnose sign-in and widget problems.") }
+            Section {
+                Button("Open GitHub issue") { openIssue() }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } footer: { Text("GitHub issues are public. Review your report before submitting.") }
+        }.scrollContentBackground(.hidden).background(Theme.background)
+            .navigationTitle("Report a problem").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .onAppear { if includeDebug { prepareDebug() } }
+            .onChange(of: includeDebug) { _, enabled in if enabled { prepareDebug() } }
+    }
+    private func prepareDebug() {
+        do {
+            let data = try Diagnostics.encode(Diagnostics.bundle(accounts: store.accounts))
+            debugText = String(decoding: data, as: UTF8.self); debugFile = try Diagnostics.export(data); exportError = nil
+        } catch { exportError = "Could not create the debug bundle." }
+    }
+    private func openIssue() {
+        var url = URLComponents(string: "https://github.com/dotdioscorea/eyeballs/issues/new")!
+        let body = String(details.prefix(6000)) + "\n\nApp: \(Diagnostics.version)\niOS: \(UIDevice.current.systemVersion)" + (includeDebug ? "\n\nAttach requota-debug.json here." : "")
+        url.queryItems = [URLQueryItem(name: "title", value: String(title.prefix(160))), URLQueryItem(name: "body", value: body)]
+        if let url = url.url { openURL(url) }
     }
 }
 
-struct PrivacyView: View {
+struct NotificationSettingsView: View {
+    @EnvironmentObject private var store: AccountStore
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Image(systemName: "lock.shield").font(.system(size: 48)).foregroundStyle(Theme.accent)
-                Text("Your accounts.\nYour iPhone.").font(.system(size: 34, weight: .semibold)).tracking(-1)
-                paragraph("Credentials stay local", "Sign-in uses the provider’s OAuth flow in the iOS system browser. Each account has separate credentials in this iPhone’s Keychain, without syncing them to other devices. Eyeballs never asks for or stores your password.")
-                paragraph("Only what you need", "The app requests usage and reset information directly from provider APIs. Usage summaries, names and your notes are saved on this device. Widgets receive account labels and usage snapshots, without email addresses, private notes or credentials.")
-                paragraph("No tracking backend", "Eyeballs has no account system, advertising, analytics SDK or server collecting your usage. Requests go directly from your iPhone to the provider. Provider websites and their sign-in services follow their own privacy policies.")
-                paragraph("You’re in control", "Remove a connection to clear its credentials, account information and widget summary. Other connections remain in place. Eyeballs also attempts to revoke its own renewable ChatGPT session; if this cannot be confirmed, you can disconnect it in ChatGPT settings.")
-                paragraph("About usage readings", "Subscription usage comes from provider-controlled interfaces, which can change. Missing readings are shown as unavailable. Cached readings stay visible with their timestamp; a predicted reset never overwrites them with zero.")
-            }.padding(24).frame(maxWidth: 600).frame(maxWidth: .infinity)
-        }.background(Theme.background).navigationTitle("Privacy").navigationBarTitleDisplayMode(.inline)
+        Form {
+            Section("Resets") {
+                Toggle("Weekly reset", isOn: $store.notificationRules.weeklyReset)
+                Toggle("Detected early reset", isOn: $store.notificationRules.earlyReset)
+                Toggle("Banked reset changes", isOn: $store.notificationRules.bankedChanges)
+                Toggle("Banked reset expiry", isOn: $store.notificationRules.bankedExpiry)
+                if store.notificationRules.bankedExpiry {
+                    Picker("Expiry warning", selection: $store.notificationRules.bankedExpiryHours) {
+                        ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) }
+                    }
+                }
+            }
+            Section("Allowance reminder") {
+                Toggle("Before weekly reset", isOn: $store.notificationRules.allowanceReminder)
+                if store.notificationRules.allowanceReminder {
+                    Picker("Notify", selection: $store.notificationRules.allowanceHours) {
+                        ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) }
+                    }
+                    Stepper("At least \(store.notificationRules.minimumRemaining)% remaining", value: $store.notificationRules.minimumRemaining, in: 0...100, step: 5)
+                }
+            }
+            Section { Toggle("Usage parsing failures", isOn: $store.notificationRules.parsingFailures) }
+        }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Notifications").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .onChange(of: store.notificationRules) { _, _ in store.saveNotificationRules() }
     }
-    private func paragraph(_ title: String, _ text: String) -> some View { VStack(alignment: .leading, spacing: 8) { Text(title).font(.headline); Text(text).font(.subheadline).foregroundStyle(.secondary).lineSpacing(4) } }
 }

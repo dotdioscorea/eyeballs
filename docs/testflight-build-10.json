@@ -1,0 +1,39 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "10",
+  "source_commit": "809481de58f11f3ba06e1b2a5ca6b2e3c7b87f03",
+  "source_tag": "testflight/1.0-10",
+  "build_id": "352d14ca-179d-49e7-bfaa-a030943b3701",
+  "ipa_sha256": "b08c8f6ad4a733a5ff857e5a8bdabf8a280072d83fd4c9e4bdafe66bc2ca88e1",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true
+  },
+  "apple_status_checked_at_utc": "2026-10-02T23:00:00Z",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "READY_FOR_BETA_SUBMISSION",
+  "external_review": {
+    "queued_build": "8",
+    "state": "WAITING_FOR_REVIEW",
+    "submission_preserved": true,
+    "build_10_review_instructions_applied_to_build_8": false,
+    "external_invitation_activation": "Awaiting first beta review approval"
+  },
+  "validation": {
+    "unit_tests_passed": 102,
+    "distinct_native_ui_checks_passed": 7,
+    "review_model": "claude-opus-5-5",
+    "review_details": "design-review-2026-10-02.json",
+    "limits": [
+      "Completed Gemini authorization remains for the owner's existing account.",
+      "Cline's completed browser/API authorization is separate from its native iPhone presentation/cancellation check.",
+      "Provider-specific credit charging, model usage and fast-mode details require further evidence."
+    ]
+  }
+}

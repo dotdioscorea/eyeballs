@@ -6,13 +6,13 @@ enum ProviderAuth {
     static let claudeClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     static let grokClientID = "b1a00492-073a-47ea-816f-4c329264a828"
     static func clientID(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID }
+        switch provider { case .codex: return OpenAIAuth.codexClientID; case .claude: return claudeClientID; case .grok: return grokClientID; case .gemini: return GeminiAuth.clientID; case .copilot: return CopilotAuth.clientID; case .cursor: return CursorAuth.clientID; case .cline: return ClineAuth.clientID; case .kimi: return KimiAuth.clientID }
     }
     static func issuer(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai" }
+        switch provider { case .codex: return OpenAIAuth.issuer; case .claude: return "https://platform.claude.com"; case .grok: return "https://auth.x.ai"; case .gemini: return GeminiAuth.issuer; case .copilot: return CopilotAuth.issuer; case .cursor: return CursorAuth.issuer; case .cline: return ClineAuth.issuer; case .kimi: return KimiAuth.Region.global.issuer }
     }
     static func authorizationEndpoint(_ provider: Provider) -> String {
-        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize" }
+        switch provider { case .codex: return OpenAIAuth.issuer + "/oauth/authorize"; case .claude: return "https://claude.com/cai/oauth/authorize"; case .grok: return issuer(provider) + "/oauth2/authorize"; case .gemini: return "https://accounts.google.com/o/oauth2/v2/auth"; case .copilot: return CopilotAuth.issuer + "/login/device"; case .cursor: return "https://cursor.com/loginDeepControl"; case .cline: return "https://authkit.cline.bot/device"; case .kimi: return "https://www.kimi.ai/code/authorize_device" }
     }
     static func scopes(_ provider: Provider) -> String {
         switch provider {
@@ -21,9 +21,15 @@ enum ProviderAuth {
         // The Grok public client authorizes billing through its CLI proxy scopes.
         // It does not allow a separate billing:read scope.
         case .grok: return "openid profile email offline_access grok-cli:access api:access"
+        case .gemini: return GeminiAuth.scopes
+        case .copilot: return "read:user"
+        case .kimi: return "kimi-code"
+        case .cursor, .cline: return ""
         }
     }
     static func exchange(callback: URL, attempt: OAuthAttempt) async throws -> AccountCredential {
+        guard attempt.provider != .copilot && attempt.provider != .cursor && attempt.provider != .cline && attempt.provider != .kimi else { throw AuthError.invalidCallback }
+        if attempt.provider == .gemini { return try await GeminiAuth.exchange(callback: callback, attempt: attempt) }
         if attempt.provider == .codex { return try await OpenAIAuth.exchange(callback: callback, attempt: attempt) }
         let verified = try attempt.validateCallback(callback)
         guard verified.clientID == clientID(attempt.provider) else { throw AuthError.invalidIdentity }
@@ -34,6 +40,11 @@ enum ProviderAuth {
         return try await credential(raw, provider: attempt.provider, previous: attempt.previous, hostID: attempt.hostID, nonce: attempt.nonce)
     }
     static func refresh(_ previous: AccountCredential) async throws -> AccountCredential {
+        if previous.provider == .kimi { return try await KimiAuth.refresh(previous) }
+        if previous.provider == .cline { return try await ClineAuth.refresh(previous) }
+        if previous.provider == .cursor { throw UsageError.signedOut }
+        if previous.provider == .copilot { return try await CopilotAuth.refresh(previous) }
+        if previous.provider == .gemini { return try await GeminiAuth.refresh(previous) }
         if previous.provider == .codex { return try await OpenAIAuth.refresh(previous) }
         guard previous.issuer == issuer(previous.provider), previous.clientID == clientID(previous.provider),
               let refresh = previous.refreshToken, !refresh.isEmpty else { throw UsageError.signedOut }
@@ -49,7 +60,7 @@ enum ProviderAuth {
         let endpoint = provider == .claude ? issuer(provider) + "/v1/oauth/token" : issuer(provider) + "/oauth2/token"
         var request = URLRequest(url: URL(string: endpoint)!)
         request.httpMethod = "POST"; request.timeoutInterval = 30
-        request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
         if provider == .claude {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: fields)
@@ -74,11 +85,7 @@ enum ProviderAuth {
         let accountID: String?
         let email: String?
         if provider == .claude {
-            var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/profile")!)
-            request.timeoutInterval = 20
-            request.setValue("Bearer " + access, forHTTPHeaderField: "Authorization")
-            request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-            request.setValue("Eyeballs/1.0", forHTTPHeaderField: "User-Agent")
+            let request = claudeProfileRequest(accessToken: access)
             let identity = try claudeIdentity(try await ProviderHTTP.json(request, unauthorizedError: .usageAccessDenied))
             subject = identity.subject; accountID = identity.accountID; email = identity.email
         } else {
@@ -115,6 +122,14 @@ enum ProviderAuth {
               let organization = raw["organization"] as? [String: Any], let id = organization["uuid"] as? String, !id.isEmpty else { throw AuthError.invalidIdentity }
         return (subject, id, account["email"] as? String)
     }
+    static func claudeProfileRequest(accessToken: String) -> URLRequest {
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/profile")!)
+        request.timeoutInterval = 10
+        request.setValue("Bearer " + accessToken, forHTTPHeaderField: "Authorization")
+        request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+        request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
+        return request
+    }
     static func grokIdentity(_ verifiedClaims: [String: Any]) throws -> (subject: String, accountID: String, principalType: String) {
         guard let subject = verifiedClaims["sub"] as? String, !subject.isEmpty,
               let type = (verifiedClaims["principal_type"] ?? verifiedClaims["principalType"]) as? String, ["User", "Team"].contains(type),
@@ -147,7 +162,7 @@ enum LoopbackRequest {
         }
         guard method == "GET" else { throw AuthError.invalidCallback }
         do { _ = try attempt.validateCallback(url) } catch AuthError.cancelled { /* Validated denial returns to the app. */ }
-        let body = "<!doctype html><meta name=viewport content='width=device-width'><title>Eyeballs</title><p>You can return to Eyeballs.</p>"
+        let body = "<!doctype html><meta name=viewport content='width=device-width'><title>Requota</title><p>You can return to Requota.</p>"
         return LoopbackReply(preflight: false, callback: url, response: "HTTP/1.1 200 OK\r\n\(cors)Content-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nContent-Security-Policy: default-src 'none'\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n\(body)")
     }
 }

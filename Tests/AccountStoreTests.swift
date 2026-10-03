@@ -10,6 +10,26 @@ final class MemoryVault: CredentialStorage {
 
 @MainActor
 final class AccountStoreTests: XCTestCase {
+    func testRefreshingAdditionalCodexLimitsMigratesSavedDisplayAndHistory() async throws {
+        let path = directory.appendingPathComponent("accounts.json")
+        let vault = MemoryVault()
+        let credential = Fixture.credential("codex")
+        let old = UsageWindow(id: "additional-0", title: "Fast", usedPercent: 10, duration: 18000)
+        let updated = try UsageParser.codex(["rate_limit": [:], "additional_rate_limits": [["limit_name": "Fast", "metered_feature": "fast", "rate_limit": ["primary_window": ["used_percent": 20, "limit_window_seconds": 18000]]]]])
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, _ in updated })
+        var account = Fixture.account(credential)
+        account.snapshot = UsageSnapshot(windows: [old], identity: credential.registrationIdentity, updatedAt: .now.addingTimeInterval(-3600))
+        account.display = AccountDisplay(rings: [RingDefinition(windowID: old.id, kind: .time, direction: .used)])
+        try store.connect(account, credential: credential)
+        await store.refresh(account.id)
+        let expectedID = try XCTUnwrap(updated.windows.first?.id)
+        XCTAssertEqual(store.accounts[0].display?.rings[0].windowID, expectedID)
+        XCTAssertEqual(store.accounts[0].display?.rings[0].direction, .used)
+        XCTAssertTrue(store.histories[account.id]!.allSatisfy { $0.windows.first?.id == expectedID })
+        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false)
+        XCTAssertEqual(restored.accounts[0].display?.rings[0].windowID, expectedID)
+        XCTAssertTrue(restored.histories[account.id]!.allSatisfy { $0.windows.first?.id == expectedID })
+    }
     var directory: URL!
     override func setUp() {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -17,6 +37,25 @@ final class AccountStoreTests: XCTestCase {
     override func tearDown() { try? FileManager.default.removeItem(at: directory) }
     func store(vault: MemoryVault) -> AccountStore { AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false) }
 
+    func testUnreadableMetadataIsPreservedAndCanRecoverAfterUnlock() throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let path = directory.appendingPathComponent("accounts.json")
+        let damaged = Data("unreadable-metadata".utf8)
+        try damaged.write(to: path)
+        let vault = MemoryVault(); let store = store(vault: vault)
+        let credential = Fixture.credential("protected-data")
+        let account = Fixture.account(credential)
+        XCTAssertNotNil(store.error)
+        XCTAssertThrowsError(try store.connect(account, credential: credential))
+        XCTAssertEqual(try Data(contentsOf: path), damaged)
+        XCTAssertTrue(vault.values.isEmpty)
+        // Simulates protected data becoming readable; no empty cache is published.
+        try JSONEncoder().encode([account]).write(to: path)
+        store.reloadAccountsIfNeeded()
+        XCTAssertEqual(store.accounts, [account]); XCTAssertNil(store.error)
+        try store.connect(account, credential: credential)
+        XCTAssertEqual(vault.values[account.id], credential)
+    }
     func testTwoCodexAccountsWithSameEmailStaySeparateAfterRestartAndRemoval() throws {
         let vault = MemoryVault(); let store = store(vault: vault)
         let firstCredential = Fixture.credential("personal"); let secondCredential = Fixture.credential("work")
@@ -99,18 +138,6 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertNil(vault.values[account.id])
         XCTAssertTrue(self.store(vault: vault).accounts.isEmpty)
     }
-    func testPreviewDoesNotWriteAccountsOrCredentials() throws {
-        let vault = MemoryVault(); let store = store(vault: vault)
-        let credential = Fixture.credential("a"); let account = Fixture.account(credential)
-        try store.connect(account, credential: credential)
-        let before = try Data(contentsOf: directory.appendingPathComponent("accounts.json"))
-        store.startDemo(); try store.remove(store.accounts[0].id)
-        var demo = store.accounts[0]; demo.label = "Preview edit"; store.update(demo)
-        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("accounts.json")), before)
-        XCTAssertEqual(vault.values, [account.id: credential])
-        store.endDemo()
-        XCTAssertEqual(store.accounts, [account])
-    }
     func testFixtureStoresDoNotReplaceDeviceWidgetData() throws {
         let original = WidgetCache.read()
         let vault = MemoryVault(); let store = store(vault: vault)
@@ -176,7 +203,7 @@ final class AccountStoreTests: XCTestCase {
                 try store.connect(account, credential: credential); expected[account.id] = credential
             }
         }
-        XCTAssertEqual(store.accounts.count, 6)
+        XCTAssertEqual(store.accounts.count, Provider.allCases.count * 2)
         XCTAssertEqual(vault.values, expected)
         let restored = self.store(vault: vault)
         XCTAssertEqual(restored.accounts, store.accounts)
@@ -187,4 +214,69 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(restored.accounts.filter { $0.provider == .codex }.count, 2)
         XCTAssertEqual(restored.accounts.filter { $0.provider == .grok }.count, 2)
     }
+    func testDisplayEditPreservesFreshUsageAndAccountHistoryIsRemovedIndependently() async throws {
+        let vault = MemoryVault()
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { account, _ in
+            var snapshot = account.snapshot!; snapshot.windows[0].usedPercent = 66; snapshot.updatedAt = .now; return snapshot
+        })
+        let a = Fixture.credential("history-a"), b = Fixture.credential("history-b")
+        let first = Fixture.account(a), second = Fixture.account(b)
+        try store.connect(first, credential: a); try store.connect(second, credential: b)
+        var staleEditor = first
+        await store.refreshAll()
+        staleEditor.display = AccountDisplay(direction: .used, rings: [])
+        store.update(staleEditor)
+        XCTAssertEqual(store.accounts.first { $0.id == first.id }?.snapshot?.windows[0].safePercent, 66)
+        XCTAssertEqual(store.accounts.first { $0.id == first.id }?.display, staleEditor.display)
+        XCTAssertEqual(store.histories[first.id]?.last?.windows[0].safePercent, 66)
+        let otherHistory = store.histories[second.id]
+        try store.remove(first.id)
+        XCTAssertNil(store.histories[first.id]); XCTAssertEqual(store.histories[second.id], otherHistory)
+        let restored = self.store(vault: vault)
+        XCTAssertEqual(restored.histories[second.id], otherHistory)
+    }
+    func testRefreshingManyAccountsBoundsConcurrencyAndRecordsActualReads() async throws {
+        let vault = MemoryVault(); var active = 0; var maximum = 0; var completed = 0
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { account, _ in
+            active += 1; maximum = max(maximum, active)
+            defer { active -= 1; completed += 1 }
+            try await Task.sleep(for: .milliseconds(30))
+            var snapshot = account.snapshot!; snapshot.updatedAt = .now; snapshot.windows[0].usedPercent = 51; return snapshot
+        })
+        for index in 0..<8 { let credential = Fixture.credential("concurrent-\(index)"); try store.connect(Fixture.account(credential), credential: credential) }
+        await store.refreshAll()
+        XCTAssertEqual(completed, 8); XCTAssertEqual(maximum, 3)
+        XCTAssertTrue(store.accounts.allSatisfy { $0.snapshot?.windows[0].safePercent == 51 })
+        XCTAssertTrue(store.histories.values.allSatisfy { $0.last?.windows[0].safePercent == 51 })
+    }
+
+    func testCustomOrderSurvivesRestartAndFilteredReorderingKeepsHiddenAccounts() throws {
+        let vault = MemoryVault(); let store = store(vault: vault)
+        let credentials = (0..<4).map { Fixture.credential("order-\($0)") }
+        let accounts = credentials.map { Fixture.account($0) }
+        for (account, credential) in zip(accounts, credentials) { try store.connect(account, credential: credential) }
+        store.reorder([accounts[2].id, UUID(), accounts[0].id, accounts[2].id])
+        XCTAssertEqual(store.accounts.map(\.id), [accounts[2].id, accounts[1].id, accounts[0].id, accounts[3].id])
+        store.move(accounts[3].id, to: accounts[1].id)
+        XCTAssertEqual(self.store(vault: vault).accounts.map(\.id), [accounts[2].id, accounts[3].id, accounts[1].id, accounts[0].id])
+        XCTAssertEqual(AccountSort.manual.sorted(store.accounts), store.accounts)
+        XCTAssertEqual(vault.values.count, 4)
+    }
+    func testParsingFailureKeepsLastReadingAndOffersOnlyOneReportUntilRecovery() async throws {
+        let vault = MemoryVault(); var fails = true
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { account, _ in
+            if fails { throw UsageError.invalidResponse }; var snapshot = account.snapshot!; snapshot.updatedAt = .now; return snapshot
+        })
+        let credential = Fixture.credential("parse"); let account = Fixture.account(credential)
+        try store.connect(account, credential: credential)
+        await store.refresh(account.id)
+        XCTAssertEqual(store.reportAccountID, account.id); XCTAssertEqual(store.accounts.first?.snapshot, account.snapshot)
+        XCTAssertEqual(store.events.filter { $0.kind == .parsingFailure }.count, 1)
+        store.reportAccountID = nil; await store.refresh(account.id)
+        XCTAssertNil(store.reportAccountID); XCTAssertEqual(store.events.filter { $0.kind == .parsingFailure }.count, 1)
+        fails = false; await store.refresh(account.id); XCTAssertNil(store.accounts.first?.needsReport)
+        XCTAssertEqual(self.store(vault: vault).events, store.events)
+        try store.remove(account.id); XCTAssertTrue(self.store(vault: vault).events.isEmpty)
+    }
+
 }

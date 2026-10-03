@@ -22,16 +22,21 @@ extension View {
     }
 }
 
-struct EyeballsMark: View {
+struct RequotaMark: View {
     var size: CGFloat = 40
     var body: some View {
-        HStack(spacing: -size * 0.06) {
-            ForEach(0..<2) { _ in
-                ZStack {
-                    Circle().stroke(Theme.accent, lineWidth: size * 0.06)
-                    Circle().fill(Theme.accent).frame(width: size * 0.21, height: size * 0.21).offset(x: size * 0.065, y: -size * 0.035)
-                }.frame(width: size * 0.5, height: size * 0.5)
-            }
+        ZStack {
+            Circle().stroke(Theme.accent.opacity(0.18), lineWidth: size * 0.085)
+            Circle().trim(from: 0, to: 0.84)
+                .stroke(Theme.accent, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            Circle().trim(from: 0, to: 0.60)
+                .stroke(Color(hex: 0xAAA5FF), style: StrokeStyle(lineWidth: size * 0.065, lineCap: .round))
+                .rotationEffect(.degrees(90)).padding(size * 0.14)
+            Path { path in
+                path.move(to: CGPoint(x: size * 0.60, y: size * 0.60))
+                path.addLine(to: CGPoint(x: size * 0.92, y: size * 0.92))
+            }.stroke(Theme.accent, style: StrokeStyle(lineWidth: size * 0.085, lineCap: .round))
         }.frame(width: size, height: size)
     }
 }

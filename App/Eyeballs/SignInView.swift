@@ -6,7 +6,13 @@ final class SignInModel: ObservableObject {
     @Published var message: String?
     @Published var credential: AccountCredential?
     @Published var snapshot: UsageSnapshot?
+    @Published var reportSuggested = false
+    @Published var verificationCode: String?
     private let browser = OAuthBrowser()
+    private let copilotBrowser = CopilotBrowser()
+    private let cursorBrowser = CursorBrowser()
+    private let clineBrowser = ClineBrowser()
+    private let kimiBrowser = KimiBrowser()
     private let signer: ((AccountCredential?) async throws -> AccountCredential)?
     private let fetcher: (AgentAccount, AccountCredential) async throws -> UsageSnapshot
     private var task: Task<Void, Never>?
@@ -14,25 +20,45 @@ final class SignInModel: ObservableObject {
          fetcher: @escaping (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { try await UsageClient.fetch(account: $0, credential: $1) }) {
         self.signer = signer; self.fetcher = fetcher
     }
-    func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false) {
+    func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false, kimiRegion: KimiAuth.Region = .global) {
         guard !working else { return }
-        working = true; message = nil; credential = nil; snapshot = nil
+        working = true; reportSuggested = false; message = nil; credential = nil; snapshot = nil; verificationCode = nil
+        Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
+            Diagnostics.record(.signInStarted, privateSession: usePrivateSession)
+        }
         task = Task {
-            defer { working = false }
+          await Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
+            defer { working = false; verificationCode = nil }
             do {
                 let connection: AccountCredential
                 if let signer { connection = try await signer(previous) }
+                else if account.provider == .kimi {
+                    connection = try await kimiBrowser.signIn(previous: previous, privateSession: usePrivateSession, region: kimiRegion)
+                }
+                else if account.provider == .cline {
+                    connection = try await clineBrowser.signIn(previous: previous, privateSession: usePrivateSession)
+                }
+                else if account.provider == .cursor {
+                    connection = try await cursorBrowser.signIn(previous: previous, privateSession: usePrivateSession)
+                }
+                else if account.provider == .copilot {
+                    connection = try await copilotBrowser.signIn(previous: previous, privateSession: usePrivateSession) { [weak self] code in self?.verificationCode = code }
+                }
                 else { connection = try await browser.signIn(provider: account.provider, previous: previous, usePrivateSession: usePrivateSession) }
                 try Task.checkCancellation()
                 credential = connection
+                Diagnostics.record(.identityVerified, provider: account.provider)
                 // A verified identity does not prove quota access. Check the API before saving.
                 snapshot = try await fetcher(account, connection)
+                Diagnostics.record(.usageVerified, provider: account.provider)
                 try Task.checkCancellation()
             } catch is CancellationError { credential = nil; snapshot = nil }
-            catch { snapshot = nil; message = error.localizedDescription }
+            catch { snapshot = nil; message = error.localizedDescription; if case UsageError.invalidResponse = error { reportSuggested = true }; Diagnostics.record(.signInFailed, provider: account.provider, failure: .category(error)) }
+          }
         }
     }
-    func cancel() { task?.cancel(); task = nil; browser.cancel() }
+    func openGitHub() { copilotBrowser.open() }
+    func cancel() { task?.cancel(); task = nil; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); clineBrowser.cancel(); kimiBrowser.cancel(); verificationCode = nil }
 }
 
 struct SignInView: View {
@@ -42,15 +68,30 @@ struct SignInView: View {
     @StateObject private var model = SignInModel()
     @State private var name = ""
     @State private var workstream = ""
+    @State private var reporting = false
+    @State private var kimiRegion: KimiAuth.Region = .global
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    ProviderMark(provider: account.provider, size: 64).padding(.top, 24)
-                    Text("\(account.provider.name),\nin your sights.").font(.system(size: 36, weight: .semibold)).tracking(-1)
-                    if let snapshot = model.snapshot, let credential = model.credential {
+                    if store.isDemo {
+                        Text("Demo · Sample account").font(.subheadline)
+                        TextField("Account name", text: $name).accessibilityIdentifier("new-account-name")
+                        Button("Add sample account") { store.addDemoAccount(provider: account.provider, name: name); dismiss() }.buttonStyle(PrimaryButtonStyle())
+                        Text("Exit Demo to sign in to a provider.").font(.caption).foregroundStyle(.secondary)
+                    } else if let snapshot = model.snapshot, let credential = model.credential {
                         HStack(spacing: 20) {
-                            UsageRing(windows: snapshot.windows, color: account.provider.color, size: 100)
+                            let readings = AgentAccount(provider: account.provider, snapshot: snapshot).readings()
+                            if readings.isEmpty, let balance = snapshot.creditBalance {
+                                VStack(spacing: 5) {
+                                    Text(balance).font(.title2.monospacedDigit())
+                                    Text("Credits").font(.caption).foregroundStyle(.secondary)
+                                }.frame(width: 100, height: 100)
+                            } else if readings.isEmpty {
+                                Text(account.provider == .kimi ? "No Code quota reported" : "No quota reported").font(.caption).foregroundStyle(.secondary).frame(width: 100)
+                            } else {
+                                UsageRing(readings: readings, color: account.provider.color, size: 100)
+                            }
                             VStack(alignment: .leading, spacing: 8) {
                                 Label("Account verified", systemImage: "checkmark.seal.fill").foregroundStyle(Theme.accent)
                                 if let email = credential.email { Text(email).font(.subheadline).foregroundStyle(.secondary) }
@@ -71,26 +112,45 @@ struct SignInView: View {
                             catch { model.message = error.localizedDescription }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     } else {
-                        Text("Sign in securely with \(account.provider == .codex ? "ChatGPT" : account.provider.name). Each account has a separate connection, so you can add another personal or work account whenever you need.").font(.body).foregroundStyle(.secondary).lineSpacing(4).accessibilityIdentifier("independent-connections")
+                        HStack(spacing: 8) {
+                            ProviderLogo(provider: account.provider, color: account.color, size: 22)
+                            Text("Sign in with \(account.provider == .codex ? "ChatGPT" : account.provider.name).").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        if account.provider == .gemini { Text("Shows Gemini CLI and Code Assist quotas.").font(.caption).foregroundStyle(.secondary) }
+                        if account.provider == .kimi, account.snapshot == nil {
+                            Picker("Region", selection: $kimiRegion) { ForEach(KimiAuth.Region.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented).disabled(model.working)
+                        }
+                        if let code = model.verificationCode {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("GitHub requires a one-time code.").font(.subheadline)
+                                Text(code).font(.title2.monospaced().weight(.semibold)).accessibilityIdentifier("github-verification-code")
+                                Button("Copy code and open GitHub") { model.openGitHub() }
+                                    .buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("open-github-verification")
+                            }.panel()
+                        }
                         if account.snapshot != nil {
                             Text("Reconnect only this account. Choose Add account to connect a different one.").font(.subheadline).foregroundStyle(.secondary).panel()
                         }
                         Button {
-                            do { model.start(account: account, previous: try store.savedCredential(for: account.id)) }
+                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), kimiRegion: kimiRegion) }
                             catch { model.message = error.localizedDescription }
                         } label: {
                             HStack { if model.working { ProgressView() }; Text(model.working ? "Connecting…" : "Continue with \(account.provider == .codex ? "ChatGPT" : account.provider.name)") }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(model.working)
                         Button(account.snapshot == nil ? "Use another account" : "Choose a different sign-in") {
-                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true) }
+                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true, kimiRegion: kimiRegion) }
                             catch { model.message = error.localizedDescription }
                         }.font(.subheadline.weight(.medium)).tint(Theme.accent)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                             .disabled(model.working).accessibilityIdentifier("choose-another-login")
-                        Label("Credentials protected by iPhone Keychain", systemImage: "lock.shield").font(.caption).foregroundStyle(.secondary)
+                        Text("Credentials protected by iPhone Keychain").font(.caption).foregroundStyle(.secondary)
                     }
                     if let message = model.message {
-                        Label(message, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.orange).panel()
+                        Text(message).font(.subheadline).foregroundStyle(.orange).panel()
+                        if model.reportSuggested { Button("Report problem") { reporting = true } }
+                        if account.provider == .gemini, model.credential != nil && model.snapshot == nil {
+                            Link("Google Code Assist", destination: account.provider.usageURL).font(.subheadline)
+                        }
                         if model.credential != nil && model.snapshot == nil {
                             Text("Sign-in completed, but usage access could not be verified. This connection has not been saved.").font(.caption).foregroundStyle(.secondary)
                         }
@@ -101,6 +161,6 @@ struct SignInView: View {
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { model.cancel(); dismiss() } } }
                 .onAppear { name = account.label; workstream = account.workstream }
                 .onDisappear { model.cancel() }
-        }.interactiveDismissDisabled(model.working)
+        }.interactiveDismissDisabled(model.working).sheet(isPresented: $reporting) { NavigationStack { ProblemReportView(title: "\(account.provider.name) sign-in response could not be parsed", includeDebug: true).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { reporting = false } } } } }
     }
 }

@@ -49,7 +49,8 @@ struct OAuthAttempt {
                 URLQueryItem(name: "code_challenge_method", value: "S256"),
                 URLQueryItem(name: "code_challenge", value: Data(SHA256.hash(data: Data(verifier.utf8))).base64URL)
             ]
-            if provider == .grok { parts.queryItems! += [URLQueryItem(name: "nonce", value: nonce), URLQueryItem(name: "referrer", value: "eyeballs")] }
+            if provider == .gemini { parts.queryItems! += [URLQueryItem(name: "access_type", value: "offline"), URLQueryItem(name: "prompt", value: "consent select_account")] }
+            if provider == .grok { parts.queryItems! += [URLQueryItem(name: "nonce", value: nonce), URLQueryItem(name: "referrer", value: "requota")] }
             return parts.url!
         }
         let legacyRegistration = clientID.hasPrefix("oaiapp_")
@@ -65,7 +66,7 @@ struct OAuthAttempt {
         if legacyRegistration {
             items += [URLQueryItem(name: "ext_agent_host_id", value: hostID), URLQueryItem(name: "resource", value: "https://api.openai.com/v1")]
         } else {
-            items += [URLQueryItem(name: "id_token_add_organizations", value: "true"), URLQueryItem(name: "codex_cli_simplified_flow", value: "true"), URLQueryItem(name: "originator", value: "eyeballs")]
+            items += [URLQueryItem(name: "id_token_add_organizations", value: "true"), URLQueryItem(name: "codex_cli_simplified_flow", value: "true"), URLQueryItem(name: "originator", value: "requota")]
         }
         if let hint = previous?.idToken { items.append(URLQueryItem(name: "id_token_hint", value: hint)) }
         parts.queryItems = items
@@ -263,6 +264,7 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
     private let queue = DispatchQueue(label: "Eyeballs.loopback-auth")
 
     func signIn(provider: Provider = .codex, previous: AccountCredential?, usePrivateSession: Bool = false) async throws -> AccountCredential {
+        guard provider != .copilot && provider != .cursor && provider != .cline else { throw AuthError.invalidCallback }
         let callback = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
                 pending = continuation
@@ -287,7 +289,7 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
                     guard let port = listener?.port else { self.finish(.failure(AuthError.unavailable)); return }
                     do {
                         let host = provider == .claude ? "localhost" : "127.0.0.1"
-                        let path = provider == .codex ? "/auth/callback" : "/callback"
+                        let path = provider == .codex ? "/auth/callback" : provider == .gemini ? "/oauth2callback" : "/callback"
                         let redirect = URL(string: "http://\(host):\(port.rawValue)\(path)")!
                         let attempt = try OAuthAttempt(redirectURI: redirect, hostID: OpenAIAuth.hostID, previous: previous, provider: provider)
                         self.attempt = attempt
