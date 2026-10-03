@@ -44,7 +44,7 @@
   },
   "pending": [
     "Devin / Windsurf login and quota protocol",
-    "Meta Muse read-only quota access"
+    "Meta Muse personal-agent login, session renewal and read-only quota access; Muse Code remains separate"
   ],
   "perplexity": {
     "primary_sources": [
