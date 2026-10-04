@@ -139,8 +139,8 @@ final class EyeballsUITests: XCTestCase {
         if home.alerts.firstMatch.waitForExistence(timeout: 2), home.alerts.firstMatch.buttons["Allow"].exists { home.alerts.firstMatch.buttons["Allow"].tap() }
         XCTAssertEqual(enabled.value as? String, "1")
         XCUIDevice.shared.press(.home)
-        home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.01)).press(forDuration: 0.05, thenDragTo: home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)))
-        home.swipeUp()
+        // Start beside the Dynamic Island; dragging over it does not open Notification Centre.
+        home.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.01)).press(forDuration: 0.1, thenDragTo: home.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.8)))
         print("NOTIFICATION CENTER\n" + home.debugDescription)
         let warning = home.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "weekly reset approaching")).firstMatch
         XCTAssertTrue(warning.waitForExistence(timeout: 10))
@@ -190,14 +190,14 @@ final class EyeballsUITests: XCTestCase {
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
         app.tabBars.buttons["Accounts"].tap()
         app.buttons["sort-accounts"].tap(); app.buttons["Custom order"].tap()
-        XCTAssertTrue(app.buttons["account-Demo · Personal"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["account-Personal"].waitForExistence(timeout: 5))
         app.buttons["layout-cards"].tap()
         let cards = XCTAttachment(screenshot: app.screenshot()); cards.name = "Release demo cards"; cards.lifetime = .keepAlways; add(cards)
         app.buttons["compact-mode"].tap()
         let compact = XCTAttachment(screenshot: app.screenshot()); compact.name = "Release demo compact"; compact.lifetime = .keepAlways; add(compact)
         app.buttons["layout-tiles"].tap()
         let dashboard = XCTAttachment(screenshot: app.screenshot()); dashboard.name = "Release demo tiles"; dashboard.lifetime = .keepAlways; add(dashboard)
-        app.buttons["account-Demo · Personal"].tap()
+        app.buttons["account-Personal"].tap()
         XCTAssertTrue(app.staticTexts["Banked resets"].waitForExistence(timeout: 5))
         for _ in 0..<4 { if app.staticTexts["Usage history"].exists { break }; app.swipeUp() }
         XCTAssertTrue(app.staticTexts["Usage history"].waitForExistence(timeout: 5))
@@ -214,7 +214,7 @@ final class EyeballsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["exit-demo"].waitForExistence(timeout: 10))
         app.buttons["exit-demo"].tap()
         XCTAssertTrue(app.buttons["account-Personal"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["account-Demo · Personal"].exists)
+        XCTAssertFalse(app.buttons["exit-demo"].exists)
         app.tabBars.buttons["Settings"].tap(); app.buttons["Privacy & storage"].tap()
         XCTAssertTrue(app.buttons["Privacy policy"].waitForExistence(timeout: 5))
     }
@@ -271,12 +271,12 @@ final class EyeballsUITests: XCTestCase {
         app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap(); app.tabBars.buttons["Accounts"].tap()
         app.textFields["search-accounts"].tap(); app.textFields["search-accounts"].typeText("Devin\n")
-        XCTAssertTrue(app.buttons["account-Demo · Devin"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["account-Devin"].waitForExistence(timeout: 5))
         for layout in ["layout-cards", "compact-mode", "layout-tiles"] {
             app.buttons[layout].tap()
             let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Devin daily and weekly " + layout; shot.lifetime = .keepAlways; add(shot)
         }
-        app.buttons["account-Demo · Devin"].tap()
+        app.buttons["account-Devin"].tap()
         XCTAssertTrue(app.staticTexts["Daily"].exists); XCTAssertTrue(app.staticTexts["Weekly"].exists)
         XCTAssertTrue(app.staticTexts["Weekly time"].exists)
         XCTAssertFalse(app.tabBars.firstMatch.isHittable)
@@ -301,14 +301,14 @@ final class EyeballsUITests: XCTestCase {
         app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap(); app.tabBars.buttons["Accounts"].tap()
         let search = app.textFields["search-accounts"]; search.tap(); search.typeText("Perplexity\n")
-        XCTAssertTrue(app.buttons["account-Demo · Perplexity"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["account-Search"].waitForExistence(timeout: 5))
         for layout in ["layout-cards", "compact-mode", "layout-tiles"] {
             app.buttons[layout].tap()
             XCTAssertFalse(app.staticTexts["—%"].exists)
             let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Perplexity counts \(layout)"; shot.lifetime = .keepAlways; add(shot)
         }
-        app.buttons["account-Demo · Perplexity"].tap()
-        XCTAssertTrue(app.staticTexts["3 left"].waitForExistence(timeout: 5))
+        app.buttons["account-Search"].tap()
+        XCTAssertTrue(app.staticTexts["240 left"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.staticTexts["Next reset"].exists)
         for _ in 0..<3 { if app.descendants(matching: .any)["history-plot"].firstMatch.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(app.descendants(matching: .any)["history-plot"].firstMatch.waitForExistence(timeout: 5))
@@ -318,17 +318,17 @@ final class EyeballsUITests: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
         app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap(); app.tabBars.buttons["Accounts"].tap()
-        app.textFields["search-accounts"].tap(); app.textFields["search-accounts"].typeText("Demo · Amp\n")
-        XCTAssertTrue(app.buttons["account-Demo · Amp"].waitForExistence(timeout: 5))
+        app.textFields["search-accounts"].tap(); app.textFields["search-accounts"].typeText("Amp\n")
+        XCTAssertTrue(app.buttons["account-Amp"].waitForExistence(timeout: 5))
         for layout in ["layout-cards", "compact-mode", "layout-tiles"] {
             app.buttons[layout].tap()
-            let account = app.buttons["account-Demo · Amp"]
+            let account = app.buttons["account-Amp"]
             XCTAssertTrue(account.label.contains("$5.00"), account.debugDescription)
             XCTAssertFalse(account.label.contains("No quota reported"))
             XCTAssertFalse(account.label.contains("—%"))
             let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Amp credit balance " + layout; shot.lifetime = .keepAlways; add(shot)
         }
-        app.buttons["account-Demo · Amp"].tap()
+        app.buttons["account-Amp"].tap()
         XCTAssertTrue(app.staticTexts["US$5.00"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Personal credits"].exists)
         XCTAssertFalse(app.staticTexts["No usage limit reported."].exists)
@@ -341,7 +341,7 @@ final class EyeballsUITests: XCTestCase {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
         app.tabBars.buttons["Settings"].tap(); app.buttons["start-demo"].tap()
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
-        app.tabBars.buttons["Accounts"].tap(); app.buttons["account-Demo · Personal"].tap()
+        app.tabBars.buttons["Accounts"].tap(); app.buttons["account-Personal"].tap()
         app.swipeUp()
         let plot = app.descendants(matching: .any)["history-plot"].firstMatch
         XCTAssertTrue(plot.waitForExistence(timeout: 10))
@@ -467,13 +467,13 @@ final class EyeballsUITests: XCTestCase {
         for button in ["Continue with ChatGPT", "choose-another-login"] {
             app.buttons[button].tap()
             allowSystemSignIn()
-            XCTAssertTrue(service.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "Close", "Cancel")).firstMatch.waitForExistence(timeout: 10))
-            XCTAssertTrue(service.textFields["Email address"].waitForExistence(timeout: 15))
+            XCTAssertTrue(service.buttons["Cancel"].waitForExistence(timeout: 30))
+            XCTAssertTrue(service.textFields["Email address"].waitForExistence(timeout: 45))
             XCTAssertTrue((service.buttons["URL"].value as? String)?.contains("auth.openai.com") == true)
             let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
             screenshot.name = "System authentication \(button) — no credentials entered"
             screenshot.lifetime = .keepAlways; add(screenshot)
-            service.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "Close", "Cancel")).firstMatch.tap()
+            service.buttons["Cancel"].tap()
             XCTAssertTrue(app.staticTexts["Sign-in was cancelled. Your saved accounts are unchanged."].waitForExistence(timeout: 5))
         }
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
@@ -555,15 +555,15 @@ final class EyeballsUITests: XCTestCase {
         app.tabBars.buttons["Settings"].tap(); app.buttons["Reset sample data"].tap()
         app.tabBars.buttons["Accounts"].tap(); app.buttons["layout-cards"].tap()
         app.buttons["sort-accounts"].tap(); app.buttons["Custom order"].tap()
-        if !app.buttons["account-Demo · Work"].exists { app.swipeUp() }
-        app.buttons["account-Demo · Work"].tap()
+        if !app.buttons["account-Work"].exists { app.swipeUp() }
+        app.buttons["account-Work"].tap()
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)))
         XCTAssertTrue(app.staticTexts["Usage credits"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Share of weekly usage"].exists)
         XCTAssertTrue(app.staticTexts["Claude Code"].exists)
         let claude = XCTAttachment(screenshot: app.screenshot()); claude.name = "Claude spending and app breakdown"; claude.lifetime = .keepAlways; add(claude)
         app.navigationBars.buttons["Requota"].tap()
-        app.buttons["account-Demo · Personal"].tap()
+        app.buttons["account-Personal"].tap()
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55)))
         XCTAssertTrue(app.staticTexts["Estimated local messages"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Model access"].exists)

@@ -47,7 +47,7 @@ RECOMMENDED CATEGORIES
 Utilities; optional secondary category: Productivity
 
 PRICE
-Owner to choose; the copy does not assume a price or a paid tier.
+Free, as selected by the owner.
 
 SCREENSHOT ORDER
 1. See what’s left.
@@ -58,4 +58,4 @@ SCREENSHOT ORDER
 6. Usage and resets.
 
 Screenshots use native captures with illustrative account data; original captures are included.
-The listing has not been entered into App Store Connect or submitted for review.
+The listing and screenshots are saved as a draft in App Store Connect. The app has not been submitted for review.

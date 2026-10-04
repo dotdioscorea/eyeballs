@@ -26,7 +26,7 @@ class AppleConnect:
     def __init__(self, config):
         self.authorization = token(config)
     def request(self, method, path, **kwargs):
-        assert path.startswith("/v1/")
+        assert path.startswith(("/v1/", "/v2/"))
         response = requests.request(method, "https://api.appstoreconnect.apple.com" + path,
                                     headers={"Authorization": "Bearer " + self.authorization}, timeout=30, allow_redirects=False, **kwargs)
         if response.status_code >= 300:

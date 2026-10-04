@@ -3,6 +3,13 @@
   "preparedOn": "2026-10-04",
   "locale": "en-GB",
   "appVersion": "1.0",
+  "appStoreConnect": {
+    "draftSavedOn": "2026-10-04",
+    "price": "Free",
+    "availability": "Worldwide wherever Apple permits distribution",
+    "releaseType": "Manual",
+    "submittedForReview": false
+  },
   "metadata": {
     "name": "Requota: AI Usage Tracker",
     "subtitle": "Limits, resets & widgets",
@@ -17,7 +24,7 @@
   "recommendations": {
     "primaryCategory": "Utilities",
     "secondaryCategory": "Productivity",
-    "pricing": "Owner to choose; the copy does not assume a price or a paid tier.",
+    "pricing": "Free, as selected by the owner.",
     "localisations": "Start with this English listing; adapt spelling for en-US if that localisation is added.",
     "whatsNew": "Omit for the initial App Store version; write short factual notes for subsequent updates."
   },

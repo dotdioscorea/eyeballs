@@ -39,6 +39,9 @@ def main():
         raise ValueError("Keywords must be unique comma-separated terms without padding")
     if listing["status"] != "draft-for-owner-review":
         raise ValueError("This renderer handles review drafts only")
+    store_status = ("The listing and screenshots are saved as a draft in App Store Connect. The app has not been submitted for review."
+                    if listing.get("appStoreConnect", {}).get("draftSavedOn")
+                    else "The listing has not been entered into App Store Connect or submitted for review.")
 
     (DIRECTORY / "assets").mkdir(exist_ok=True)
     assets = []
@@ -76,7 +79,7 @@ def main():
     for number, shot in enumerate(listing["screenshots"], 1):
         text_lines += [f"{number}. {shot['headline']}"]
     text_lines += ["", "Screenshots use native captures with illustrative account data; original captures are included.",
-                   "The listing has not been entered into App Store Connect or submitted for review.", ""]
+                   store_status, ""]
     text_output = "\n".join(text_lines)
 
     paragraphs = []
@@ -147,7 +150,7 @@ h1{{font-size:30px;line-height:1.16;letter-spacing:-.7px;margin:0 0 8px}}.subtit
 <div class="field"><h3>Files</h3><a href="listing-en-GB.txt">Plain-text listing</a><br><a href="listing-en-GB.json">Metadata and screenshot brief</a></div></aside></div>
 <details class="details"><summary>Comparison notes</summary><div><p>{escaped(listing['research']['approach'])}</p><ul class="research">{research}</ul><p class="note">Listings checked 4 October 2026. These notes describe positioning and copy, not independent verification of competing apps.</p></div></details>
 <details class="details"><summary>Screenshot preparation notes</summary><div><ul class="review-notes">{screenshot_notes}</ul><p>{apple_links}</p></div></details>
-<p class="note" style="margin:25px 0 0">This is a local review draft. No App Store metadata has been changed or submitted.</p>
+<p class="note" style="margin:25px 0 0">{escaped(store_status)}</p>
 </main><div id="copy-status" role="status" aria-live="polite"></div>
 <script type="application/json" id="listing-data">{json.dumps(metadata, ensure_ascii=False).replace('<', chr(92) + 'u003c')}</script>
 <script>
@@ -163,7 +166,7 @@ document.querySelectorAll('[data-field]').forEach(button=>button.addEventListene
 </script></body></html>
 '''
     validation = {"preparedOn": listing["preparedOn"], "metadata": counts, "screenshots": assets,
-                  "scope": "Reviewable copy and native screenshot artwork; no App Store Connect mutation or submission."}
+                  "scope": store_status}
     outputs = {"listing-en-GB.txt": text_output, "review.html": document,
                "validation.json": json.dumps(validation, indent=2) + "\n"}
     for name, value in outputs.items():

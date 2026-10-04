@@ -1,5 +1,3 @@
-- Connected usage lines and smoother curves.
-- Drag-to-inspect values below charts.
-- Provider filters and expandable account/metric selection.
-- Combined Activity heatmaps with day breakdowns.
-- More Copilot, Grok and Gemini usage details.
+- Adaptive iPad account grids and wider charts.
+- Inline Activity breakdowns on larger screens.
+- Improved Demo accounts and usage history.
