@@ -1,0 +1,57 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "19",
+  "source_commit": "e60b7f2aebd5eefe813942d6487c67040d2ec9c9",
+  "source_tag": "testflight/1.0-19",
+  "ipa_sha256": "f098f512fa14dab2de8a11a41835eb549706d389006189627ac5496a2c48f1dc",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true,
+    "debug_activation_fixture_excluded": true,
+    "sdk": "iphoneos26.5",
+    "privacy_manifests": 2,
+    "non_exempt_encryption": false
+  },
+  "build_id": "591e249d-54f5-4543-be79-51e51709670c",
+  "apple_status_checked_at_utc": "2026-10-04T20:44:24.820018+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 206,
+    "unit_tests_executed": 211,
+    "opt_in_live_tests_skipped": 5,
+    "native_live_checks_passed": 1,
+    "activation_unit_checks_passed": 20,
+    "native_ui_checks_passed": 3,
+    "native_ui_checks": [
+      "Per-provider activation preferences persist and Claude permission is explicit",
+      "Manual and automatic activation across three accounts; relaunch prevents repeat sends",
+      "Claude available and spent banked-reset panels"
+    ],
+    "limits": [
+      "No unused live weekly window was available. The owner agreed to use controlled responses for the beta and perform the live countdown check at the next unused week.",
+      "Live Codex and Claude protocol requests completed on active included windows. The final native Claude request completed; the native Codex send was skipped by the allowance guard.",
+      "Physical-device background refresh cadence was not measured. Automatic activation runs when app usage refreshes."
+    ]
+  },
+  "app_store_draft": {
+    "state": "PREPARE_FOR_SUBMISSION",
+    "selected_build": "19",
+    "release_type": "MANUAL",
+    "submitted_for_review": false,
+    "support_url": "https://github.com/dotdioscorea/requota/issues",
+    "privacy_policy_url": "https://dotdioscorea.github.io/requota/"
+  }
+}
