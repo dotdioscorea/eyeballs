@@ -18,7 +18,6 @@ final class AccountStore: ObservableObject {
     @Published var refreshing: Set<UUID> = []
     @Published private(set) var activating: Set<UUID> = []
     @Published private(set) var activationMessages: [UUID: String] = [:]
-    @Published var activationProviders: [String: Bool]
     @Published var error: String?
     @Published var notificationsEnabled = UserDefaults.standard.bool(forKey: "reset-notifications")
     private var cooldowns: [UUID: Date] = [:]
@@ -34,13 +33,13 @@ final class AccountStore: ObservableObject {
     init(location: URL? = nil, vault: any CredentialStorage = CredentialVault(), integratesWithSystem: Bool = true, isDemo: Bool = false,
          fetcher: @escaping (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { try await UsageClient.fetch(account: $0, credential: $1) },
          renewer: @escaping (AccountCredential) async throws -> AccountCredential = { try await ProviderAuth.refresh($0) },
-         activationProviders: [String: Bool]? = nil,
+         legacyActivationProviders: [String: Bool]? = nil,
          activator: @escaping (AccountCredential) async throws -> Void = { try await AllowanceActivation.send($0) }) {
         #if DEBUG
         if SimulatorFixtures.enabled, ProcessInfo.processInfo.arguments.contains("--reset-activation-settings") { UserDefaults.standard.removeObject(forKey: "activation-providers") }
         #endif
         self.isDemo = isDemo
-        self.activationProviders = activationProviders ?? (integratesWithSystem && !isDemo ? UserDefaults.standard.data(forKey: "activation-providers").flatMap { try? JSONDecoder().decode([String: Bool].self, from: $0) } ?? [:] : [:])
+        let legacyActivationProviders = legacyActivationProviders ?? (integratesWithSystem && !isDemo ? UserDefaults.standard.data(forKey: "activation-providers").flatMap { try? JSONDecoder().decode([String: Bool].self, from: $0) } ?? [:] : [:])
         var selectedLocation = location ?? (isDemo ? DemoData.location : nil)
         #if DEBUG
         if !isDemo, location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RequotaUITest/accounts.json") }
@@ -94,6 +93,20 @@ final class AccountStore: ObservableObject {
            accounts.allSatisfy({ $0.snapshot?.source == "UI Test Fixture" }) { accounts = []; persist() }
         if !isDemo, SimulatorFixtures.enabled, !SimulatorFixtures.storeCaptureEnabled, accounts.isEmpty { accounts = SimulatorFixtures.accounts() }
         if !isDemo, SimulatorFixtures.widgetEnabled { persist() }
+        #endif
+        // Preserve the old opt-in for existing connections only. New accounts
+        // default to off and never inherit a provider-wide setting.
+        if !isDemo, accounts.contains(where: { $0.automaticActivation == nil }) {
+            for index in accounts.indices where accounts[index].automaticActivation == nil {
+                accounts[index].automaticActivation = AllowanceActivation.supported(accounts[index].provider) && legacyActivationProviders[accounts[index].provider.rawValue] == true
+            }
+            persist()
+        }
+        #if DEBUG
+        if !isDemo, SimulatorFixtures.enabled, ProcessInfo.processInfo.arguments.contains("--reset-activation-settings") {
+            for index in accounts.indices { accounts[index].automaticActivation = false }
+            persist()
+        }
         #endif
         for account in accounts { histories[account.id] = historyStore.read(account.id); if let snapshot = account.snapshot { recordHistory(snapshot, id: account.id) } }
         #if DEBUG
@@ -166,6 +179,7 @@ final class AccountStore: ObservableObject {
         } else {
             try vault.save(credential, id: account.id)
             var connected = account; connected.needsLogin = false; connected.issue = nil; connected.needsReport = nil
+            connected.automaticActivation = account.automaticActivation ?? false
             if let snapshot = connected.snapshot { connected.snapshot = observe(snapshot, previous: nil, id: connected.id) }
             revisions[account.id, default: 0] += 1
             accounts.append(connected)
@@ -323,7 +337,7 @@ final class AccountStore: ObservableObject {
             observeActivationClock(snapshot, id: id)
             if integratesWithSystem { Diagnostics.record(.refreshSucceeded, provider: account.provider) }
             persist()
-            if allowsActivation, activationProviders[account.provider.rawValue] == true, !activating.contains(id),
+            if allowsActivation, accounts[index].automaticActivation == true, !activating.contains(id),
                AllowanceActivation.permitted(credential),
                AllowanceActivation.mayAutomaticallyAttempt(snapshot, provider: account.provider, record: accounts[index].activation) {
                 activating.insert(id)
@@ -352,9 +366,11 @@ final class AccountStore: ObservableObject {
         persist()
         return .failed
     }
-    func saveActivationSettings() {
-        guard !isDemo else { return }
-        if let data = try? JSONEncoder().encode(activationProviders) { UserDefaults.standard.set(data, forKey: "activation-providers") }
+    func setAutomaticActivation(_ enabled: Bool, for id: UUID) {
+        guard !isDemo, let index = accounts.firstIndex(where: { $0.id == id }),
+              AllowanceActivation.supported(accounts[index].provider) else { return }
+        accounts[index].automaticActivation = enabled
+        persist()
     }
     func activationPermitted(_ id: UUID) -> Bool {
         (try? savedCredential(for: id)).map(AllowanceActivation.permitted) ?? false

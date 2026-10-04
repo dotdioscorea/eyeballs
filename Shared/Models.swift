@@ -113,6 +113,7 @@ struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
     var display: AccountDisplay?
     var colorHex: UInt32?
     var activation: ActivationRecord?
+    var automaticActivation: Bool?
     var addedAt: Date = .now
     var title: String { label.isEmpty ? provider.name : label }
     var nextReset: Date? { snapshot?.nextReset }

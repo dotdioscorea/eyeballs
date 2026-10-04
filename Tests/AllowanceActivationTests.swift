@@ -192,9 +192,10 @@ final class AllowanceActivationTests: XCTestCase {
         XCTAssertEqual(calls, 1)
         let account = AgentAccount(provider: .codex, snapshot: unused(credential))
         let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: MemoryVault(), integratesWithSystem: false,
-            fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true],
+            fetcher: { _, c in self.unused(c) },
             activator: { _ in throw ActivationPreparationFailure(cause: UsageError.invalidResponse) })
         try store.connect(account, credential: credential)
+        store.setAutomaticActivation(true, for: account.id)
         await store.refresh(account.id)
         XCTAssertEqual(store.accounts[0].needsReport, true)
         XCTAssertEqual(store.reportAccountID, account.id)
@@ -205,15 +206,16 @@ final class AllowanceActivationTests: XCTestCase {
     func testKnownUnsentFailureRetriesAfterBackoffAndSurvivesRelaunch() async throws {
         let path = directory.appendingPathComponent("accounts.json"), credential = Fixture.credential("one"), vault = MemoryVault(); var attempts = 0
         let account = AgentAccount(provider: .codex, snapshot: unused(credential))
-        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true], activator: { _ in
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activator: { _ in
             attempts += 1; throw ActivationPreparationFailure(cause: URLError(.timedOut))
         })
         try store.connect(account, credential: credential)
+        store.setAutomaticActivation(true, for: account.id)
         await store.refresh(account.id); await store.refresh(account.id)
         XCTAssertEqual(attempts, 1); XCTAssertNotNil(store.accounts[0].activation?.retryAfter)
         var saved = store.accounts; saved[0].activation?.retryAfter = .now.addingTimeInterval(-1)
         try JSONEncoder().encode(saved).write(to: path, options: .atomic)
-        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true], activator: { _ in attempts += 1 })
+        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activator: { _ in attempts += 1 })
         await restored.refresh(account.id); await restored.refresh(account.id)
         XCTAssertEqual(attempts, 2); XCTAssertEqual(restored.accounts[0].activation?.status, .completed)
         XCTAssertNil(restored.accounts[0].activation?.retryAfter)
@@ -223,7 +225,7 @@ final class AllowanceActivationTests: XCTestCase {
         let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activator: { _ in sends += 1 })
         let account = AgentAccount(provider: .codex, snapshot: unused(credential)); try store.connect(account, credential: credential)
         await store.refresh(account.id); XCTAssertEqual(sends, 0); XCTAssertNil(store.accounts[0].activation)
-        let demo = AccountStore(location: directory.appendingPathComponent("demo/accounts.json"), integratesWithSystem: false, isDemo: true, activationProviders: ["codex": true], activator: { _ in XCTFail("Demo made activation request") })
+        let demo = AccountStore(location: directory.appendingPathComponent("demo/accounts.json"), integratesWithSystem: false, isDemo: true, activator: { _ in XCTFail("Demo made activation request") })
         demo.resetDemo(); await demo.startAllowance(demo.accounts[0].id); await demo.refreshAll()
     }
     func testAutomaticActivationPersistsAndIsolatesMultipleAccounts() async throws {
@@ -232,13 +234,17 @@ final class AllowanceActivationTests: XCTestCase {
         let fetch: (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { _, c in
             return self.unused(c, reset: deadlines[c.subject])
         }
-        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: fetch, activationProviders: ["codex": true], activator: { c in
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: fetch, activator: { c in
             let disk = try JSONDecoder().decode([AgentAccount].self, from: Data(contentsOf: path))
             XCTAssertEqual(disk.first { $0.snapshot?.identity == c.registrationIdentity }?.activation?.status, .attempted)
             sent.append(c.subject)
             deadlines[c.subject] = .now.addingTimeInterval(604800)
         })
-        for c in [a, b] { try store.connect(AgentAccount(provider: .codex, snapshot: unused(c)), credential: c) }
+        for c in [a, b] {
+            let account = AgentAccount(provider: .codex, snapshot: unused(c))
+            try store.connect(account, credential: c)
+            store.setAutomaticActivation(true, for: account.id)
+        }
         await store.refreshAll(); XCTAssertEqual(Set(sent), Set([a.subject, b.subject]))
         XCTAssertTrue(store.accounts.allSatisfy { $0.activation?.status == .completed })
         XCTAssertEqual(store.events.filter { $0.kind == .windowStarted }.count, 0)
@@ -249,7 +255,7 @@ final class AllowanceActivationTests: XCTestCase {
             saved[index].activation?.resetObservedAt = .now.addingTimeInterval(-61)
         }
         try JSONEncoder().encode(saved).write(to: path, options: .atomic)
-        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: fetch, activationProviders: ["codex": true], activator: { _ in XCTFail("Repeated after relaunch") })
+        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: fetch, activator: { _ in XCTFail("Repeated after relaunch") })
         await restored.refreshAll(); XCTAssertEqual(sent.count, 2)
         XCTAssertTrue(restored.accounts.allSatisfy { $0.activation?.status == .started })
         XCTAssertEqual(restored.events.filter { $0.kind == .windowStarted }.count, 2)
@@ -260,10 +266,53 @@ final class AllowanceActivationTests: XCTestCase {
         XCTAssertTrue(debug.contains("activationClockReported")); XCTAssertTrue(debug.contains("activationDeadlineInMinutes"))
         XCTAssertTrue(debug.contains("activationClockObservationAgeMinutes")); XCTAssertTrue(debug.contains("activationCandidate"))
     }
+    func testAccountOptInDoesNotActivateAnotherAccountOfTheSameProvider() async throws {
+        let path = directory.appendingPathComponent("accounts.json"), vault = MemoryVault()
+        let a = Fixture.credential("a"), b = Fixture.credential("b"); var sent: [String] = []
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false,
+            fetcher: { _, c in self.unused(c) }, activator: { sent.append($0.subject) })
+        let first = AgentAccount(provider: .codex, snapshot: unused(a)), second = AgentAccount(provider: .codex, snapshot: unused(b))
+        try store.connect(first, credential: a); try store.connect(second, credential: b)
+        store.setAutomaticActivation(true, for: first.id)
+        await store.refreshAll()
+        XCTAssertEqual(sent, [a.subject])
+        XCTAssertEqual(store.accounts.first { $0.id == second.id }?.automaticActivation, false)
+        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false,
+            fetcher: { _, c in self.unused(c) }, activator: { _ in XCTFail("Unselected account or duplicate activation") })
+        await restored.refreshAll()
+        XCTAssertEqual(restored.accounts.first { $0.id == first.id }?.automaticActivation, true)
+        XCTAssertEqual(restored.accounts.first { $0.id == second.id }?.automaticActivation, false)
+        // An editor opened before the toggle changed must not overwrite it.
+        restored.update(first)
+        try restored.connect(first, credential: a)
+        XCTAssertEqual(restored.accounts.first { $0.id == first.id }?.automaticActivation, true)
+    }
+    func testLegacyProviderOptInMigratesOnceAndNewConnectionsDefaultToOff() throws {
+        let path = directory.appendingPathComponent("accounts.json"), vault = MemoryVault()
+        let a = Fixture.credential("a"), b = Fixture.credential("b"), c = claude()
+        let first = AgentAccount(provider: .codex, snapshot: unused(a))
+        var optedOut = AgentAccount(provider: .codex, snapshot: unused(b)); optedOut.automaticActivation = false
+        let other = AgentAccount(provider: .claude, snapshot: unused(c))
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode([first, optedOut, other]).write(to: path)
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, legacyActivationProviders: ["codex": true])
+        XCTAssertEqual(store.accounts.map(\.automaticActivation), [true, false, false])
+        store.setAutomaticActivation(false, for: first.id)
+        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false, legacyActivationProviders: ["codex": true, "claude": true])
+        XCTAssertTrue(restored.accounts.allSatisfy { $0.automaticActivation == false })
+        let newCredential = Fixture.credential("new"), new = AgentAccount(provider: .codex, snapshot: unused(Fixture.credential("new")))
+        try restored.connect(new, credential: newCredential)
+        XCTAssertEqual(restored.accounts.last?.automaticActivation, false)
+        restored.setAutomaticActivation(true, for: new.id)
+        try restored.remove(new.id)
+        try restored.connect(new, credential: newCredential)
+        XCTAssertEqual(restored.accounts.last?.automaticActivation, false)
+    }
     func testFailedRequestIsNotRepeatedAutomaticallyOrPassedOffAsAStart() async throws {
         let credential = Fixture.credential("one"), vault = MemoryVault(); var sends = 0
-        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true], activator: { _ in sends += 1; throw URLError(.timedOut) })
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activator: { _ in sends += 1; throw URLError(.timedOut) })
         let account = AgentAccount(provider: .codex, snapshot: unused(credential)); try store.connect(account, credential: credential)
+        store.setAutomaticActivation(true, for: account.id)
         await store.refresh(account.id); await store.refresh(account.id)
         XCTAssertEqual(sends, 1); XCTAssertEqual(store.accounts[0].activation?.status, .failed)
         XCTAssertFalse(store.events.contains { $0.kind == .windowStarted || $0.kind == .activationSent })
@@ -288,8 +337,9 @@ final class AllowanceActivationTests: XCTestCase {
     func testPersistenceFailurePreventsConsumption() async throws {
         let credential = Fixture.credential("one"), vault = MemoryVault(); var sends = 0
         let path = directory.appendingPathComponent("accounts.json")
-        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true], activator: { _ in sends += 1 })
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activator: { _ in sends += 1 })
         let account = AgentAccount(provider: .codex, snapshot: unused(credential)); try store.connect(account, credential: credential)
+        store.setAutomaticActivation(true, for: account.id)
         try FileManager.default.removeItem(at: directory)
         try Data("File blocks metadata directory".utf8).write(to: directory)
         await store.refresh(account.id)
@@ -300,8 +350,9 @@ final class AllowanceActivationTests: XCTestCase {
         let credential = Fixture.credential("one"), vault = MemoryVault()
         let account = AgentAccount(provider: .codex, snapshot: unused(credential))
         var store: AccountStore!
-        store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true], activator: { _ in try store.remove(account.id) })
+        store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activator: { _ in try store.remove(account.id) })
         try store.connect(account, credential: credential)
+        store.setAutomaticActivation(true, for: account.id)
         await store.refresh(account.id)
         XCTAssertTrue(store.accounts.isEmpty); XCTAssertNil(store.histories[account.id]); XCTAssertTrue(store.events.isEmpty)
         XCTAssertNil(try vault.load(id: account.id))

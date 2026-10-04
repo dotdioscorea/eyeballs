@@ -31,6 +31,7 @@
 		3FF25665D726AAB295B08D29 /* CombinedActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E77F068AD9B4B600DEAE0A51 /* CombinedActivity.swift */; };
 		3FFC007CEB3C617C3C026627 /* AccountStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C77C48356431B2B13B41CF0B /* AccountStoreTests.swift */; };
 		419258BFF84AB13B18C1161F /* CreditText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20755F1D863EBE0679794915 /* CreditText.swift */; };
+		4352733A012D9BB618C39FAE /* ActivationControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57DD2307052225DC7BC5030F /* ActivationControls.swift */; };
 		44ED7C982CAE935A0DAD348A /* KimiTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7CBFD78227F07C014485FAB /* KimiTests.swift */; };
 		4887DCBCB311AC32A9261DF9 /* ProviderDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838D8289B8EB36E1D6194872 /* ProviderDetailsView.swift */; };
 		4953E7484A43BDCC528DDEC4 /* BackgroundRefreshScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8B659E7A2AB7F5BC7D8033B /* BackgroundRefreshScheduler.swift */; };
@@ -191,6 +192,7 @@
 		5123A81B3E8809865F8B6FB1 /* PerplexityUsageParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerplexityUsageParser.swift; sourceTree = "<group>"; };
 		54B5F06EC60E18E8F38A77E3 /* ClaudeResetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeResetTests.swift; sourceTree = "<group>"; };
 		554AA4E350EE090A8CDF90EF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		57DD2307052225DC7BC5030F /* ActivationControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivationControls.swift; sourceTree = "<group>"; };
 		593510E742D30787ED2B5172 /* AccountDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDetailView.swift; sourceTree = "<group>"; };
 		5BE8DFFB955779168763E0A2 /* WidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetIntents.swift; sourceTree = "<group>"; };
 		6157400751C764645C115D5B /* CursorBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CursorBrowser.swift; sourceTree = "<group>"; };
@@ -311,6 +313,7 @@
 				593510E742D30787ED2B5172 /* AccountDetailView.swift */,
 				CCDBEBA063BAD601A8AE01C0 /* AccountEvents.swift */,
 				46635AC9CE03B49D6F27BDF6 /* AccountStore.swift */,
+				57DD2307052225DC7BC5030F /* ActivationControls.swift */,
 				E335124029EE03AD071C872D /* ActivationUIFixture.swift */,
 				1CADF7188DB07AE6D64E5677 /* AllowanceActivation.swift */,
 				9A1A94056C750394175DD119 /* AmpAuth.swift */,
@@ -625,6 +628,7 @@
 				5C16C4F9A710EBFAC80C8A4D /* AccountDisplay.swift in Sources */,
 				9CCF00199A1AEFC0F9A28AF7 /* AccountEvents.swift in Sources */,
 				6EFADD86A7721CFF246F919D /* AccountStore.swift in Sources */,
+				4352733A012D9BB618C39FAE /* ActivationControls.swift in Sources */,
 				E00C05E08F555EA0CF7B89D0 /* ActivationUIFixture.swift in Sources */,
 				FEDF479D1BA849878FC78790 /* AllowanceActivation.swift in Sources */,
 				B5CEA38A15F7F79440CF3B20 /* AllowanceChanges.swift in Sources */,

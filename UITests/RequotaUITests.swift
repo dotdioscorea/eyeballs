@@ -7,41 +7,55 @@ final class RequotaUITests: XCTestCase {
         app.launch(); app.buttons["layout-tiles"].tap(); app.buttons["account-Personal"].tap()
         for _ in 0..<10 { if app.buttons["start-week"].isHittable { break }; app.swipeUp() }
         let start = app.buttons["start-week"]
-        XCTAssertTrue(start.isHittable); start.tap()
+        let toggle = app.switches["automatic-activation-00000000-0000-0000-0000-000000000001"]
+        XCTAssertTrue(start.isHittable); XCTAssertTrue(toggle.isHittable)
+        XCTAssertEqual(start.frame.midY, toggle.frame.midY, accuracy: 5, "Action sits beside the toggle")
+        XCTAssertFalse(app.staticTexts["activation-explanation"].exists)
+        let compact = XCTAttachment(screenshot: app.screenshot()); compact.name = "Compact account activation controls"; compact.lifetime = .keepAlways; add(compact)
+        app.buttons["activation-help-00000000-0000-0000-0000-000000000001"].tap()
+        XCTAssertTrue(app.staticTexts["activation-explanation"].waitForExistence(timeout: 5))
+        let help = XCTAttachment(screenshot: app.screenshot()); help.name = "Activation explanation popover"; help.lifetime = .keepAlways; add(help)
+        app.navigationBars.staticTexts["Personal"].tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 5)); start.tap()
         let message = app.staticTexts["activation-message"]
         XCTAssertTrue(message.waitForExistence(timeout: 10)); XCTAssertEqual(message.label, "Request completed.")
         start.tap(); XCTAssertEqual(message.label, "An activation request was already attempted recently.")
-        let manual = XCTAttachment(screenshot: app.screenshot()); manual.name = "Manual activation and repeat guard"; manual.lifetime = .keepAlways; add(manual)
-        app.switches["Automatic for Codex"].coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         app.navigationBars.buttons["Requota"].tap()
-        app.swipeDown(); app.swipeDown()
-        app.buttons["account-Mac mini"].tap()
-        for _ in 0..<10 { if app.staticTexts["activation-message"].isHittable { break }; app.swipeUp() }
-        XCTAssertEqual(app.staticTexts["activation-message"].label, "Request completed.")
-        app.navigationBars.buttons["Requota"].tap(); app.tabBars.buttons["Events"].tap()
-        let sent = app.staticTexts.matching(NSPredicate(format: "label == %@", "Activation request completed"))
-        XCTAssertEqual(sent.count, 3, "Each Codex account receives one request")
+        app.tabBars.buttons["Settings"].tap(); app.buttons["activation-settings"].tap()
+        let mac = app.switches["automatic-activation-00000000-0000-0000-0000-000000000004"]
+        XCTAssertTrue(mac.waitForExistence(timeout: 5))
+        mac.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(mac.value as? String, "1")
+        XCTAssertEqual(app.switches["automatic-activation-00000000-0000-0000-0000-000000000001"].value as? String, "0")
         app.terminate(); app.launchArguments.removeAll { ["--reset-activation-fixture", "--reset-activation-settings"].contains($0) }; app.launch()
         app.tabBars.buttons["Events"].tap()
-        XCTAssertEqual(sent.count, 3, "Refresh and relaunch must not send again")
+        let sent = app.staticTexts.matching(NSPredicate(format: "label == %@", "Activation request completed"))
+        let completed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in sent.count == 2 }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [completed], timeout: 10), .completed)
+        XCTAssertEqual(sent.count, 2, "Only the manually started and opted-in accounts receive requests")
+        app.terminate(); app.launchArguments.removeAll { ["--reset-activation-fixture", "--reset-activation-settings"].contains($0) }; app.launch()
+        app.tabBars.buttons["Events"].tap()
+        XCTAssertEqual(sent.count, 2, "Repeated launches must not send again")
         app.tabBars.buttons["Settings"].tap(); app.buttons["activation-settings"].tap()
-        app.switches["Codex"].firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
-        XCTAssertEqual(app.switches["Codex"].firstMatch.value as? String, "0")
+        XCTAssertEqual(mac.value as? String, "1")
+        mac.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(mac.value as? String, "0")
     }
-    func testActivationProviderSettingsPersistAndClaudePermissionIsExplicit() {
+    func testActivationAccountSettingsPersistAndClaudePermissionIsExplicit() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--reset-activation-settings"]
-        app.launch(); app.tabBars.buttons["Settings"].tap()
-        app.buttons["activation-settings"].tap()
-        let codex = app.switches["Codex"].firstMatch
-        XCTAssertTrue(codex.waitForExistence(timeout: 5)); XCTAssertEqual(codex.value as? String, "0")
-        XCTAssertEqual(app.switches["Claude"].firstMatch.value as? String, "0")
-        codex.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap(); XCTAssertEqual(codex.value as? String, "1")
-        let settings = XCTAttachment(screenshot: app.screenshot()); settings.name = "Per-provider activation settings"; settings.lifetime = .keepAlways; add(settings)
+        app.launch(); app.tabBars.buttons["Settings"].tap(); app.buttons["activation-settings"].tap()
+        let personal = app.switches["automatic-activation-00000000-0000-0000-0000-000000000001"]
+        let mac = app.switches["automatic-activation-00000000-0000-0000-0000-000000000004"]
+        XCTAssertTrue(personal.waitForExistence(timeout: 5)); XCTAssertEqual(personal.value as? String, "0")
+        XCTAssertEqual(mac.value as? String, "0")
+        personal.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap(); XCTAssertEqual(personal.value as? String, "1")
+        XCTAssertEqual(mac.value as? String, "0")
+        let settings = XCTAttachment(screenshot: app.screenshot()); settings.name = "Per-account activation settings"; settings.lifetime = .keepAlways; add(settings)
         app.terminate(); app.launchArguments.removeAll { $0 == "--reset-activation-settings" }; app.launch()
         app.tabBars.buttons["Settings"].tap(); app.buttons["activation-settings"].tap()
-        XCTAssertEqual(app.switches["Codex"].firstMatch.value as? String, "1")
-        app.switches["Codex"].firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(personal.value as? String, "1"); XCTAssertEqual(mac.value as? String, "0")
+        personal.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         app.navigationBars.buttons["Settings"].tap(); app.tabBars.buttons["Accounts"].tap()
         app.buttons["layout-tiles"].tap(); app.buttons["account-Work"].tap()
         for _ in 0..<10 { if app.buttons["allow-activation"].isHittable { break }; app.swipeUp() }
