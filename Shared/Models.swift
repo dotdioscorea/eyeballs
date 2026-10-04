@@ -138,6 +138,12 @@ struct ActivationRecord: Codable, Equatable, Sendable {
     var resetAt: Date?
     var usedSinceAttempt: Bool?
     var lastObservedUsed: Double?
+    var windowID: String?
+    var previousResetAt: Date?
+    var resetObservedAt: Date?
+    var plan: String?
+    var allowanceContext: String?
+    var retryAfter: Date?
 }
 
 extension Color {

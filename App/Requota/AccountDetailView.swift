@@ -85,7 +85,7 @@ struct AccountDetailView: View {
                                     Text("Activation is unavailable for this connection.").font(.caption).foregroundStyle(.secondary)
                                 }
                                 if let message = store.activationMessages[id] { Text(message).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("activation-message") }
-                                else if let record = account.activation { Text("\(record.status == .started ? "Started" : [.failed, .attempted].contains(record.status) ? "Attempted" : "Request sent") \(record.attemptedAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }
+                                else if let record = account.activation { Text(record.status == .started ? "Weekly window active." : "\([.failed, .attempted].contains(record.status) ? "Attempted" : "Request sent") \(record.attemptedAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }
                                 Text("Uses a small amount of included allowance. Automatic activation applies to all \(account.provider.name) accounts and runs during refreshes.").font(.caption).foregroundStyle(.secondary)
                             }.panel()
                         }

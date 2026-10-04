@@ -1,6 +1,33 @@
 import XCTest
 
 final class RequotaUITests: XCTestCase {
+    func testManualAndAutomaticActivationAcrossAccountsDoNotRepeatAfterRelaunch() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture", "--activation-fixture", "--reset-activation-fixture", "--reset-activation-settings", "--exit-demo-test"]
+        app.launch(); app.buttons["layout-tiles"].tap(); app.buttons["account-Personal"].tap()
+        for _ in 0..<10 { if app.buttons["start-week"].isHittable { break }; app.swipeUp() }
+        let start = app.buttons["start-week"]
+        XCTAssertTrue(start.isHittable); start.tap()
+        let message = app.staticTexts["activation-message"]
+        XCTAssertTrue(message.waitForExistence(timeout: 10)); XCTAssertEqual(message.label, "Request completed.")
+        start.tap(); XCTAssertEqual(message.label, "An activation request was already attempted recently.")
+        let manual = XCTAttachment(screenshot: app.screenshot()); manual.name = "Manual activation and repeat guard"; manual.lifetime = .keepAlways; add(manual)
+        app.switches["Automatic for Codex"].coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        app.navigationBars.buttons["Requota"].tap()
+        app.swipeDown(); app.swipeDown()
+        app.buttons["account-Mac mini"].tap()
+        for _ in 0..<10 { if app.staticTexts["activation-message"].isHittable { break }; app.swipeUp() }
+        XCTAssertEqual(app.staticTexts["activation-message"].label, "Request completed.")
+        app.navigationBars.buttons["Requota"].tap(); app.tabBars.buttons["Events"].tap()
+        let sent = app.staticTexts.matching(NSPredicate(format: "label == %@", "Activation request completed"))
+        XCTAssertEqual(sent.count, 3, "Each Codex account receives one request")
+        app.terminate(); app.launchArguments.removeAll { ["--reset-activation-fixture", "--reset-activation-settings"].contains($0) }; app.launch()
+        app.tabBars.buttons["Events"].tap()
+        XCTAssertEqual(sent.count, 3, "Refresh and relaunch must not send again")
+        app.tabBars.buttons["Settings"].tap(); app.buttons["activation-settings"].tap()
+        app.switches["Codex"].firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(app.switches["Codex"].firstMatch.value as? String, "0")
+    }
     func testActivationProviderSettingsPersistAndClaudePermissionIsExplicit() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--reset-activation-settings"]

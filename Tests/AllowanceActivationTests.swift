@@ -96,13 +96,41 @@ final class AllowanceActivationTests: XCTestCase {
         XCTAssertFalse(AllowanceActivation.mayAutomaticallyAttempt(unused(credential, reset: now.addingTimeInterval(3600), now: now), provider: .codex, record: usedThenReset, now: now))
     }
     func testConfirmedClockStartIsSeparateFromSuccessfulRequest() {
-        let now = Date.now, credential = Fixture.credential("one")
-        let before = unused(credential, now: now), after = unused(credential, reset: now.addingTimeInterval(604800), now: now)
-        XCTAssertTrue(AllowanceActivation.confirmedStart(before: before, after: after, provider: .codex, attemptedAt: now))
-        XCTAssertFalse(AllowanceActivation.confirmedStart(before: after, after: after, provider: .codex, attemptedAt: now))
-        XCTAssertFalse(AllowanceActivation.confirmedStart(before: before, after: unused(credential, reset: now.addingTimeInterval(18000)), provider: .codex, attemptedAt: now))
-        let c = claude()
-        XCTAssertTrue(AllowanceActivation.confirmedStart(before: unused(c, now: now), after: unused(c, reset: now.addingTimeInterval(604800 + 2700), now: now), provider: .claude, attemptedAt: now))
+        let now = Date.now, credential = Fixture.credential("one"), deadline = now.addingTimeInterval(604800)
+        var record = ActivationRecord(attemptedAt: now, status: .completed, resetAt: deadline,
+            windowID: "primary_window", resetObservedAt: now, plan: "Pro")
+        let first = unused(credential, reset: deadline, now: now)
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: first, provider: .codex, now: now))
+        let later = now.addingTimeInterval(61)
+        let stable = unused(credential, reset: deadline, now: later)
+        XCTAssertTrue(AllowanceActivation.confirmedStart(record: record, snapshot: stable, provider: .codex, now: later))
+        record.previousResetAt = deadline
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: stable, provider: .codex, now: later))
+        record.previousResetAt = deadline.addingTimeInterval(-5)
+        XCTAssertTrue(AllowanceActivation.confirmedStart(record: record, snapshot: stable, provider: .codex, now: later))
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: unused(credential, reset: later.addingTimeInterval(604800), now: later), provider: .codex, now: later), "Moving deadline is not a started clock")
+        record.status = .failed
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: stable, provider: .codex, now: later))
+        let c = claude(), claudeDeadline = now.addingTimeInterval(604800 + 2700)
+        let claudeRecord = ActivationRecord(attemptedAt: now, status: .completed, resetAt: claudeDeadline, windowID: "seven_day", resetObservedAt: now, plan: "Pro")
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: claudeRecord, snapshot: unused(c, reset: claudeDeadline, now: later), provider: .claude, now: later), "An hour-rounded moving deadline needs longer verification")
+        let nextHour = now.addingTimeInterval(3661)
+        XCTAssertTrue(AllowanceActivation.confirmedStart(record: claudeRecord, snapshot: unused(c, reset: claudeDeadline, now: nextHour), provider: .claude, now: nextHour))
+    }
+    func testClockConfirmationRejectsChangedPlanWindowAndStaleReadings() {
+        let now = Date.now, credential = Fixture.credential("one"), deadline = now.addingTimeInterval(604800)
+        let record = ActivationRecord(attemptedAt: now.addingTimeInterval(-120), status: .completed, resetAt: deadline,
+            windowID: "primary_window", resetObservedAt: now.addingTimeInterval(-61), plan: "Pro", allowanceContext: "original-plan")
+        var snapshot = unused(credential, reset: deadline, now: now); snapshot.allowanceContext = "original-plan"
+        XCTAssertTrue(AllowanceActivation.confirmedStart(record: record, snapshot: snapshot, provider: .codex, now: now))
+        snapshot.plan = "Plus"
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: snapshot, provider: .codex, now: now))
+        snapshot.plan = "Pro"; snapshot.allowanceContext = "upgraded"
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: snapshot, provider: .codex, now: now))
+        snapshot.allowanceContext = "original-plan"; snapshot.windows[0].id = "secondary_window"
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: snapshot, provider: .codex, now: now))
+        snapshot.windows[0].id = "primary_window"; snapshot.updatedAt = now.addingTimeInterval(-121)
+        XCTAssertFalse(AllowanceActivation.confirmedStart(record: record, snapshot: snapshot, provider: .codex, now: now))
     }
     func testStreamRequiresCompletedEventAndRejectsInStreamFailures() {
         func data(_ text: String) -> Data { Data(text.utf8) }
@@ -149,6 +177,47 @@ final class AllowanceActivationTests: XCTestCase {
         do { try await AllowanceActivation.send(readonly) { _ in XCTFail("No request with read-only token"); throw UsageError.unavailable }; XCTFail("Expected permission error") }
         catch ActivationError.permissionRequired { }
     }
+    func testPreparationFailuresNeverPostAndMalformedModelsCanBeReported() async throws {
+        let credential = Fixture.credential("one"); var calls = 0
+        do {
+            try await AllowanceActivation.send(credential) { request in
+                calls += 1; XCTAssertNotEqual(request.httpMethod, "POST")
+                return (Data("{\"new_schema\":[]}".utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
+            XCTFail("Expected a preparation error")
+        } catch let failure as ActivationPreparationFailure {
+            XCTAssertEqual(DiagnosticFailure.category(failure), .response)
+            XCTAssertTrue(failure.localizedDescription.contains("No message was sent"))
+        }
+        XCTAssertEqual(calls, 1)
+        let account = AgentAccount(provider: .codex, snapshot: unused(credential))
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: MemoryVault(), integratesWithSystem: false,
+            fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true],
+            activator: { _ in throw ActivationPreparationFailure(cause: UsageError.invalidResponse) })
+        try store.connect(account, credential: credential)
+        await store.refresh(account.id)
+        XCTAssertEqual(store.accounts[0].needsReport, true)
+        XCTAssertEqual(store.reportAccountID, account.id)
+        XCTAssertEqual(store.events.filter { $0.kind == .parsingFailure }.count, 1)
+        XCTAssertEqual(store.accounts[0].activation?.status, .failed)
+        XCTAssertNotNil(store.accounts[0].activation?.retryAfter)
+    }
+    func testKnownUnsentFailureRetriesAfterBackoffAndSurvivesRelaunch() async throws {
+        let path = directory.appendingPathComponent("accounts.json"), credential = Fixture.credential("one"), vault = MemoryVault(); var attempts = 0
+        let account = AgentAccount(provider: .codex, snapshot: unused(credential))
+        let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true], activator: { _ in
+            attempts += 1; throw ActivationPreparationFailure(cause: URLError(.timedOut))
+        })
+        try store.connect(account, credential: credential)
+        await store.refresh(account.id); await store.refresh(account.id)
+        XCTAssertEqual(attempts, 1); XCTAssertNotNil(store.accounts[0].activation?.retryAfter)
+        var saved = store.accounts; saved[0].activation?.retryAfter = .now.addingTimeInterval(-1)
+        try JSONEncoder().encode(saved).write(to: path, options: .atomic)
+        let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activationProviders: ["codex": true], activator: { _ in attempts += 1 })
+        await restored.refresh(account.id); await restored.refresh(account.id)
+        XCTAssertEqual(attempts, 2); XCTAssertEqual(restored.accounts[0].activation?.status, .completed)
+        XCTAssertNil(restored.accounts[0].activation?.retryAfter)
+    }
     func testAutomaticActivationIsOffByDefaultAndDemoCannotConsume() async throws {
         let credential = Fixture.credential("one"), vault = MemoryVault(); var sends = 0
         let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, c in self.unused(c) }, activator: { _ in sends += 1 })
@@ -159,24 +228,37 @@ final class AllowanceActivationTests: XCTestCase {
     }
     func testAutomaticActivationPersistsAndIsolatesMultipleAccounts() async throws {
         let path = directory.appendingPathComponent("accounts.json"), vault = MemoryVault()
-        let a = Fixture.credential("a"), b = Fixture.credential("b"); var sent: [String] = []; var counters: [String: Int] = [:]
+        let a = Fixture.credential("a"), b = Fixture.credential("b"); var sent: [String] = []; var deadlines: [String: Date] = [:]
         let fetch: (AgentAccount, AccountCredential) async throws -> UsageSnapshot = { _, c in
-            counters[c.subject, default: 0] += 1
-            return self.unused(c, reset: counters[c.subject]! > 1 ? Date.now.addingTimeInterval(604800) : nil)
+            return self.unused(c, reset: deadlines[c.subject])
         }
         let store = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: fetch, activationProviders: ["codex": true], activator: { c in
             let disk = try JSONDecoder().decode([AgentAccount].self, from: Data(contentsOf: path))
             XCTAssertEqual(disk.first { $0.snapshot?.identity == c.registrationIdentity }?.activation?.status, .attempted)
             sent.append(c.subject)
+            deadlines[c.subject] = .now.addingTimeInterval(604800)
         })
         for c in [a, b] { try store.connect(AgentAccount(provider: .codex, snapshot: unused(c)), credential: c) }
         await store.refreshAll(); XCTAssertEqual(Set(sent), Set([a.subject, b.subject]))
-        XCTAssertTrue(store.accounts.allSatisfy { $0.activation?.status == .started })
-        XCTAssertEqual(store.events.filter { $0.kind == .windowStarted }.count, 2)
+        XCTAssertTrue(store.accounts.allSatisfy { $0.activation?.status == .completed })
+        XCTAssertEqual(store.events.filter { $0.kind == .windowStarted }.count, 0)
+        // Move the saved observation into the past rather than sleeping a minute.
+        var saved = store.accounts
+        for index in saved.indices {
+            saved[index].activation?.attemptedAt = .now.addingTimeInterval(-120)
+            saved[index].activation?.resetObservedAt = .now.addingTimeInterval(-61)
+        }
+        try JSONEncoder().encode(saved).write(to: path, options: .atomic)
         let restored = AccountStore(location: path, vault: vault, integratesWithSystem: false, fetcher: fetch, activationProviders: ["codex": true], activator: { _ in XCTFail("Repeated after relaunch") })
         await restored.refreshAll(); XCTAssertEqual(sent.count, 2)
+        XCTAssertTrue(restored.accounts.allSatisfy { $0.activation?.status == .started })
+        XCTAssertEqual(restored.events.filter { $0.kind == .windowStarted }.count, 2)
+        await restored.refreshAll()
+        XCTAssertEqual(restored.events.filter { $0.kind == .windowStarted }.count, 2)
         let debug = String(decoding: try Diagnostics.encode(Diagnostics.bundle(accounts: restored.accounts)), as: UTF8.self)
         XCTAssertFalse(debug.contains(a.accessToken)); XCTAssertFalse(debug.contains(a.subject)); XCTAssertTrue(debug.contains("activationStatus"))
+        XCTAssertTrue(debug.contains("activationClockReported")); XCTAssertTrue(debug.contains("activationDeadlineInMinutes"))
+        XCTAssertTrue(debug.contains("activationClockObservationAgeMinutes")); XCTAssertTrue(debug.contains("activationCandidate"))
     }
     func testFailedRequestIsNotRepeatedAutomaticallyOrPassedOffAsAStart() async throws {
         let credential = Fixture.credential("one"), vault = MemoryVault(); var sends = 0

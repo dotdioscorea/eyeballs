@@ -6,6 +6,10 @@ enum DiagnosticStage: String, Codable { case signInStarted, identityVerified, us
 enum DiagnosticFailure: String, Codable {
     case cancelled, timeout, callback, identity, signedOut, permission, throttled, response, accountMismatch, network, other
     static func category(_ error: Error) -> Self {
+        if let error = error as? ActivationPreparationFailure { return category(error.cause) }
+        if let error = error as? ActivationError {
+            switch error { case .permissionRequired: return .permission; case .incomplete, .allowanceUnknown: return .response; default: return .other }
+        }
         if let error = error as? AuthError {
             switch error { case .cancelled: return .cancelled; case .timedOut: return .timeout; case .invalidCallback: return .callback; case .invalidIdentity: return .identity; case .unavailable: return .network }
         }
@@ -224,6 +228,10 @@ struct DebugBundle: Codable {
         var resetInventoryAgeSeconds: Int?
         var activationStatus: ActivationRecord.Status?
         var activationAgeSeconds: Int?
+        var activationCandidate: Bool?
+        var activationClockReported: Bool?
+        var activationDeadlineInMinutes: Int?
+        var activationClockObservationAgeMinutes: Int?
     }
     struct RefreshStatus: Codable {
         var backgroundRefresh: String
@@ -310,10 +318,18 @@ enum Diagnostics {
                                                   bankedResetCount: account.snapshot?.bankedResets.map { $0.reduce(0) { $0 + $1.count } },
                                                   resetInventoryAgeSeconds: account.snapshot?.resetInventory.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.checkedAt)))) },
                                                   activationStatus: account.activation?.status,
-                                                  activationAgeSeconds: account.activation.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.attemptedAt)))) })
+                                                  activationAgeSeconds: account.activation.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.attemptedAt)))) },
+                                                  activationCandidate: AllowanceActivation.supported(account.provider) ? account.snapshot.map { AllowanceActivation.candidate($0, provider: account.provider, now: now) } : nil,
+                                                  activationClockReported: account.snapshot.flatMap { AllowanceActivation.weekly($0, provider: account.provider)?.clockReported },
+                                                  activationDeadlineInMinutes: account.snapshot.flatMap { AllowanceActivation.weekly($0, provider: account.provider)?.resetsAt }.flatMap { minutes($0.timeIntervalSince(now)) },
+                                                  activationClockObservationAgeMinutes: account.activation?.resetObservedAt.flatMap { minutes(now.timeIntervalSince($0)) })
                     }, events: safeEvents)
     }
     static var version: String { "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))" }
+    private static func minutes(_ seconds: TimeInterval) -> Int? {
+        guard seconds.isFinite else { return nil }
+        return Int(max(-5_256_000, min(5_256_000, seconds / 60)))
+    }
     static func encode(_ bundle: DebugBundle) throws -> Data {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
         return try encoder.encode(bundle)

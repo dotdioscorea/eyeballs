@@ -4,13 +4,25 @@ enum ActivationError: LocalizedError {
     case unsupported, permissionRequired, allowanceUnknown, alreadyActive, recentlyAttempted, incomplete
     var errorDescription: String? {
         switch self {
-        case .unsupported: return "Activation is not available for this provider."
+        case .unsupported: return "Activation is not available for this account."
         case .permissionRequired: return "Allow activation for this account first."
         case .allowanceUnknown: return "An unused included allowance could not be confirmed. No request was sent."
         case .alreadyActive: return "The weekly window is already active."
         case .recentlyAttempted: return "An activation request was already attempted recently."
         case .incomplete: return "The activation request could not be confirmed. Refresh usage before trying again."
         }
+    }
+}
+
+struct ActivationPreparationFailure: LocalizedError {
+    var cause: Error
+    var errorDescription: String? { cause.localizedDescription + " No message was sent." }
+    var retryAfter: Date {
+        if case UsageError.throttled(let date) = cause { return date }
+        if case ActivationError.unsupported = cause { return .now.addingTimeInterval(86400) }
+        if case UsageError.invalidResponse = cause { return .now.addingTimeInterval(3600) }
+        if case UsageError.usageAccessDenied = cause { return .now.addingTimeInterval(3600) }
+        return .now.addingTimeInterval(300)
     }
 }
 
@@ -51,15 +63,26 @@ enum AllowanceActivation {
     static func mayAutomaticallyAttempt(_ snapshot: UsageSnapshot, provider: Provider, record: ActivationRecord?, now: Date = .now) -> Bool {
         guard candidate(snapshot, provider: provider, now: now) else { return false }
         guard let record else { return true }
+        if record.status == .failed, let retryAfter = record.retryAfter { return now >= retryAfter }
         if now.timeIntervalSince(record.attemptedAt) >= 604800 { return true }
         // Re-arm only after real usage and a subsequent observed reset. A moving
         // unstarted deadline, rounding, relaunch or an uncertain POST cannot re-arm.
         return record.usedSinceAttempt == true && record.lastObservedUsed.map { $0 > 0 } == true
     }
-    static func confirmedStart(before: UsageSnapshot, after: UsageSnapshot, provider: Provider, attemptedAt: Date) -> Bool {
-        guard let old = weekly(before, provider: provider), old.resetsAt == nil,
-              let reset = weekly(after, provider: provider)?.resetsAt else { return false }
-        return abs(reset.timeIntervalSince(attemptedAt) - 604800) <= (provider == .claude ? 3600 : 600)
+    static func confirmedStart(record: ActivationRecord, snapshot: UsageSnapshot, provider: Provider, now: Date = .now) -> Bool {
+        guard record.status == .completed,
+              snapshot.plan?.lowercased() == record.plan?.lowercased(), snapshot.allowanceContext == record.allowanceContext,
+              now.timeIntervalSince(snapshot.updatedAt) >= -60, now.timeIntervalSince(snapshot.updatedAt) <= 120,
+              let week = weekly(snapshot, provider: provider), week.id == record.windowID, week.clockReported == true,
+              let reset = week.resetsAt, reset > now, let anchor = record.resetAt, let observed = record.resetObservedAt,
+              observed >= record.attemptedAt,
+              snapshot.updatedAt.timeIntervalSince(observed) >= (provider == .claude ? 3660 : 60),
+              abs(reset.timeIntervalSince(anchor)) <= 1,
+              abs(reset.timeIntervalSince(record.attemptedAt) - 604800) <= (provider == .claude ? 3600 : 600) else { return false }
+        // A deadline that was already fixed before the request is not a new start.
+        // Claude rounds deadlines to the hour; wait beyond that resolution before
+        // treating an unchanged reading as a fixed countdown.
+        return record.previousResetAt.map { abs(reset.timeIntervalSince($0)) > 1 } ?? true
     }
     static func send(_ credential: AccountCredential,
                      transport: (URLRequest) async throws -> (Data, HTTPURLResponse) = ProviderHTTP.data) async throws {
@@ -68,22 +91,24 @@ enum AllowanceActivation {
         let catalogueURL = codex ? "https://chatgpt.com/backend-api/codex/models?client_version=0.159.3" : "https://api.anthropic.com/v1/models"
         var catalogue = request(catalogueURL, credential: credential)
         catalogue.setValue("application/json", forHTTPHeaderField: "Accept")
-        let (modelsData, modelsResponse) = try await transport(catalogue)
-        guard let object = try ProviderHTTP.decodeJSON(modelsData, response: modelsResponse, unauthorizedError: .usageAccessDenied) as? [String: Any] else { throw UsageError.invalidResponse }
         let model: String
-        if codex {
-            let models = object["models"] as? [[String: Any]] ?? []
-            guard let available = models.first(where: {
-                let slug = $0["slug"] as? String ?? ""
-                let efforts = $0["supported_reasoning_levels"] as? [[String: Any]] ?? []
-                return slug.hasSuffix("-luna") && $0["visibility"] as? String == "list" && efforts.contains { $0["effort"] as? String == "low" }
-            }), let slug = available["slug"] as? String else { throw ActivationError.unsupported }
-            model = slug
-        } else {
-            let models = object["data"] as? [[String: Any]] ?? []
-            guard let available = models.first(where: { ($0["id"] as? String)?.hasPrefix("claude-haiku-") == true }), let id = available["id"] as? String else { throw ActivationError.unsupported }
-            model = id
-        }
+        do {
+            let (modelsData, modelsResponse) = try await transport(catalogue)
+            guard let object = try ProviderHTTP.decodeJSON(modelsData, response: modelsResponse, unauthorizedError: .usageAccessDenied) as? [String: Any] else { throw UsageError.invalidResponse }
+            if codex {
+                guard let models = object["models"] as? [[String: Any]] else { throw UsageError.invalidResponse }
+                guard let available = models.first(where: {
+                    let slug = $0["slug"] as? String ?? ""
+                    let efforts = $0["supported_reasoning_levels"] as? [[String: Any]] ?? []
+                    return slug.hasSuffix("-luna") && $0["visibility"] as? String == "list" && efforts.contains { $0["effort"] as? String == "low" }
+                }), let slug = available["slug"] as? String else { throw ActivationError.unsupported }
+                model = slug
+            } else {
+                guard let models = object["data"] as? [[String: Any]] else { throw UsageError.invalidResponse }
+                guard let available = models.first(where: { ($0["id"] as? String)?.hasPrefix("claude-haiku-") == true }), let id = available["id"] as? String else { throw ActivationError.unsupported }
+                model = id
+            }
+        } catch { throw ActivationPreparationFailure(cause: error) }
         var message = request(codex ? "https://chatgpt.com/backend-api/codex/responses" : "https://api.anthropic.com/v1/messages", credential: credential)
         message.httpMethod = "POST"; message.timeoutInterval = 45
         message.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -94,8 +119,10 @@ enum AllowanceActivation {
         } else {
             body = ["model": model, "max_tokens": 8, "messages": [["role": "user", "content": "Reply only OK."]]]
         }
-        message.httpBody = try JSONSerialization.data(withJSONObject: body)
-        try Task.checkCancellation()
+        do {
+            message.httpBody = try JSONSerialization.data(withJSONObject: body)
+            try Task.checkCancellation()
+        } catch { throw ActivationPreparationFailure(cause: error) }
         // Deliberately no retry of POST: transport failure may follow consumption.
         let (data, response) = try await transport(message)
         if response.statusCode == 401 || response.statusCode == 403 { throw UsageError.usageAccessDenied }

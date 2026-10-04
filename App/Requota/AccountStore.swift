@@ -41,10 +41,13 @@ final class AccountStore: ObservableObject {
         #endif
         self.isDemo = isDemo
         self.activationProviders = activationProviders ?? (integratesWithSystem && !isDemo ? UserDefaults.standard.data(forKey: "activation-providers").flatMap { try? JSONDecoder().decode([String: Bool].self, from: $0) } ?? [:] : [:])
-        self.activator = activator
         var selectedLocation = location ?? (isDemo ? DemoData.location : nil)
         #if DEBUG
         if !isDemo, location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RequotaUITest/accounts.json") }
+        if !isDemo, location == nil, SimulatorFixtures.activationEnabled {
+            selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RequotaActivationUITest/accounts.json")
+            if ProcessInfo.processInfo.arguments.contains("--reset-activation-fixture") { try? FileManager.default.removeItem(at: selectedLocation!.deletingLastPathComponent()) }
+        }
         if !isDemo, location == nil, SimulatorFixtures.storeCaptureEnabled {
             selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RequotaStoreCapture/accounts.json")
             UserDefaults.standard.set("manual", forKey: "dashboard-sort")
@@ -57,8 +60,25 @@ final class AccountStore: ObservableObject {
         self.historyStore = UsageHistoryStore(directory: self.location.deletingLastPathComponent().appendingPathComponent("history"))
         self.integratesWithSystem = integratesWithSystem && !isDemo
         self.publishesWidgetSummaries = integratesWithSystem
-        self.vault = vault; self.fetcher = fetcher; self.renewer = renewer
+        #if DEBUG && targetEnvironment(simulator)
+        if !isDemo, location == nil, SimulatorFixtures.activationEnabled {
+            let fixture = ActivationUIFixture(location: self.location)
+            self.vault = fixture; self.fetcher = fixture.fetch; self.activator = fixture.activate
+        } else { self.vault = vault; self.fetcher = fetcher; self.activator = activator }
+        #else
+        self.vault = vault; self.fetcher = fetcher; self.activator = activator
+        #endif
+        self.renewer = renewer
         if isDemo { notificationsEnabled = false }
+        #if DEBUG
+        if SimulatorFixtures.activationEnabled {
+            notificationsEnabled = false
+            if ProcessInfo.processInfo.arguments.contains("--reset-activation-fixture") {
+                UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+                UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+            }
+        }
+        #endif
         do {
             let data = try Data(contentsOf: self.location)
             accounts = try JSONDecoder().decode([AgentAccount].self, from: data)
@@ -233,7 +253,7 @@ final class AccountStore: ObservableObject {
         reloadAccountsIfNeeded()
         guard loadedAccounts else { summary.metadataUnavailable = true; return summary }
         #if DEBUG
-        if SimulatorFixtures.enabled { return summary }
+        if SimulatorFixtures.enabled && !SimulatorFixtures.activationEnabled { return summary }
         #endif
         // Oldest readings go first so a short background grant does not always
         // refresh the same accounts. Bound concurrent provider requests to three.
@@ -261,11 +281,11 @@ final class AccountStore: ObservableObject {
             snapshot.updatedAt = .now; accounts[index].snapshot = snapshot; recordHistory(snapshot, id: id); persist(); return .updated
         }
         #if DEBUG
-        if SimulatorFixtures.enabled { return .skipped }
+        if SimulatorFixtures.enabled && !SimulatorFixtures.activationEnabled { return .skipped }
         #endif
         guard !refreshing.contains(id), let account = accounts.first(where: { $0.id == id }), !account.needsLogin else { return .skipped }
         #if DEBUG
-        if account.snapshot?.source == "UI Test Fixture" { return .skipped }
+        if account.snapshot?.source == "UI Test Fixture" && !SimulatorFixtures.activationEnabled { return .skipped }
         #endif
         if let cooldown = cooldowns[id], cooldown > .now { return .skipped }
         if minimumAge > 0, let snapshot = account.snapshot, Date.now.timeIntervalSince(snapshot.updatedAt) < minimumAge, !snapshot.windows.contains(where: { $0.resetDue() }) { return .skipped }
@@ -300,6 +320,7 @@ final class AccountStore: ObservableObject {
             recordHistory(snapshot, id: id)
             accounts[index].retainMetricNames()
             accounts[index].snapshot = observe(snapshot, previous: accounts[index].snapshot, id: id); accounts[index].issue = nil; accounts[index].needsLogin = false; accounts[index].needsReport = nil
+            observeActivationClock(snapshot, id: id)
             if integratesWithSystem { Diagnostics.record(.refreshSucceeded, provider: account.provider) }
             persist()
             if allowsActivation, activationProviders[account.provider.rawValue] == true, !activating.contains(id),
@@ -359,10 +380,17 @@ final class AccountStore: ObservableObject {
         guard let index = accounts.firstIndex(where: { $0.id == id }), before.identity == credential.registrationIdentity,
               !Task.isCancelled else { return }
         let account = accounts[index], revision = revisions[id, default: 0], attemptedAt = Date.now
-        accounts[index].activation = ActivationRecord(attemptedAt: attemptedAt, status: .attempted)
+        let week = AllowanceActivation.weekly(before, provider: account.provider)
+        accounts[index].activation = ActivationRecord(attemptedAt: attemptedAt, status: .attempted,
+            windowID: week?.id, previousResetAt: week?.resetsAt, plan: before.plan, allowanceContext: before.allowanceContext)
         // An uncertain request must survive termination and relaunch. If the
         // record cannot be saved, do not send anything.
-        guard persist() else { activationMessages[id] = "The activation attempt could not be saved. No request was sent."; return }
+        guard persist() else {
+            accounts[index].activation?.status = .failed
+            accounts[index].activation?.retryAfter = .now.addingTimeInterval(300)
+            activationMessages[id] = "The activation attempt could not be saved. No request was sent."
+            return
+        }
         do {
             try await Diagnostics.$context.withValue(.init(provider: account.provider, accountID: id)) { Diagnostics.record(.activationAttempted); try await activator(credential); Diagnostics.record(.activationCompleted) }
             guard revisions[id, default: 0] == revision, let currentIndex = accounts.firstIndex(where: { $0.id == id }) else { return }
@@ -377,20 +405,38 @@ final class AccountStore: ObservableObject {
             guard after.identity == credential.registrationIdentity else { throw UsageError.wrongAccount }
             accounts[latest].snapshot = observe(after, previous: accounts[latest].snapshot, id: id)
             recordHistory(after, id: id)
-            accounts[latest].activation?.resetAt = AllowanceActivation.weekly(after, provider: account.provider)?.resetsAt
-            if AllowanceActivation.confirmedStart(before: before, after: after, provider: account.provider, attemptedAt: attemptedAt) {
-                accounts[latest].activation?.status = .started
-                activationMessages[id] = "Weekly window started."
-                appendEvents([AccountEvent(id: "\(id):started:\(attemptedAt.timeIntervalSince1970)", accountID: id, kind: .windowStarted, date: attemptedAt, detectedAt: .now, window: "Weekly", windowID: AllowanceActivation.weekly(after, provider: account.provider)?.id)])
-            }
+            observeActivationClock(after, id: id)
             persist()
         } catch {
             Diagnostics.$context.withValue(.init(provider: account.provider, accountID: id)) { Diagnostics.record(.activationFailed, failure: .category(error)) }
             guard revisions[id, default: 0] == revision, let latest = accounts.firstIndex(where: { $0.id == id }) else { return }
             // Keep completed status when only the follow-up usage read failed.
             if accounts[latest].activation?.status == .attempted { accounts[latest].activation?.status = .failed }
+            if let failure = error as? ActivationPreparationFailure {
+                accounts[latest].activation?.retryAfter = failure.retryAfter
+                if case UsageError.invalidResponse = failure.cause {
+                    accounts[latest].needsReport = true; reportAccountID = id
+                    appendEvents([AccountEvent(id: "\(id):activation-parse:\(attemptedAt.timeIntervalSince1970)", accountID: id,
+                        kind: .parsingFailure, date: .now, detectedAt: .now)])
+                }
+            }
             activationMessages[id] = accounts[latest].activation?.status == .completed ? "Request completed. Usage could not be updated yet." : error.localizedDescription
             persist()
+        }
+    }
+    private func observeActivationClock(_ snapshot: UsageSnapshot, id: UUID) {
+        guard let index = accounts.firstIndex(where: { $0.id == id }), let record = accounts[index].activation,
+              record.status == .completed, let week = AllowanceActivation.weekly(snapshot, provider: accounts[index].provider),
+              week.id == record.windowID, week.clockReported == true else { return }
+        if AllowanceActivation.confirmedStart(record: record, snapshot: snapshot, provider: accounts[index].provider) {
+            accounts[index].activation?.status = .started
+            activationMessages[id] = "Weekly window active."
+            let detectedAt = Date.now
+            appendEvents([AccountEvent(id: "\(id):started:\(record.attemptedAt.timeIntervalSince1970)", accountID: id,
+                kind: .windowStarted, date: detectedAt, detectedAt: detectedAt, window: "Weekly", windowID: week.id)])
+        } else if record.resetAt != week.resetsAt || record.resetObservedAt == nil {
+            accounts[index].activation?.resetAt = week.resetsAt
+            accounts[index].activation?.resetObservedAt = snapshot.updatedAt
         }
     }
     func enableNotifications(_ enabled: Bool) async {

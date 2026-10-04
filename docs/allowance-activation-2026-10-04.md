@@ -1,6 +1,6 @@
 # Allowance activation
 
-Draft implementation on `feature/allowance-activation`. This feature has not been uploaded to TestFlight. Build 18 remains the released beta and selected App Store draft build.
+Implementation for TestFlight build 19 on `feature/allowance-activation`. Upload and availability will be recorded after release verification. Build 18 remains the available beta during preparation.
 
 ## Behaviour
 
@@ -8,8 +8,9 @@ Draft implementation on `feature/allowance-activation`. This feature has not bee
 - Account pages provide a manual Start week action. It refreshes usage before deciding whether a request is needed.
 - Automatic activation runs during app refreshes. It has no separate server or always-running widget process.
 - Requests contain fixed short text and no tools, notes or usage history.
-- Attempts are saved before sending. Interrupted or failed requests are not automatically retried within the week. Observed usage followed by a new unused window can re-arm activation after an early reset.
+- Attempts are saved before sending. Interrupted or failed sends are not automatically retried within the week. Failures before sending can retry after a saved backoff; malformed model responses prompt a problem report. Observed usage followed by a new unused window can re-arm activation after an early reset.
 - Completed requests and confirmed clock changes are recorded separately. HTTP 200 without a completed response is insufficient.
+- Confirmation needs a new fixed deadline across later readings, for at least one minute on Codex and longer than one hour on Claude's hour-rounded deadlines. A pre-existing fixed deadline is not reported as a new start. Verification survives relaunch and does not send another request.
 - Established weekly deadlines, exhausted or unknown allowances, unsupported billing plans, unreadable metadata and mismatched identities prevent consumption.
 
 The shared policy handles eligibility, persistence, reporting and events. Codex and Claude have request adapters. Providers with scheduled allowances and standalone credit balances do not need an activation request. New first-use windows can use the same policy when their provider adapter is validated.
@@ -31,9 +32,9 @@ Claude's normal app connection retains `user:profile` only. Enabling activation 
 
 Codex's CLI implementation was checked against [OpenAI's source](https://github.com/openai/codex/blob/c2f7fe89d87ce853900d0b5cb1f5dc4863e44d73/codex-rs/codex-api/src/common.rs). OpenAI documents the first-request weekly clock after a purchased reset in its [reset guide](https://help.openai.com/en/articles/20001507-paid-weekly-work-and-codex-rate-limit-resets). That documentation does not establish the response shape for every kind of unused window.
 
-## Release check still required
+## Field validation at the next unused week
 
-The live request tests used active weeks. They prove authentication and minimal consumption, not that those requests start an unused weekly clock. An unused account must still be checked before release:
+The live request tests used active weeks. They prove authentication and minimal consumption, not that those requests start an unused weekly clock. The owner confirmed that a live unused week may not be available for up to a week; the beta uses controlled-response tests for that transition. The following live check remains pending:
 
 1. Capture a redacted reading before its first request, identifying the weekly window and whether its deadline is absent or moving.
 2. Send the request through the native adapter.
@@ -42,11 +43,10 @@ The live request tests used active weeks. They prove authentication and minimal 
 
 A rounded 0% reading alone does not prove a week is unstarted. The current candidate policy additionally requires a reported clock field, a fresh reading, a qualifying personal plan and non-exhausted known windows; Codex must explicitly allow included usage. Missing or malformed fields are rejected. A full or absent deadline remains a candidate until the clock change is verified.
 
-Private protocol artifacts remain under ignored `artifacts/`. Credentials stay outside Git. Local diagnostics include activation stages, endpoint categories, status and failure categories, without prompts, generated responses or credentials.
+Private protocol artifacts remain under ignored `artifacts/`. Credentials stay outside Git. Local diagnostics include activation stages, endpoint categories, status and failure categories, candidate/clock status, deadline distance and observation age, without prompts, generated responses or credentials.
 
 ## Local checks
 
 - Signed simulator build succeeded.
-- Latest native unit suite: 208 executed, 5 live tests skipped, 203 passed, no failures. This includes 17 activation policy/transport tests covering permission, plan and allowance checks, inactive Codex secondary windows, separate accounts, persistence, deletion and interrupted requests, plus the successful native Claude live check.
-- Native UI: per-provider settings persist after relaunch and Claude's additional permission is presented explicitly. The existing available/spent Claude reset panel check also passed.
-- The first UI attempt tapped the centre of the accessible toggle row rather than its switch. Targeting the visible switch, as existing notification tests do, passed. App code did not change for this correction.
+- The final native unit result will be recorded after the recovery checks. Activation policy/transport tests covering permission, plan and allowance checks, moving/fixed deadlines, tier changes, inactive Codex secondary windows, separate accounts, persistence, deletion and interrupted requests. The earlier native Claude live check also passed.
+- Native UI: per-provider settings persist after relaunch and Claude's additional permission is presented explicitly. The existing available/spent Claude reset panel check also passed. A separate native UI test passed manual activation, automatic activation across three saved Codex accounts, and repeat prevention after relaunch. Its controlled provider fixture runs only in Debug simulator builds and is excluded from Release.
