@@ -1,6 +1,6 @@
 # Allowance activation
 
-Implementation for TestFlight build 19 on `feature/allowance-activation`. Upload and availability will be recorded after release verification. Build 18 remains the available beta during preparation.
+TestFlight **1.0 (19)** is available to the existing internal and external tester groups. Apple approved external beta testing. [PR #3](https://github.com/dotdioscorea/requota/pull/3) is merged into main; the binary source is `e60b7f2`, tagged `testflight/1.0-19`. See [the release record](testflight-build-19.json).
 
 ## Behaviour
 
