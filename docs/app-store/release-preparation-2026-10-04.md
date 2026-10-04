@@ -14,7 +14,7 @@ The [version draft](https://appstoreconnect.apple.com/apps/6818509879/distributi
 - The existing trader declaration is retained. The signed package declares no non-exempt encryption.
 - Reviewer contact details and [Demo access instructions](review-notes.txt) are saved. Private reviewer details remain outside this public repository.
 
-**Owner item:** App Information → Content Rights is pending confirmation of the necessary rights to third-party content. Provider permission work remains with the owner; no permission was inferred from successful login or API requests.
+Content Rights is saved as “Yes” on the owner’s confirmation of the necessary rights to third-party content.
 
 ## Validation
 
@@ -26,4 +26,4 @@ The exact uploaded IPA was checked for matching app/widget versions, distributio
 
 `scripts/prepare-app-store.py` supports `metadata`, `screenshots`, `pricing`, `availability`, `select-build` and `verify`. Writes require `--apply` and an editable, unsubmitted version. Its API credentials are read from ignored `.release/apple.json`. It does not submit or release an App Store version.
 
-After the owner declaration is complete, App Store review submission and eventual manual release are separate actions.
+App Store review submission and eventual manual release are separate actions.

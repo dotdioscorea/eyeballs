@@ -66,6 +66,8 @@
     "all_screenshots_processed": true,
     "review_contact_configured": true,
     "demo_review_notes_match": true,
-    "content_rights_declaration": "Pending owner confirmation"
+    "content_rights_declaration": "USES_THIRD_PARTY_CONTENT",
+    "content_rights_confirmed_by_owner": true,
+    "content_rights_verified_at_utc": "2026-10-04T16:37:59.196283+00:00"
   }
 }
