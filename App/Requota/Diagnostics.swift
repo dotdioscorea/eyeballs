@@ -2,7 +2,7 @@ import Foundation
 import CoreFoundation
 import UIKit
 
-enum DiagnosticStage: String, Codable { case signInStarted, identityVerified, usageVerified, signInFailed, refreshSucceeded, refreshFailed, refreshCycle, http, usageParsed, resetCompared }
+enum DiagnosticStage: String, Codable { case signInStarted, identityVerified, usageVerified, signInFailed, refreshSucceeded, refreshFailed, refreshCycle, http, usageParsed, resetCompared, activationAttempted, activationCompleted, activationFailed }
 enum DiagnosticFailure: String, Codable {
     case cancelled, timeout, callback, identity, signedOut, permission, throttled, response, accountMismatch, network, other
     static func category(_ error: Error) -> Self {
@@ -18,7 +18,7 @@ enum DiagnosticFailure: String, Codable {
         return .other
     }
 }
-enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedResets, identityKeys, deviceAuthorization, other
+enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedResets, identityKeys, deviceAuthorization, activation, models, other
     static func identify(_ url: URL?) -> Self {
         guard let url else { return .other }
         if url.host == "ampcode.com", url.path == "/api/internal" {
@@ -30,6 +30,8 @@ enum DiagnosticEndpoint: String, Codable { case token, identity, usage, bankedRe
         case "/api/user", "/coding/v1/me", "/api/v1/users/me", "/aiserver.v1.DashboardService/GetMe", "/api/oauth/profile", "/oauth2/v2/userinfo", "/user": return .identity
         case "/exa.seat_management_pb.SeatManagementService/GetUserStatus", "/rest/rate-limit/status", "/coding/v1/usages", "/aiserver.v1.DashboardService/GetCurrentPeriodUsage", "/aiserver.v1.DashboardService/GetPlanInfo", "/v1internal:loadCodeAssist", "/v1internal:retrieveUserQuota", "/backend-api/wham/usage", "/api/oauth/usage", "/v1/billing", "/copilot_internal/user": return .usage
         case "/backend-api/wham/rate-limit-reset-credits": return .bankedResets
+        case "/backend-api/codex/responses", "/v1/messages": return .activation
+        case "/backend-api/codex/models", "/v1/models": return .models
         case "/.well-known/jwks.json": return .identityKeys
         default: return url.host == "api.cline.bot" && url.path.range(of: "^/api/v1/users/[A-Za-z0-9_-]{1,160}/balance$", options: .regularExpression) != nil ? .usage : .other
         }
@@ -220,6 +222,8 @@ struct DebugBundle: Codable {
         var missingTimeCount: Int
         var bankedResetCount: Int?
         var resetInventoryAgeSeconds: Int?
+        var activationStatus: ActivationRecord.Status?
+        var activationAgeSeconds: Int?
     }
     struct RefreshStatus: Codable {
         var backgroundRefresh: String
@@ -304,7 +308,9 @@ enum Diagnostics {
                                                   missingUsageCount: account.snapshot?.windows.filter { $0.safePercent == nil }.count ?? 0,
                                                   missingTimeCount: account.readings(at: now).filter { $0.definition.kind == .time && $0.percent == nil }.count,
                                                   bankedResetCount: account.snapshot?.bankedResets.map { $0.reduce(0) { $0 + $1.count } },
-                                                  resetInventoryAgeSeconds: account.snapshot?.resetInventory.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.checkedAt)))) })
+                                                  resetInventoryAgeSeconds: account.snapshot?.resetInventory.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.checkedAt)))) },
+                                                  activationStatus: account.activation?.status,
+                                                  activationAgeSeconds: account.activation.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.attemptedAt)))) })
                     }, events: safeEvents)
     }
     static var version: String { "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))" }

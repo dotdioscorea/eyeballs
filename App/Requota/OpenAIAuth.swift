@@ -27,12 +27,14 @@ struct OAuthAttempt {
     let hostID: String
     let redirectURI: URL
     let previous: AccountCredential?
-    init(redirectURI: URL, hostID: String, previous: AccountCredential? = nil, provider: Provider = .codex) throws {
+    let allowActivation: Bool
+    init(redirectURI: URL, hostID: String, previous: AccountCredential? = nil, provider: Provider = .codex, allowActivation: Bool = false) throws {
         state = try Self.random(); nonce = try Self.random(); verifier = try Self.random()
         guard previous == nil || previous?.provider == provider else { throw UsageError.wrongAccount }
         self.provider = provider
         self.clientID = previous?.clientID ?? ProviderAuth.clientID(provider)
         self.hostID = hostID; self.redirectURI = redirectURI; self.previous = previous
+        self.allowActivation = allowActivation
     }
     static func random() throws -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
@@ -53,7 +55,7 @@ struct OAuthAttempt {
             parts.queryItems = [
                 URLQueryItem(name: "client_id", value: clientID), URLQueryItem(name: "response_type", value: "code"),
                 URLQueryItem(name: "redirect_uri", value: redirectURI.absoluteString),
-                URLQueryItem(name: "scope", value: ProviderAuth.scopes(provider)), URLQueryItem(name: "state", value: state),
+                URLQueryItem(name: "scope", value: ProviderAuth.authorizationScopes(provider, allowActivation: allowActivation, previous: previous)), URLQueryItem(name: "state", value: state),
                 URLQueryItem(name: "code_challenge_method", value: "S256"),
                 URLQueryItem(name: "code_challenge", value: Data(SHA256.hash(data: Data(verifier.utf8))).base64URL)
             ]
@@ -99,7 +101,7 @@ struct OAuthAttempt {
 enum OpenAIAuth {
     static let issuer = "https://auth.openai.com"
     // Public native Codex client from OpenAI's local app-server login implementation.
-    // This personal, local integration reads quotas; it never requests inference.
+    // Reads quotas; optional allowance activation uses the same subscription.
     static let codexClientID = "app_EMoamEEZ73f0CkXaXp7hrann"
     static var hostID: String {
         if let existing = UserDefaults.standard.string(forKey: "oauth-host-id") { return existing }
@@ -271,12 +273,12 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
     private var timeout: Task<Void, Never>?
     private let queue = DispatchQueue(label: "Requota.loopback-auth")
 
-    func signIn(provider: Provider = .codex, previous: AccountCredential?, usePrivateSession: Bool = false) async throws -> AccountCredential {
+    func signIn(provider: Provider = .codex, previous: AccountCredential?, usePrivateSession: Bool = false, allowActivation: Bool = false) async throws -> AccountCredential {
         guard provider != .copilot && provider != .cursor && provider != .cline else { throw AuthError.invalidCallback }
         let callback = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
                 pending = continuation
-                do { try start(provider: provider, previous: previous, usePrivateSession: usePrivateSession) } catch { finish(.failure(error)) }
+                do { try start(provider: provider, previous: previous, usePrivateSession: usePrivateSession, allowActivation: allowActivation) } catch { finish(.failure(error)) }
             }
         } onCancel: { Task { @MainActor in self.cancel() } }
         guard let attempt else { throw AuthError.invalidCallback }
@@ -284,7 +286,7 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
         return try await ProviderAuth.exchange(callback: callback, attempt: attempt)
     }
     func cancel() { finish(.failure(AuthError.cancelled)) }
-    private func start(provider: Provider, previous: AccountCredential?, usePrivateSession: Bool) throws {
+    private func start(provider: Provider, previous: AccountCredential?, usePrivateSession: Bool, allowActivation: Bool) throws {
         let parameters = NWParameters.tcp
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
         let listener = try NWListener(using: parameters)
@@ -299,7 +301,7 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
                         let host = provider == .claude ? "localhost" : "127.0.0.1"
                         let path = provider == .codex ? "/auth/callback" : provider == .gemini ? "/oauth2callback" : "/callback"
                         let redirect = URL(string: "http://\(host):\(port.rawValue)\(path)")!
-                        let attempt = try OAuthAttempt(redirectURI: redirect, hostID: OpenAIAuth.hostID, previous: previous, provider: provider)
+                        let attempt = try OAuthAttempt(redirectURI: redirect, hostID: OpenAIAuth.hostID, previous: previous, provider: provider, allowActivation: allowActivation)
                         self.attempt = attempt
                         let session = ASWebAuthenticationSession(url: attempt.authorizationURL, callbackURLScheme: nil) { [weak self] _, _ in
                             Task { @MainActor in self?.finish(.failure(AuthError.cancelled)) }

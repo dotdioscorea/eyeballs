@@ -42,6 +42,7 @@ struct UsageWindow: Codable, Identifiable, Equatable, Sendable {
     var usedAmount: Double?
     var limitAmount: Double?
     var amountUnit: String?
+    var clockReported: Bool?
     var safePercent: Double? {
         guard let usedPercent, usedPercent.isFinite, usedPercent >= 0 else { return nil }
         return min(100, usedPercent)
@@ -64,6 +65,7 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
     var details: ProviderDetails?
     var remainingAllowances: [RemainingAllowance]?
     var resetInventory: ResetInventory?
+    var includedUsageAllowed: Bool?
     var nextReset: Date? { windows.compactMap(\.resetsAt).filter { $0 > .now }.min() }
     func isStale(at date: Date = .now) -> Bool {
         date.timeIntervalSince(updatedAt) > 30 * 60 || windows.contains { $0.resetDue(at: date) }
@@ -110,6 +112,7 @@ struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
     var needsReport: Bool?
     var display: AccountDisplay?
     var colorHex: UInt32?
+    var activation: ActivationRecord?
     var addedAt: Date = .now
     var title: String { label.isEmpty ? provider.name : label }
     var nextReset: Date? { snapshot?.nextReset }
@@ -126,6 +129,15 @@ struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
         if provider == .kimi, snapshot?.identity?.hasPrefix("https://auth.kimi.com|") == true { return URL(string: "https://www.kimi.com/code/console")! }
         return provider.usageURL
     }
+}
+
+struct ActivationRecord: Codable, Equatable, Sendable {
+    enum Status: String, Codable, Sendable { case attempted, completed, started, failed }
+    var attemptedAt: Date
+    var status: Status
+    var resetAt: Date?
+    var usedSinceAttempt: Bool?
+    var lastObservedUsed: Double?
 }
 
 extension Color {

@@ -38,6 +38,7 @@ struct ResetNotificationRules: Codable, Equatable {
     func announces(_ kind: AccountEvent.Kind) -> Bool {
         guard enabled else { return false }
         switch kind {
+        case .activationSent, .windowStarted: return false
         case .weeklyReset: return weeklyReset
         case .earlyReset: return earlyReset
         case .bankedDetected, .bankedUsed, .bankedRemoved: return bankedChanges

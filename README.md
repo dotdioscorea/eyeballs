@@ -23,6 +23,8 @@ The [App Store listing preview](docs/app-store/review.html) includes draft copy,
 
 Browser sign-in uses `ASWebAuthenticationSession` and the providers’ public native clients. Perplexity uses a native passwordless email-code form and its own isolated session token. Codex, Claude, Grok and Gemini use OAuth with PKCE; Copilot uses GitHub’s device authorization flow with an explicit one-time code. Cursor uses its native browser handshake with PKCE and polling. Cline and Amp use WorkOS device authorization. Devin uses the CLI’s PKCE flow and authenticated quota service. Kimi Code uses its device flow, with a choice of international or mainland China services. Normal sign-in can reuse browser sessions; “Use another account” starts a private session. Live usage must be verified before a connection can be saved.
 
+The allowance-activation feature branch adds optional per-provider automatic activation and a manual account action. Codex and Claude request paths have passed live protocol checks; an unused weekly window still needs validation before release. See [implementation and validation status](docs/allowance-activation-2026-10-04.md).
+
 | Provider | Usage endpoint | Identity |
 | --- | --- | --- |
 | Codex | `chatgpt.com/backend-api/wham/usage` | Signed RS256 OIDC identity |
