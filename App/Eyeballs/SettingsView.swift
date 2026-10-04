@@ -1,65 +1,217 @@
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
     @EnvironmentObject private var store: AccountStore
+    @EnvironmentObject private var session: AccountSession
     var body: some View {
         List {
             Section {
-                HStack(spacing: 18) {
-                    EyeballsMark(size: 56)
-                    VStack(alignment: .leading, spacing: 5) { Text("Eyeballs").font(.title3.weight(.semibold)); Text("A little clarity for your AI accounts.").font(.caption).foregroundStyle(.secondary) }
-                }.padding(.vertical, 8)
+                NavigationLink { NotificationSettingsView() } label: { LabeledContent("Notifications", value: store.notificationsEnabled ? "On" : "Off") }.accessibilityIdentifier("notification-settings")
             }
             Section {
-                Toggle("Reset reminders", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value) } })).disabled(store.isDemo)
-            } header: { Text("Notifications") } footer: { Text("A quiet reminder when a provider-reported reset is due. Usage is confirmed on the next refresh.") }
-            Section {
-                NavigationLink("Add a widget") { WidgetGuideView() }
+                NavigationLink("Updates") { UpdateSettingsView() }
                 NavigationLink("Privacy & storage") { PrivacyView() }
+                Link("Source code", destination: URL(string: "https://github.com/dotdioscorea/eyeballs")!)
+                NavigationLink("Report a problem") { ProblemReportView() }
             }
             Section {
-                Button(store.isDemo ? "Exit preview" : "Preview with sample accounts") { store.isDemo ? store.endDemo() : store.startDemo() }
-            } footer: { Text("Preview accounts use sample data and never replace your saved connections.") }
-            Section {
-                LabeledContent("Version", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))")
-            }
+                if store.isDemo {
+                    Button("Reset sample data") { store.resetDemo() }
+                    Button("Simulate early reset") { store.simulateDemoReset() }
+                    Button("Test notification") { Task { await session.testNotification() } }
+                    Button("Exit demo") { session.endDemo() }
+                } else {
+                    Button("Demo") { session.startDemo() }.accessibilityIdentifier("start-demo")
+                }
+            } footer: { Text(store.isDemo ? "Sample accounts use separate storage and make no provider requests." : "Explore with sample accounts.") }
+            Section { LabeledContent("Version", value: Diagnostics.version) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings")
     }
 }
 
-struct WidgetGuideView: View {
+struct UpdateSettingsView: View {
+    @AppStorage("foreground-refresh-minutes") private var interval = 1
+    @Environment(\.scenePhase) private var phase
+    @Environment(\.openURL) private var openURL
+    @State private var status = RefreshSettings.backgroundStatus
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Text("A glance is enough.").font(.system(size: 32, weight: .semibold)).tracking(-1)
-                HStack(spacing: 25) {
-                    ForEach(DemoAccounts.accounts) { account in
-                        VStack(spacing: 12) { UsageRing(windows: account.snapshot!.windows, color: account.provider.color, size: 76, lineWidth: 6); Text(account.provider.name).font(.caption.weight(.medium)) }
-                    }
-                }.frame(maxWidth: .infinity).panel()
-                Text("Sample widget layout").font(.caption).foregroundStyle(.secondary)
-                ForEach(Array(["Touch and hold your Home Screen, then choose Edit → Add Widget.", "Search for Eyeballs and choose an account or the overview.", "Touch and hold an account widget, then choose Edit Widget to pick its account."].enumerated()), id: \.offset) { index, instruction in
-                    HStack(alignment: .top, spacing: 16) { Text("\(index + 1)").font(.headline).foregroundStyle(Theme.accent).frame(width: 24); Text(instruction).font(.subheadline).foregroundStyle(.secondary) }
+        List {
+            Section {
+                Picker("While app is open", selection: $interval) {
+                    ForEach(RefreshSettings.intervals, id: \.self) { Text("Every \($0) min").tag($0) }
                 }
-                Text("Widgets show your latest saved reading. iOS decides when widgets refresh; opening Eyeballs updates them. Account credentials never go to widgets.").font(.caption).foregroundStyle(.secondary).panel()
-            }.padding(24).frame(maxWidth: 600).frame(maxWidth: .infinity)
-        }.background(Theme.background).navigationTitle("Widgets").navigationBarTitleDisplayMode(.inline)
+            }
+            Section {
+                LabeledContent("Background App Refresh", value: status)
+                if lowPower { LabeledContent("Low Power Mode", value: "On") }
+                if status != "Available", !lowPower { Button("Open iPhone settings") { openURL(URL(string: UIApplication.openSettingsURLString)!) } }
+            } footer: { Text("Background timing is set by iOS. Widgets can request updates but don’t keep the app running.") }
+        }.scrollContentBackground(.hidden).background(Theme.background)
+            .navigationTitle("Updates").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .onChange(of: phase) { _, _ in status = RefreshSettings.backgroundStatus; lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled }
+    }
+}
+struct PrivacyView: View {
+    @State private var cleared = false
+    var body: some View {
+        List {
+            Section {
+                Text("Sign-in uses the iOS system browser or Perplexity’s email codes. Tokens are stored in this iPhone’s Keychain and don’t sync to iCloud. Requota doesn’t store passwords or email codes.")
+                Text("Usage history is kept for up to 90 days. Account names and notes are stored on this device. Widgets receive names and usage, without emails, identities, notes or tokens.")
+                Text("Requests go directly to provider APIs. Requota has no backend, ads or analytics.")
+                Text("Removing an account deletes its local tokens and saved data.")
+            }
+            Section {
+                Text("Diagnostic events record sign-in stages, error categories, HTTP status codes and known usage field types for up to seven days. They exclude credentials and account identities. Nothing is sent automatically.")
+                Button(cleared ? "Diagnostics cleared" : "Clear diagnostics") { Diagnostics.clear(); cleared = true }.disabled(cleared)
+            }
+            Section {
+                Link("Privacy policy", destination: URL(string: "https://dotdioscorea.github.io/eyeballs/")!)
+            }
+        }.font(.subheadline).scrollContentBackground(.hidden).background(Theme.background)
+            .navigationTitle("Privacy & storage").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+    }
+}
+struct ProblemReportView: View {
+    @EnvironmentObject private var store: AccountStore
+    @Environment(\.openURL) private var openURL
+    @State private var title: String
+    @State private var details: String
+    @State private var includeDebug: Bool
+    @State private var debugFile: URL?
+    @State private var debugText = ""
+    @State private var exportError: String?
+    init(title: String = "", details: String = "", includeDebug: Bool = false) {
+        _title = State(initialValue: title); _details = State(initialValue: details); _includeDebug = State(initialValue: includeDebug)
+    }
+    var body: some View {
+        Form {
+            Section {
+                TextField("Problem summary", text: $title)
+                TextField("What happened?", text: $details, axis: .vertical).lineLimit(5...12)
+            }
+            Section {
+                Toggle("Include debug bundle", isOn: $includeDebug).accessibilityIdentifier("include-debug-bundle")
+                if includeDebug {
+                    if let debugFile { ShareLink("Save or share debug bundle", item: debugFile) }
+                    DisclosureGroup("View debug bundle") { Text(debugText).font(.system(.caption, design: .monospaced)).textSelection(.enabled) }
+                    if let exportError { Text(exportError).foregroundStyle(.orange) }
+                }
+            } footer: { Text(includeDebug ? "Save the JSON file, then attach it to your GitHub issue. It excludes tokens, names, emails and notes." : "A debug bundle can help diagnose sign-in and widget problems.") }
+            Section {
+                Button("Open GitHub issue") { openIssue() }.disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } footer: { Text("GitHub issues are public. Review your report before submitting.") }
+        }.scrollContentBackground(.hidden).background(Theme.background)
+            .navigationTitle("Report a problem").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .onAppear { if includeDebug { prepareDebug() } }
+            .onChange(of: includeDebug) { _, enabled in if enabled { prepareDebug() } }
+    }
+    private func prepareDebug() {
+        do {
+            let data = try Diagnostics.encode(Diagnostics.bundle(accounts: store.accounts))
+            debugText = String(decoding: data, as: UTF8.self); debugFile = try Diagnostics.export(data); exportError = nil
+        } catch { exportError = "Could not create the debug bundle." }
+    }
+    private func openIssue() {
+        var url = URLComponents(string: "https://github.com/dotdioscorea/eyeballs/issues/new")!
+        let body = String(details.prefix(6000)) + "\n\nApp: \(Diagnostics.version)\niOS: \(UIDevice.current.systemVersion)" + (includeDebug ? "\n\nAttach requota-debug.json here." : "")
+        url.queryItems = [URLQueryItem(name: "title", value: String(title.prefix(160))), URLQueryItem(name: "body", value: body)]
+        if let url = url.url { openURL(url) }
     }
 }
 
-struct PrivacyView: View {
+struct NotificationSettingsView: View {
+    @EnvironmentObject private var store: AccountStore
+    @Environment(\.scenePhase) private var phase
+    @Environment(\.openURL) private var openURL
+    @State private var status = NotificationDeliveryStatus.saved
+    @State private var testMessage: String?
+    private var providers: [Provider] { Provider.allCases.filter { provider in store.accounts.contains { $0.provider == provider } } }
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Image(systemName: "lock.shield").font(.system(size: 48)).foregroundStyle(Theme.accent)
-                Text("Your accounts.\nYour iPhone.").font(.system(size: 34, weight: .semibold)).tracking(-1)
-                paragraph("Credentials stay local", "Sign-in uses the provider’s OAuth flow in the iOS system browser. Each account has separate credentials in this iPhone’s Keychain, without syncing them to other devices. Eyeballs never asks for or stores your password.")
-                paragraph("Only what you need", "The app requests usage and reset information directly from provider APIs. Usage summaries, names and your notes are saved on this device. Widgets receive account labels and usage snapshots, without email addresses, private notes or credentials.")
-                paragraph("No tracking backend", "Eyeballs has no account system, advertising, analytics SDK or server collecting your usage. Requests go directly from your iPhone to the provider. Provider websites and their sign-in services follow their own privacy policies.")
-                paragraph("You’re in control", "Remove a connection to clear its credentials, account information and widget summary. Other connections remain in place. Eyeballs also attempts to revoke its own renewable ChatGPT session; if this cannot be confirmed, you can disconnect it in ChatGPT settings.")
-                paragraph("About usage readings", "Subscription usage comes from provider-controlled interfaces, which can change. Missing readings are shown as unavailable. Cached readings stay visible with their timestamp; a predicted reset never overwrites them with zero.")
-            }.padding(24).frame(maxWidth: 600).frame(maxWidth: .infinity)
-        }.background(Theme.background).navigationTitle("Privacy").navigationBarTitleDisplayMode(.inline)
+        Form {
+            Section {
+                Toggle("Enable notifications", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value); await reload() } })).accessibilityIdentifier("notifications-enabled")
+                LabeledContent("iOS permission", value: status.authorization)
+                LabeledContent("Alerts", value: status.alerts)
+                LabeledContent("Scheduled reminders", value: String(status.scheduled))
+                Button("Open iPhone settings") { openURL(URL(string: UIApplication.openSettingsURLString)!) }
+                Button("Test notification") { Task {
+                    do { try await NotificationDelivery.shared.test(); testMessage = "Test scheduled for 3 seconds from now." }
+                    catch { testMessage = "Could not schedule the test." }
+                } }.disabled(!store.notificationsEnabled || status.authorization == "Denied")
+                if let testMessage { Text(testMessage).font(.caption).foregroundStyle(.secondary) }
+                if status.schedulingFailed { Text("Some reminders could not be scheduled. Try enabling notifications again.").font(.caption).foregroundStyle(.orange) }
+            } footer: { Text("Reset reminders can arrive while the app is closed. Low usage and early resets need a successful refresh. Focus and iOS notification settings can delay alerts.") }
+            NotificationRuleControls(rules: $store.notificationRules)
+            if !providers.isEmpty {
+                Section("Providers") {
+                    ForEach(providers) { provider in
+                        NavigationLink { ProviderNotificationSettings(provider: provider) } label: {
+                            LabeledContent(provider.name, value: store.notificationProviderRules[provider.rawValue].map { $0.enabled ? "Custom" : "Off" } ?? "Default")
+                        }
+                    }
+                }
+            }
+        }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Notifications").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .task { await reload() }
+            .onChange(of: phase) { _, value in if value == .active { Task { await reload() } } }
+            .onChange(of: store.notificationRules) { _, _ in store.saveNotificationRules(); Task { await reload() } }
+            .onChange(of: store.notificationProviderRules) { _, _ in store.saveNotificationRules(); Task { await reload() } }
     }
-    private func paragraph(_ title: String, _ text: String) -> some View { VStack(alignment: .leading, spacing: 8) { Text(title).font(.headline); Text(text).font(.subheadline).foregroundStyle(.secondary).lineSpacing(4) } }
+    private func reload() async { await store.scheduleNotifications(); status = await NotificationDelivery.shared.status() }
+}
+struct ProviderNotificationSettings: View {
+    let provider: Provider
+    @EnvironmentObject private var store: AccountStore
+    private var custom: Bool { store.notificationProviderRules[provider.rawValue] != nil }
+    private var rules: Binding<ResetNotificationRules> {
+        Binding(get: { store.notificationProviderRules[provider.rawValue] ?? store.notificationRules }, set: { store.notificationProviderRules[provider.rawValue] = $0 })
+    }
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Use default settings", isOn: Binding(get: { !custom }, set: { defaults in
+                    if defaults { store.notificationProviderRules.removeValue(forKey: provider.rawValue) }
+                    else { store.notificationProviderRules[provider.rawValue] = store.notificationRules }
+                }))
+                if custom { Toggle("Notify for this provider", isOn: rules.enabled) }
+            }
+            if custom, rules.wrappedValue.enabled { NotificationRuleControls(rules: rules) }
+        }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle(provider.name).navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .onChange(of: store.notificationProviderRules) { _, _ in store.saveNotificationRules() }
+    }
+}
+struct NotificationRuleControls: View {
+    @Binding var rules: ResetNotificationRules
+    var body: some View {
+        Section("Low allowance") {
+            Toggle("Low remaining allowance", isOn: $rules.lowAllowance)
+            if rules.lowAllowance {
+                Picker("Remaining threshold", selection: $rules.lowThreshold) { ForEach([0, 5, 10, 15, 20, 25, 50], id: \.self) { Text("\($0)%").tag($0) } }
+            }
+        }
+        Section("Resets") {
+            Toggle("Weekly reset", isOn: $rules.weeklyReset)
+            Toggle("Other window resets", isOn: $rules.sessionReset)
+            Toggle("Detected early reset", isOn: $rules.earlyReset)
+            Toggle("Banked reset changes", isOn: $rules.bankedChanges)
+            Toggle("Banked reset expiry", isOn: $rules.bankedExpiry)
+            if rules.bankedExpiry {
+                Picker("Expiry warning", selection: $rules.bankedExpiryHours) { ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) } }
+            }
+        }
+        Section("Before weekly reset") {
+            Toggle("Unused allowance reminder", isOn: $rules.allowanceReminder)
+            if rules.allowanceReminder {
+                Picker("Notify", selection: $rules.allowanceHours) { ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) } }
+                Stepper("At least \(rules.minimumRemaining)% remaining", value: $rules.minimumRemaining, in: 0...100, step: 5)
+            }
+        }
+        Section("Account changes") {
+            Toggle("Plan or allowance changes", isOn: $rules.allowanceChanges)
+            Toggle("Usage parsing failures", isOn: $rules.parsingFailures)
+        }
+    }
 }

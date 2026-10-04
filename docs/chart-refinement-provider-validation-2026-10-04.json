@@ -1,0 +1,114 @@
+{
+  "product": "Requota",
+  "source_commit": "cd7ac8d978675ab321cd00e22468a961be929040",
+  "date": "2026-10-04",
+  "validation": {
+    "unit_passed": 174,
+    "unit_opt_in_skipped": 3,
+    "native_ui_passed": 5,
+    "simulator": "iPhone 15 / iOS 18.3.1",
+    "final_result_bundle": "build16-release-checks.xcresult",
+    "ui_checks": [
+      "Continuous cursor inspection below the plot, stable domain while scrubbing, account/metric toggles and provider-filter selection preservation",
+      "Bounded pinch zoom and time-axis pan; smoothing and averaged rate comparisons",
+      "Single combined Activity heatmap and selected-day account breakdown",
+      "Copilot additional budget/unlimited counters, Grok spending, Gemini remaining count panels",
+      "Selection outside plot bounds, reset event sheets, 90-day view and daily/monthly heatmaps"
+    ],
+    "iterations": "Early runs found a non-tappable account-row spacer, corrected currency/header/element queries, and an ambiguous DisclosureGroup identifier. Material UI fixes and precise queries passed in the final run. A diagnostic print was removed from the UI test afterward; product code is unchanged."
+  },
+  "charts": {
+    "info_buttons_removed": true,
+    "cursor_readout_below_plot": true,
+    "cursor_rule_outside_chart": true,
+    "cache_key": [
+      "source revision including measure/smoothing/rate",
+      "visible domain",
+      "focused series"
+    ],
+    "sparse_level_bridges": "Faint straight endpoint connections within the same known allowance cycle; no inspected or stored intermediate readings.",
+    "reset_transitions": "Explicit right-angle render points; no smoothing across cycles.",
+    "smoothing": "Render-only simplification, followed by an explicitly sampled bounded Hermite curve. The readout uses that curve and marks estimates against raw observations.",
+    "simplification_percentage_tolerance_pp": 0.75,
+    "zero_full_plateau_edges_retained": true,
+    "provider_filters_preserve_selection": true,
+    "account_metric_panel_collapsible": true,
+    "dash_style_first_60_unique_tested": true,
+    "rate_averaging_hours": [
+      1,
+      6,
+      12
+    ],
+    "rate_minimum_covered_fraction": 0.5,
+    "rate_reset_crossing_deltas_excluded": true,
+    "rate_valid_intervals_either_side_of_reset_retained": true,
+    "rate_gap_limit": "Smaller of 6 hours or the quota duration; unknown, unit and allowance changes break runs.",
+    "heatmap_hourly_interval_limit_hours": 2,
+    "heatmap_calendar_day_interval_limit_hours": 6,
+    "heatmap_deltas_prorated_by_elapsed_overlap": true,
+    "combined_activity": "One quota per account within a selected window class. Percentage changes average known accounts; compatible amount consumption sums. Unknown values remain unknown.",
+    "day_breakdown_matches_active_heatmap_gap_rule": true
+  },
+  "provider_observations": {
+    "copilot_live_usage_status": 200,
+    "cursor_live_usage_status": 200,
+    "copilot_new_fields": [
+      "credits_used",
+      "entitlement",
+      "quota_remaining",
+      "unlimited",
+      "overage_count",
+      "overage_entitlement",
+      "overage_permitted",
+      "token_based_billing"
+    ],
+    "grok_new_detail": "Reported onDemandUsed Cent amount shown as USD, even without a positive spending cap.",
+    "gemini_new_detail": "Reported remainingAmount retained beside remainingFraction; no inferred entitlement or used counter.",
+    "copilot_new_details": "Finite and unlimited counters; additional-budget usage and enabled state; compatible counter units.",
+    "history_new_fields": [
+      "reported credit balance",
+      "numeric provider details and credit availability"
+    ],
+    "history_excludes_repeated_model_catalogues": true,
+    "cursor_follow_up": "Current free response inspected. Spend-limit units and model capability semantics were not established, so additional currency totals or model-access claims were not invented.",
+    "primary_sources": [
+      "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/services/chat/common/chatEntitlementService.ts",
+      "https://raw.githubusercontent.com/microsoft/vscode/main/src/vs/workbench/contrib/chat/browser/chatStatus/chatStatusDashboard.ts",
+      "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/packages/core/src/code_assist/types.ts",
+      "https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.PchipInterpolator.html"
+    ],
+    "live_responses_committed": false
+  },
+  "design_review": {
+    "model_requested": "claude-opus-5-5",
+    "models_observed": [
+      "claude-opus-5-5"
+    ],
+    "final_verdict": "All four material fixes confirmed; no remaining shipping blockers identified in reviewed sources and screenshots.",
+    "findings_resolved": [
+      "Sparse level traces separated from rate gap policy",
+      "Short-window rate continuity with reset drops excluded",
+      "Combined Activity avoids double-counting multiple quota windows per account",
+      "Cached inspection rendering and stable reset-marker lane",
+      "Real axis gesture space and full account-row hit target",
+      "Distinct provider/account/metric dash ordinals",
+      "Readable heatmap day numbers",
+      "Consistent Consumption menu alignment",
+      "Shared explicit smooth curve for drawing and inspection"
+    ]
+  },
+  "limits": [
+    "History still depends on successful provider refreshes; iOS controls background delivery.",
+    "Long unknown intervals and unobserved resets cannot establish consumption. Sparse endpoint bridges are visual only.",
+    "Provider amounts and currencies are shown only where understood; not all providers expose token or model counters.",
+    "Native provider login protocols did not change. Gemini and Grok additions were checked with fixtures, not a new live sign-in in this release.",
+    "Home and Lock Screen widget code did not change; physical-device system rendering and long-term background cadence remain manual checks."
+  ],
+  "evidence_sha256": {
+    "selector": "05d5bc3a6e951b40c2531a2ed715b3fac105126ae41c5cc21016e7a759af764c",
+    "activity": "78b8e99ccc32ab30b628b1e8b6da045be3127c350e128878c6bdc4ccfc4cfccd",
+    "readout": "066acea43bbf98b9209faa0f81b3612cde9ec87a9a5afd728907f96218d56831",
+    "reset": "84f891f5e6ff4af3bb45eb63c0069bb50e25dec5fe95cb8313e43f796b920220",
+    "gemini": "cf2c95b963c8de8a14954931c1fb70b7e93c22a2270d0c40b833fdc22257337d"
+  }
+}

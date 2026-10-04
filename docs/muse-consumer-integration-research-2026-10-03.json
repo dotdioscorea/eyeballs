@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-03",
+  "provider": "Meta Muse personal agent",
+  "implementationStatus": "Not included in build 13: authenticated UK account reaches the consumer regional waitlist",
+  "sources": [
+    "https://about.fb.com/news/2026/09/introducing-muse-personal-ai-agent/",
+    "https://muse.ai/",
+    "https://muse.ai/_next/static/chunks/1xp85khkw6uj0.js?dpl=dpl_3cBamDPw4rtmmFHFK1WLGUj323GS"
+  ],
+  "verified": {
+    "separateFromMuseCode": true,
+    "consumerSignInForm": "Mobile number or email, with provider sign-in and saved-account choices",
+    "publicLoginAssetSha256": "99c5e12bb2953dc86364c92c021cf364dcebd515ad46984baff6b125db860248",
+    "nativeAuthJsonBasePath": "/api/auth/native",
+    "sourceObservedAuthOperations": [
+      "restart",
+      "start",
+      "send-otp",
+      "resend-otp",
+      "select-account",
+      "two-factor",
+      "two-factor-send-code",
+      "register-completion"
+    ],
+    "sourceObservedCsrfHeader": "X-Hatch-CSRF-Token",
+    "sourceObservedOtpRequestFields": [
+      "contact_point",
+      "region"
+    ],
+    "sourceObservedOtpRegionFailure": "regionNotSupported",
+    "sourceObservedProviderSsoStart": "/api/auth/provider-sso/start",
+    "sourceObservedProviderSsoComplete": "/api/auth/provider-sso/complete",
+    "consumerOidcStart": {
+      "endpoint": "https://muse.ai/api/oidc/start",
+      "anonymousStatus": 307,
+      "authorizationHost": "auth.meta.com",
+      "authorizationPath": "/oidc",
+      "redirectUri": "https://auth.muse.ai/oidc/muse/",
+      "responseType": "code",
+      "pkceChallengePresent": true,
+      "returnedScopeParameter": "openid+linking"
+    },
+    "sourceObservedSettings": [
+      "settings_usage",
+      "settings_subscription",
+      "settings_subscription_additional_usage"
+    ],
+    "completedFirstPartyFacebookSignIn": true,
+    "authenticatedLandingPath": "/access",
+    "authenticatedAccessMessage": "Muse isn't available in your country or region yet.",
+    "independentNativeBootstrap": {
+      "path": "/api/auth/native/bootstrap?resume_provider_completion=1",
+      "status": 200,
+      "browserCookiesImported": false
+    },
+    "independentNativeRestart": {
+      "status": 201
+    },
+    "independentEmailOtpRequest": {
+      "path": "/api/auth/native/send-otp",
+      "status": 201,
+      "region": "GB",
+      "confirmationCompleted": false
+    },
+    "independentProviderSsoStart": {
+      "path": "/api/auth/provider-sso/start",
+      "status": 200,
+      "provider": "facebook",
+      "action": "/oidc/start",
+      "browserCallbackCompletedWithSameSession": false
+    }
+  },
+  "anonymousNativeAuthProbes": [
+    {
+      "path": "/api/auth/native/start",
+      "method": "POST",
+      "status": 403,
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "Forbidden"
+    },
+    {
+      "path": "/api/auth/native/restart",
+      "method": "POST",
+      "status": 403,
+      "bodyKeys": [
+        "error"
+      ],
+      "error": "Forbidden"
+    }
+  ],
+  "interpretation": "Native bootstrap, restart and email-code requests succeeded with their own session and CSRF protection. This supersedes the earlier anonymous 403 probes. Normal first-party Facebook sign-in completed, but the tested UK account reaches a regional waitlist before usage settings. An SSO broker session started outside the browser did not complete in the browser, so independent iPhone SSO is not claimed.",
+  "notYetVerified": [
+    "Completed independent native authentication and callback",
+    "Authenticated identity, session renewal and account switching",
+    "Consumer allowance endpoint and live usage payload",
+    "Weekly allowances, reserve credits, reset dates and subscription tier fields"
+  ],
+  "scope": {
+    "newAccountCreated": false,
+    "subscriptionPurchased": false,
+    "browserCookiesImported": false,
+    "usageScrapingImplemented": false,
+    "providerAddedToApp": false
+  },
+  "lastChecked": "2026-10-04"
+}

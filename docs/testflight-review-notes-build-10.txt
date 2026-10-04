@@ -1,0 +1,10 @@
+Requota monitors usage for independently connected third-party AI accounts. It has no Requota account or developer backend. Provider authentication uses the iOS system browser; each user supplies their own provider account.
+
+For isolated sample access, open Settings → Demo. A Demo bar identifies sample data. Nine sample accounts cover cards, tiles, compact bars, display settings, widgets, history, account comparisons and reset events. History includes consumption heatmaps and recent burn-rate estimates. Settings can simulate an early reset, restore samples and send a labelled test notification. Exit demo restores real account data. Demo does not contact providers or test live authentication.
+
+We request acceptance of this isolated demonstration path because sharing third-party subscription credentials would expose unrelated private accounts. We can respond to requests for additional testing access.
+
+Privacy: https://dotdioscorea.github.io/eyeballs/
+Source and support: https://github.com/dotdioscorea/eyeballs
+
+Build 8 remains in its original external beta review. These instructions describe build 10 and must not be presented as capabilities of build 8.

@@ -1,0 +1,127 @@
+{
+  "preparedOn": "2026-10-04",
+  "metadata": {
+    "name": {
+      "length": 25,
+      "limit": 30
+    },
+    "subtitle": {
+      "length": 24,
+      "limit": 30
+    },
+    "promotionalText": {
+      "length": 136,
+      "limit": 170
+    },
+    "description": {
+      "length": 1609,
+      "limit": 4000
+    },
+    "keywords": {
+      "length": 92,
+      "limit": 100
+    }
+  },
+  "screenshots": [
+    {
+      "asset": "assets/01-overview.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "f6fefd30245126a181b6500c765c45e60043f250bfaaf096236aa6d9bb29db02",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/01-overview.png"
+    },
+    {
+      "asset": "assets/02-widgets.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "577bc034a71f0cfaa9fe042815953d3d89ff317068aedd8b8004903a3c4206ac",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/02-widgets.png"
+    },
+    {
+      "asset": "assets/03-compact.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "f4624942e0d443b4d3d3998f8673f5995e4951071d933b574324e1613b13997c",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/03-compact.png"
+    },
+    {
+      "asset": "assets/04-charts.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "3ac7fa46a6d1780d03326a64753c832d8b6851e6c2742cac5f4375bebdd67500",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/04-charts.png"
+    },
+    {
+      "asset": "assets/05-activity.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "671e512aa0c2e9d47257b428eb680a347555639fdbf47964307b4e0c3a28e68d",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/05-activity.png"
+    },
+    {
+      "asset": "assets/06-rings.png",
+      "width": 1320,
+      "height": 2868,
+      "sha256": "c4004016c1c4d8736a70e6ea4131484a7a3c48f598f245ef28fc236398354fee",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/06-rings.png"
+    },
+    {
+      "asset": "assets/ipad/01-overview.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "c9502b4e666c66527f3fd8d2d4331b742581c5bcf7daa1be772bf087d8cd409a",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/01-overview.png"
+    },
+    {
+      "asset": "assets/ipad/03-compact.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "00aa2566f0f56f54a965b97093e5e4e0ae0711ccc1f6fa99568d2f45bb183e8d",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/03-compact.png"
+    },
+    {
+      "asset": "assets/ipad/04-charts.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "2a936d67ab8d410a25414981e899e113d8ac857fbf1e1d01a4bd5ed5aa5ce438",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/04-charts.png"
+    },
+    {
+      "asset": "assets/ipad/05-activity.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "52bef470914c4f9d178cd65171625df15f080aa85745c58812ed79115f712cee",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/05-activity.png"
+    },
+    {
+      "asset": "assets/ipad/06-rings.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "512b8be1dc2e0932d4d8fe406774bd3b4bb66f8aa782749891b6d477cd2cfdc4",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/06-rings.png"
+    }
+  ],
+  "scope": "The listing and screenshots are saved as a draft in App Store Connect. The app has not been submitted for review."
+}

@@ -26,7 +26,7 @@ class AppleConnect:
     def __init__(self, config):
         self.authorization = token(config)
     def request(self, method, path, **kwargs):
-        assert path.startswith("/v1/")
+        assert path.startswith(("/v1/", "/v2/"))
         response = requests.request(method, "https://api.appstoreconnect.apple.com" + path,
                                     headers={"Authorization": "Bearer " + self.authorization}, timeout=30, allow_redirects=False, **kwargs)
         if response.status_code >= 300:
@@ -58,13 +58,13 @@ def main():
         values = api.request("GET", "/v1/apps", params={"limit": 20})["data"]
         print(json.dumps([{k: v for k, v in {"id": item["id"], "name": item["attributes"]["name"], "bundle_id": item["attributes"]["bundleId"]}.items()} for item in values], indent=2))
     elif args.action == "register-identifiers":
-        values = [api.register_identifier("com.dotdioscorea.eyeballs", "Eyeballs"), api.register_identifier("com.dotdioscorea.eyeballs.widgets", "Eyeballs Widgets")]
+        values = [api.register_identifier("com.dotdioscorea.eyeballs", "Requota"), api.register_identifier("com.dotdioscorea.eyeballs.widgets", "Requota Widgets")]
         print(json.dumps(values, indent=2))
         print("Create the shared app group and app record in Apple's website before uploading.")
     else:
         app = api.request("GET", f"/v1/apps/{args.app_id}")["data"]
         if app["attributes"]["bundleId"] != "com.dotdioscorea.eyeballs":
-            raise RuntimeError("The selected app is not Eyeballs")
+            raise RuntimeError("The selected app is not Requota")
         response = api.request("GET", "/v1/builds", params={"filter[app]": args.app_id, "filter[version]": args.build, "include": "buildBetaDetail,preReleaseVersion"})
         builds = response["data"]
         if len(builds) != 1:

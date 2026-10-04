@@ -1,0 +1,42 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "15",
+  "source_commit": "8f859c14affd0607914a1538b9b60a01f22679d6",
+  "source_tag": "testflight/1.0-15",
+  "build_id": "96fc0124-bd03-46ed-903c-42ab7bca2501",
+  "ipa_sha256": "c3d0d4b73d4581b0c936db1d313bd299690605421bb02b20ead1164536205761",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true
+  },
+  "apple_status_checked_at_utc": "2026-10-04T08:57:24.993646+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "build": "15",
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 162,
+    "opt_in_native_live_tests_rerun": false,
+    "native_ui_checks_passed": 6,
+    "review_model": "claude-opus-5-5",
+    "validation_details": "chart-notification-widget-validation-2026-10-04.json",
+    "limits": [
+      "Low-allowance and observed-event alerts require successful provider refreshes; iOS controls background timing and notification delivery.",
+      "Lock Screen content was checked at accessory dimensions in an exact shared-code harness. System gallery setup, masking and vibrancy remain physical-device checks.",
+      "Rate charts average observed consumption over intervals up to six hours and preserve unknowns, resets and entitlement changes. They do not measure instantaneous tokens.",
+      "Known reset dates were added to accessory timeline entries after simulator checks and verified by release compilation."
+    ]
+  }
+}

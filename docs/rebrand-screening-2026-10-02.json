@@ -1,0 +1,185 @@
+{
+  "checkedAt": "2026-10-02T21:09:26.626775+00:00",
+  "scope": "Preliminary name screening; not trademark clearance or App Store Connect name reservation. RDAP absence establishes no current registration, not a guaranteed purchase price or registration eligibility.",
+  "creativeReview": {
+    "tool": "Claude Code CLI",
+    "model": "claude-opus-5-5",
+    "passes": 3,
+    "recommendation": "Ringset"
+  },
+  "candidates": [
+    {
+      "name": "Ringset",
+      "domains": [
+        {
+          "domain": "ringset.app",
+          "status": 404,
+          "registered": false,
+          "not_found": true,
+          "rdap_name": null
+        },
+        {
+          "domain": "ringset.com",
+          "status": 200,
+          "registered": true,
+          "not_found": false,
+          "rdap_name": "RINGSET.COM"
+        }
+      ],
+      "apps": {
+        "gb": [],
+        "us": []
+      }
+    },
+    {
+      "name": "Requota",
+      "domains": [
+        {
+          "domain": "requota.app",
+          "status": 404,
+          "registered": false,
+          "not_found": true,
+          "rdap_name": null
+        },
+        {
+          "domain": "requota.com",
+          "status": 200,
+          "registered": true,
+          "not_found": false,
+          "rdap_name": "REQUOTA.COM"
+        }
+      ],
+      "apps": {
+        "gb": [],
+        "us": []
+      }
+    },
+    {
+      "name": "QuotaShelf",
+      "domains": [
+        {
+          "domain": "quotashelf.app",
+          "status": 404,
+          "registered": false,
+          "not_found": true,
+          "rdap_name": null
+        },
+        {
+          "domain": "quotashelf.com",
+          "status": 404,
+          "registered": false,
+          "not_found": true,
+          "rdap_name": null
+        }
+      ],
+      "apps": {
+        "gb": [],
+        "us": []
+      }
+    },
+    {
+      "name": "Usagent",
+      "domains": [
+        {
+          "domain": "usagent.app",
+          "http": 404,
+          "registered": false,
+          "not_found": true
+        },
+        {
+          "domain": "usagent.com",
+          "http": 200,
+          "registered": true,
+          "not_found": false
+        }
+      ],
+      "apps": {
+        "gb": [],
+        "us": []
+      }
+    },
+    {
+      "name": "Remainder",
+      "domains": [
+        {
+          "domain": "remainder.app",
+          "http": 200,
+          "registered": true,
+          "not_found": false
+        },
+        {
+          "domain": "remainder.com",
+          "http": 200,
+          "registered": true,
+          "not_found": false
+        }
+      ],
+      "apps": {
+        "gb": [
+          {
+            "title": "Remainder Division Calculator",
+            "url": "https://apps.apple.com/gb/app/remainder-division-calculator/id1596388180?uo=4"
+          },
+          {
+            "title": "Remainder_Calculator",
+            "url": "https://apps.apple.com/gb/app/remainder-calculator/id1271889943?uo=4"
+          },
+          {
+            "title": "Math Learn Remainder Division",
+            "url": "https://apps.apple.com/gb/app/math-learn-remainder-division/id1601746400?uo=4"
+          },
+          {
+            "title": "Remainders - Countdown Events",
+            "url": "https://apps.apple.com/gb/app/remainders-countdown-events/id6443686380?uo=4"
+          },
+          {
+            "title": "RemainderCalculator byNSDev",
+            "url": "https://apps.apple.com/gb/app/remaindercalculator-bynsdev/id6751115930?uo=4"
+          }
+        ],
+        "us": [
+          {
+            "title": "Remainder: Timebox To Do List",
+            "url": "https://apps.apple.com/us/app/remainder-timebox-to-do-list/id6780983206?uo=4"
+          },
+          {
+            "title": "Remainder_Calculator",
+            "url": "https://apps.apple.com/us/app/remainder-calculator/id1271889943?uo=4"
+          },
+          {
+            "title": "RemainderCalculator byNSDev",
+            "url": "https://apps.apple.com/us/app/remaindercalculator-bynsdev/id6751115930?uo=4"
+          },
+          {
+            "title": "Drink Water Remainder",
+            "url": "https://apps.apple.com/us/app/drink-water-remainder/id6766213522?uo=4"
+          }
+        ]
+      }
+    }
+  ],
+  "productConflicts": {
+    "Headroom": "Direct AI usage monitor at https://headroom.day/",
+    "Remainder": "iOS productivity app at https://apps.apple.com/us/app/remainder-timebox-to-do-list/id6780983206",
+    "Usagent": "Search confusion with Marvel U.S.Agent at https://www.marvel.com/comics/issue/84246/u.s.agent_1"
+  },
+  "sources": {
+    "appDomainRegistry": "https://pubapi.registry.google/rdap/domain/",
+    "comDomainRegistry": "https://rdap.verisign.com/com/v1/domain/",
+    "appStoreSearch": "https://itunes.apple.com/search",
+    "appStoreCountries": [
+      "gb",
+      "us"
+    ]
+  },
+  "registrarQuote": "Porkbun requires authenticated API access; no registration or purchase performed.",
+  "decision": {
+    "name": "Requota",
+    "selectedBy": "Owner",
+    "date": "2026-10-02",
+    "appStoreConnectName": "Requota",
+    "appStoreConnectSubtitle": "AI Usage Tracker",
+    "appleMetadataVerified": true,
+    "domainPurchased": false
+  }
+}

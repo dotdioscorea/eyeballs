@@ -1,9 +1,3 @@
-Eyeballs 1.0 (3) — easier sign-in and Grok fix
-
-Removes the unsupported billing:read OAuth scope that caused xAI to reject authentication-code issuance. Grok now requests only identity and CLI proxy scopes supported by its public client. The direct usage/billing endpoint remains the same.
-
-Continue now uses the normal iOS authentication session, allowing existing browser sign-ins to be reused where the provider permits. Use another account starts a separate login when needed. Saved accounts still have independent Keychain credentials.
-
-The owner confirmed fresh Codex and Claude connections worked in TestFlight build 2. Grok's completed fresh login → live billing check remains pending. Automated checks cover the allowed scope contract, account isolation, persistence, cancellation, signatures, callback security and refresh recovery.
-
-Update to build 3, then try connecting Grok again. Save connection is enabled only after its live usage request succeeds. Widgets show saved readings; preview data never populates widgets.
+- Adaptive iPad account grids and wider charts.
+- Inline Activity breakdowns on larger screens.
+- Improved Demo accounts and usage history.

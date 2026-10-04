@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Requota — Privacy policy</title>
+  <style>
+    body { font: 17px/1.6 system-ui, sans-serif; max-width: 680px; margin: 0 auto; padding: 40px 24px; }
+    h1 { font-size: 28px; line-height: 1.2; } h2 { font-size: 20px; margin-top: 28px; }
+    a { color: light-dark(#087c53, #65dfa8); } small { color: light-dark(#555, #aaa); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Requota privacy policy</h1>
+    <small>Updated 3 October 2026</small>
+
+    <h2>Account connections</h2>
+    <p>Sign-in uses the iOS system browser, or Perplexity’s email verification codes. Requota stores provider-issued tokens, including Perplexity session tokens, and account identity details in this device’s Keychain, with iCloud Keychain synchronization disabled. Requota does not store passwords or email codes.</p>
+    <p>Sign-in, token renewal, identity checks and usage requests go directly to the selected provider. The provider receives the information needed for those requests, including your connection’s credentials and network address. The provider’s privacy policy applies to its services.</p>
+
+    <h2>Local data</h2>
+    <p>Account names, workstreams, notes, display preferences and cached usage are stored on your device. Usage history and observed events are kept for up to 90 days, subject to size limits. iOS may include app files in device backups according to your settings.</p>
+    <p>Widgets use a local shared summary containing names, workstreams, display preferences and cached usage. It excludes credentials, email addresses, account identities, notes and detailed spending/model-access panels. Notifications are scheduled locally when enabled.</p>
+
+    <h2>Diagnostics and reports</h2>
+    <p>Local diagnostics keep up to 100 events for seven days. They record sign-in stages, request categories, HTTP status codes, error categories and types of known usage fields. Exported debug bundles exclude passwords, tokens, request bodies, URLs, account identities, names, email addresses, workstreams and notes.</p>
+    <p>A problem report is optional. You review and submit it on GitHub, and choose whether to attach a debug bundle. GitHub issues are public; information you type or attach will be visible to others. Nothing is submitted automatically.</p>
+    <p>Requota has no developer-operated account service, advertising or analytics SDK. During TestFlight testing, Apple separately provides crash reports, testing statistics and feedback under <a href="https://testflight.apple.com/">TestFlight’s terms and privacy information</a>.</p>
+
+    <h2>Deletion and contact</h2>
+    <p>Removing a connection deletes its local credentials, account data, history, events, widget summary and account notifications. You can clear diagnostics in Settings → Privacy &amp; storage. Removing a connection does not delete its provider account or a report already submitted to GitHub.</p>
+    <p>Privacy questions: <a href="mailto:dotdioscorea@awr.sh">dotdioscorea@awr.sh</a>. Developer: Aaron Rucinski. <a href="https://github.com/dotdioscorea/eyeballs">Source code</a>.</p>
+  </main>
+</body>
+</html>

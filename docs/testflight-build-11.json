@@ -1,0 +1,51 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "11",
+  "source_commit": "3e508c94edf5cae65259118b34af855a880bea6b",
+  "source_tag": "testflight/1.0-11",
+  "build_id": "c4332e67-fefe-46f6-abb4-b050e5d0627f",
+  "ipa_sha256": "edb43dc166dd9225bf3423dde5b6148cf0ac43ad4432f84c41f9d0cd63b78c83",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true
+  },
+  "apple_status_checked_at_utc": "2026-10-03T09:30:56.437603+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "build": "11",
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "requested_tester_invitation_sent": true
+  },
+  "validation": {
+    "unit_tests_passed": 118,
+    "native_ui_checks_in_final_run": 4,
+    "native_ui_checks": [
+      "Kimi regional system sign-in presentation and cancellation",
+      "Claude spending and weekly-share panels; Codex credits and model access",
+      "Release Demo restoration",
+      "Six-account widget configuration, persistence and row links"
+    ],
+    "additional_native_ui_regressions_passed": [
+      "Four-ring full-percentage app and widget displays",
+      "Persistent compact display and configuration copy"
+    ],
+    "review_model": "claude-opus-5-5",
+    "review_details": "design-review-2026-10-03.json",
+    "live_protocol_details": "provider-stats-research-2026-10-03.json",
+    "limits": [
+      "Kimi completed browser/API authorization and refresh in both regions are separate from native iPhone presentation/cancellation.",
+      "Kimi Free accounts reported no Code quota; paid shapes use official SDK fixtures and remain to be tested live.",
+      "Completed Gemini authorization remains for the owner\u2019s existing account.",
+      "Balances, message estimates, usage shares and model access do not establish actual token consumption or active credit charging."
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "16",
+  "source_commit": "cd7ac8d978675ab321cd00e22468a961be929040",
+  "source_tag": "testflight/1.0-16",
+  "build_id": "160a5413-7268-4c5b-b51e-f4df4465e042",
+  "ipa_sha256": "fc01cd8258a2cf48b1ec76e8c830b15349ad15dfea4bbe93bf5fa186227a2f57",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true
+  },
+  "apple_status_checked_at_utc": "2026-10-04T10:26:16.942834+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "build": "16",
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 174,
+    "opt_in_live_tests_skipped": 3,
+    "native_ui_checks_passed": 5,
+    "live_readonly_api_checks": [
+      "Copilot usage HTTP 200",
+      "Cursor usage HTTP 200"
+    ],
+    "review_model": "claude-opus-5-5",
+    "validation_details": "chart-refinement-provider-validation-2026-10-04.json",
+    "limits": [
+      "Background delivery still depends on iOS and successful provider refreshes.",
+      "Sparse level bridges do not create readings or rates; long unknown intervals and reset-crossing consumption remain unknown.",
+      "Additional Gemini/Grok fields were validated with fixtures; Gemini live authorization remains an owner check.",
+      "Home and Lock Screen widgets did not change; long-term physical-device delivery and system widget rendering remain manual checks."
+    ]
+  }
+}

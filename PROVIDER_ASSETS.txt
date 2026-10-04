@@ -1,0 +1,75 @@
+Provider marks are used to identify the connected services. They remain the property of their respective owners.
+
+OpenAI/Codex: https://openai.com/brand/
+Asset: https://images.ctfassets.net/kftzwdyauwt9/3hUGLn3ypllZ0oa01qOYVq/28e8188e6f11b84c3e876569d492734f/Blossom_Light.svg
+The existing filled blossom path is extracted and cropped; construction guides are omitted.
+
+Claude: https://claude.com/
+Asset: https://assets.claude.com/95a868946ac8a31e5ff832e2899f294aa368b836.png
+
+Grok: https://grok.com/images/favicon.svg
+The existing mark paths are extracted without the favicon background.
+
+Gemini: https://www.gstatic.com/lamda/images/gemini_sparkle_4g_512_lt_f94943af3be039176192d.png
+Cursor: https://cursor.com/marketing-static/favicon.svg
+The mark is cropped and the background and border are omitted.
+Cline: https://github.com/cline/cline/blob/main/assets/branding/logos/cline-icon-white.svg
+Copilot: https://github.com/primer/octicons/blob/main/icons/copilot-24.svg
+
+Marks are rendered as templates so account colour preferences can be applied.
+
+Copilot icon licence (Primer Octicons):
+
+MIT License
+
+Copyright (c) 2026 GitHub Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Kimi Code: https://github.com/MoonshotAI/kimi-code/blob/main/apps/vscode/resources/kimi-icon.svg
+The existing SVG mark is rendered as a template; currentColor is set to black for asset compilation.
+
+Kimi Code icon licence:
+
+MIT License
+
+Copyright (c) 2026 Moonshot AI
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Perplexity brandmark
+Source: https://www.perplexity.ai/favicon.svg
+Template vector uses the official mark, without its favicon background.
+Perplexity name and mark remain their owner’s trademarks.

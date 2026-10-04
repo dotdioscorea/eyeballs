@@ -23,10 +23,11 @@ targets:
     info:
       path: App/Eyeballs/Info.plist
       properties:
-        CFBundleDisplayName: Eyeballs
+        CFBundleDisplayName: Requota
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        UILaunchScreen: {}
+        UILaunchScreen:
+          UIColorName: LaunchBackground
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations:
@@ -39,8 +40,8 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: false
-        UIBackgroundModes: [fetch]
-        BGTaskSchedulerPermittedIdentifiers: [com.dotdioscorea.eyeballs.refresh]
+        UIBackgroundModes: [fetch, processing]
+        BGTaskSchedulerPermittedIdentifiers: [com.dotdioscorea.eyeballs.refresh, com.dotdioscorea.eyeballs.processing]
         CFBundleURLTypes:
           - CFBundleURLSchemes: [eyeballs]
         NSAppTransportSecurity:
@@ -64,9 +65,10 @@ targets:
     info:
       path: App/EyeballsWidgets/Info.plist
       properties:
-        CFBundleDisplayName: Eyeballs
+        CFBundleDisplayName: Requota
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        BGTaskSchedulerPermittedIdentifiers: [com.dotdioscorea.eyeballs.refresh, com.dotdioscorea.eyeballs.processing]
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

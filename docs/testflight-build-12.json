@@ -1,0 +1,48 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "12",
+  "source_commit": "8f26aea262a2c7141461e24d8eca2fd9da5aa1a9",
+  "source_tag": "testflight/1.0-12",
+  "build_id": "159eb89a-a601-4c4d-9bfc-1c4a5eb0adbe",
+  "ipa_sha256": "16940f958f4afc8d7fa9f5ca837c337512f6e3733f5fcd1853f1ead1321e6e06",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true
+  },
+  "apple_status_checked_at_utc": "2026-10-03T21:29:09.686200+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "build": "12",
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 130,
+    "opt_in_native_live_tests_passed": 1,
+    "native_ui_checks_passed": 4,
+    "native_ui_checks": [
+      "Perplexity native email form and cancellation",
+      "Perplexity count cards, compact rows, tiles and history",
+      "Release Demo restoration",
+      "Six-account widget with a Perplexity count, persistence and row links"
+    ],
+    "review_model": "claude-opus-5-5",
+    "review_details": "perplexity-design-review-2026-10-03.json",
+    "live_protocol_details": "perplexity-protocol-validation-2026-10-03.json",
+    "limits": [
+      "Completed independent email-code API authorization and native URLSession renewal are separate from native email-form presentation. A completed email login through the iPhone UI remains a manual check.",
+      "Paid-plan Perplexity allowances remain to be tested live.",
+      "No cap or reset date was supplied for the tested Free account; percentages and reset rings are therefore absent.",
+      "Perplexity count history is separate from percentage comparisons and consumption heatmaps."
+    ]
+  }
+}

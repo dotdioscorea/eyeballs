@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-03",
+  "provider": "Perplexity",
+  "target_build": "12",
+  "primary_sources": [
+    "https://www.perplexity.ai/",
+    "https://pplx-next-static-public.perplexity.ai/_spa/assets/platform-core__v2-BE9inOS5.js",
+    "https://github.com/perplexityai/perplexity-cli"
+  ],
+  "login": {
+    "method": "Native passwordless six-digit email code",
+    "csrf_endpoint": "/api/auth/csrf",
+    "send_endpoint": "/api/auth/signin/email",
+    "verify_endpoint": "/api/auth/callback/email",
+    "renew_endpoint": "/api/auth/session",
+    "session_cookie": "__Secure-next-auth.session-token",
+    "storage": "Separate UUID-keyed Keychain record per connection",
+    "browser_cookies_imported": false,
+    "shared_cookie_storage": false
+  },
+  "live_protocol": {
+    "csrf_status": 200,
+    "email_send_status": 200,
+    "email_verification_status": 302,
+    "session_identity_status": 200,
+    "profile_status": 200,
+    "allowance_status": 200,
+    "session_renewal_status": 200,
+    "renewed_identity_matches": true,
+    "renewed_token_changed": true,
+    "allowances_accessible_with_only_own_session_token": true,
+    "plan": "Free",
+    "percent_cap_reported": false,
+    "reset_date_reported": false
+  },
+  "native_urlsession_check": {
+    "completed_on": "iOS 18.3.1 simulator",
+    "renewal_identity_and_allowances_passed": true,
+    "test": "PerplexityLiveTests.testNativeSessionRenewalIdentityAndAllowances",
+    "distinction": "Uses the independent email-protocol test session, not a browser session. The complete email verification protocol and native form UI are separate checks."
+  },
+  "metrics": [
+    "Pro searches",
+    "Research",
+    "Labs",
+    "Agentic research"
+  ],
+  "display": {
+    "count_and_availability_only": true,
+    "missing_counts_do_not_become_zero": true,
+    "no_invented_percentages_or_reset_dates": true,
+    "local_count_history": true,
+    "widget_count_summaries": true
+  },
+  "diagnostics": "Whitelisted field types for modes, remaining_detail, kind, count and availability; no response values, codes, cookies, identities or emails",
+  "limits": [
+    "Paid-plan live validation is outstanding.",
+    "Provider gives no cap or reset time for the tested Free account.",
+    "Count-only history is separate from percentage comparisons and consumption heatmaps.",
+    "A completed email login through the native iPhone UI remains a separate manual check."
+  ],
+  "native_ui_checks": {
+    "email_form_and_cancellation": true,
+    "cards_compact_tiles_and_count_history": true,
+    "release_demo_restoration": true,
+    "six_account_widget_with_live_process_termination_and_account_link": true,
+    "widget_evidence": "Anonymous Perplexity count fixture alongside five percentage accounts"
+  },
+  "unit_tests_passed": 130,
+  "opt_in_native_live_test_passed": true
+}

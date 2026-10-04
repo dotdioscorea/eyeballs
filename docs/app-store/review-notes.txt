@@ -1,0 +1,14 @@
+Requota monitors usage for independently connected third-party AI accounts. It has no Requota account, developer backend or purchase flow. Users connect their own provider accounts using iOS system-browser authentication or Perplexity's native email-code form.
+
+Reviewer access:
+1. Open Settings → Demo. The visible Demo bar identifies illustrative data. No provider account or network connection is needed for the demonstration.
+2. Open Accounts. Thirteen accounts cover eleven providers, including multiple Codex and Claude accounts. Try cards, tiles, compact bars, search, provider filters and custom ordering. Open an account to change its colour and usage/reset metrics.
+3. Open Charts to compare accounts on line and rate charts, inspect values, zoom and pan. Activity combines consumption into a heatmap; select a day for its account breakdown. Forty days of illustrative history include idle periods and quota resets.
+4. Open Events for observed resets and banked-reset detection. In Settings, “Simulate early reset” adds a labelled example event. Notification settings include a test notification that requests iOS permission.
+5. Add Requota Home Screen or Lock Screen widgets from the system widget gallery. During Demo, select illustrative accounts. Rows can show several accounts; tapping an account opens its details.
+6. Exit demo to return to live connections. Demo metadata, history, notifications and widget summaries are separate from real accounts. Demo does not contact providers or establish that a live sign-in has succeeded.
+
+We request acceptance of this demonstration path because sharing third-party credentials would expose unrelated private accounts. We can respond to requests for additional testing access.
+
+Privacy: https://dotdioscorea.github.io/eyeballs/
+Source and support: https://github.com/dotdioscorea/eyeballs

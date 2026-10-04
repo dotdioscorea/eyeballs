@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-04",
+  "reviewer": "claude-opus-5-5",
+  "scope": [
+    "Devin quota cards, compact rows and square tiles",
+    "Amp balance cards, compact rows, square tiles and detail",
+    "Six-account Home Screen widget with Devin and Amp",
+    "Widget rendering and provider-logo source"
+  ],
+  "evidence": "Anonymous native simulator screenshots and exact Swift/SVG sources; Lock Screen observations were from source, not rendered screenshots",
+  "findings": [
+    "Devin layouts have no blocking issues",
+    "Amp balance layouts show no invented quotas or reset dates",
+    "Dense balance-only widget row is centred instead of aligned with other accounts",
+    "Balance-only detail duplicates a currency balance and shows unusable percentage-history controls",
+    "Lock Screen widgets lack a credit-balance fallback"
+  ],
+  "changes": [
+    "Align balance-only widget rows with the account column",
+    "Show personal credit balances in circular and rectangular Lock Screen widgets",
+    "Show stale/reconnect colouring and an accessibility status hint for balance-only rows",
+    "Hide empty metric legend and quota-history controls when no current or historical windows exist",
+    "Show one structured personal-credit panel instead of duplicate balances",
+    "Normalize Amp SVG fill and centre its margins; retain the official wide wordmark with per-account tint"
+  ],
+  "verification": "Final Opus recheck found no unresolved blocking bugs in the reviewed files. Native checks passed for all three Devin/Amp layouts, the simplified Amp detail, and six-account widget alignment, app-termination persistence and Amp row links.",
+  "validation_limits": [
+    "Circular and rectangular Lock Screen balance branches were inspected and compiled, not visually checked in a live Lock Screen configuration.",
+    "Balance-only stale/reconnect styling was inspected in source; the screenshots show fresh sample readings.",
+    "The native formatter follows the current locale; the demo dollar string is a fixed sample."
+  ],
+  "followup_checks": [
+    "Missing tier windows remain entries in readings(settings:), so their indices and saved display choices are preserved.",
+    "Amp snapshots leave remainingAllowances nil; the reviewer\u2019s hypothetical empty-array branch does not apply to the verified Amp response."
+  ]
+}

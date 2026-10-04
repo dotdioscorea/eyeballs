@@ -1,11 +1,71 @@
 import CryptoKit
 import Security
 import XCTest
-import CryptoKit
 @testable import Eyeballs
 
 final class AuthenticationTests: XCTestCase {
     let callback = URL(string: "http://127.0.0.1:1455/auth/callback")!
+    func testCursorBindsNativeHandshakeAndKeepsVerifierOutOfURLs() throws {
+        let attempt = try CursorAuth.Attempt()
+        XCTAssertFalse(attempt.url.absoluteString.contains(attempt.verifier))
+        XCTAssertEqual(attempt.request.httpMethod, "POST")
+        let body = try JSONSerialization.jsonObject(with: attempt.request.httpBody!) as! [String: String]
+        XCTAssertEqual(body["verifier"], attempt.verifier)
+        var raw: [String: Any] = ["uuid": attempt.id.uuidString, "challenge": attempt.challenge, "authId": "private-principal", "accessToken": "private-token"]
+        XCTAssertNoThrow(try attempt.validate(raw))
+        raw["uuid"] = UUID().uuidString; XCTAssertThrowsError(try attempt.validate(raw))
+        raw["uuid"] = attempt.id.uuidString; raw["challenge"] = "different"; XCTAssertThrowsError(try attempt.validate(raw))
+        XCTAssertEqual(try CursorAuth.identity(["authId": "private", "publicUserId": "verified-principal"]), "verified-principal")
+        XCTAssertThrowsError(try CursorAuth.identity(["authId": "private"]))
+        XCTAssertThrowsError(try CursorAuth.request("CreateUserApiKey", accessToken: "private"))
+    }
+    func testCopilotDeviceFlowRejectsForeignVerificationURLsAndInvalidPrincipals() throws {
+        var raw: [String: Any] = ["device_code": "private-device-code", "user_code": "ABCD-EFGH", "verification_uri": "https://github.com/login/device", "expires_in": 900, "interval": 5]
+        let verification = try CopilotAuth.Verification.decode(raw)
+        XCTAssertEqual(verification.interval, 5)
+        for url in ["http://github.com/login/device", "https://github.com.evil.test/login/device", "https://github.com/login/device?secret=value", "https://user@github.com/login/device"] {
+            raw["verification_uri"] = url; XCTAssertThrowsError(try CopilotAuth.Verification.decode(raw))
+        }
+        XCTAssertEqual(try CopilotAuth.identity(["id": 123, "login": "fixture"]), "123")
+        XCTAssertThrowsError(try CopilotAuth.identity(["id": true, "login": "fixture"]))
+        XCTAssertThrowsError(try CopilotAuth.identity(["id": 123.5, "login": "fixture"]))
+        XCTAssertThrowsError(try CopilotAuth.pollResult(["error": "access_denied"]))
+        XCTAssertThrowsError(try CopilotAuth.pollResult(["error": "expired_token"]))
+        if case .pending = try CopilotAuth.pollResult(["error": "authorization_pending"]) { } else { XCTFail("Expected pending") }
+        if case .slowDown = try CopilotAuth.pollResult(["error": "slow_down"]) { } else { XCTFail("Expected slower polling") }
+        let request = CopilotAuth.formRequest("https://github.com/login/oauth/access_token", fields: ["device_code": "private-device-code"])
+        XCTAssertFalse(request.url!.absoluteString.contains("private-device-code"))
+        XCTAssertTrue(String(decoding: request.httpBody!, as: UTF8.self).contains("private-device-code"))
+    }
+    func testCopilotNeverAcceptsUnreportedOrRepositoryScopes() async {
+        for scope in [nil, "repo", "read:user,repo"] as [String?] {
+            var raw = ["access_token": "fixture-access", "token_type": "bearer"]
+            raw["scope"] = scope
+            do { _ = try await CopilotAuth.credential(raw, previous: nil); XCTFail("Unsafe scope was accepted") }
+            catch { }
+        }
+    }
+    func testGeminiUsesGoogleNativeOAuthWithPKCEAndVerifiedIdentity() throws {
+        XCTAssertThrowsError(try GeminiAuth.quotaProject([:]))
+        XCTAssertThrowsError(try GeminiAuth.quotaProject(["cloudaicompanionProject": NSNull()]))
+        XCTAssertEqual(try GeminiAuth.quotaProject(["cloudaicompanionProject": "managed-project"]), "managed-project")
+        let redirect = URL(string: "http://127.0.0.1:43210/oauth2callback")!
+        let attempt = try OAuthAttempt(redirectURI: redirect, hostID: "fixture", provider: .gemini)
+        let url = attempt.authorizationURL
+        XCTAssertEqual(url.host, "accounts.google.com")
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!
+        XCTAssertEqual(query.first { $0.name == "client_id" }?.value, GeminiAuth.clientID)
+        XCTAssertEqual(query.first { $0.name == "access_type" }?.value, "offline")
+        XCTAssertEqual(query.first { $0.name == "code_challenge_method" }?.value, "S256")
+        XCTAssertFalse(url.absoluteString.contains(attempt.verifier))
+        XCTAssertThrowsError(try GeminiAuth.identity(["email": "unverified@example.com"]))
+        XCTAssertNil(try GeminiAuth.identity(["id": "a", "email": "unverified@example.com"]).email)
+        XCTAssertEqual(try GeminiAuth.identity(["id": "a", "email": "verified@example.com", "verified_email": true]).email, "verified@example.com")
+        var credential = Fixture.credential("google"); credential.provider = .gemini; credential.issuer = GeminiAuth.issuer
+        let request = try UsageClient.request(provider: .gemini, credential: credential)
+        XCTAssertEqual(request.url?.host, "cloudcode-pa.googleapis.com")
+        XCTAssertThrowsError(try UsageClient.request(provider: .codex, credential: credential))
+    }
     func testCodexLoginRequestsQuotaCompatibleNativeCredentialsAndPKCE() throws {
         let first = try OAuthAttempt(redirectURI: callback, hostID: "urn:uuid:phone")
         let second = try OAuthAttempt(redirectURI: callback, hostID: "urn:uuid:phone")
@@ -19,7 +79,7 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertEqual(value("scope"), "openid profile email offline_access")
         XCTAssertNil(value("resource"))
         XCTAssertNil(value("agent_name_hint"))
-        XCTAssertEqual(value("originator"), "eyeballs")
+        XCTAssertEqual(value("originator"), "requota")
         XCTAssertEqual(value("code_challenge_method"), "S256")
         XCTAssertEqual(value("code_challenge"), Data(SHA256.hash(data: Data(first.verifier.utf8))).base64URL)
         XCTAssertEqual(value("redirect_uri"), callback.absoluteString)

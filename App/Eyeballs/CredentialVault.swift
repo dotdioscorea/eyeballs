@@ -1,7 +1,8 @@
 import Foundation
 import Security
 
-// One credential record per connection. No passwords, cookies or shared provider session.
+// One credential record per connection. Perplexity stores its own passwordless
+// session token; other providers use OAuth tokens. No shared browser session.
 struct AccountCredential: Codable, Equatable, Sendable {
     var provider: Provider
     var issuer: String

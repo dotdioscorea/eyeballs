@@ -1,0 +1,61 @@
+REQUOTA — APP STORE LISTING DRAFT
+Prepared 4 October 2026 · English (UK) · Version 1.0
+
+NAME (25/30)
+Requota: AI Usage Tracker
+
+SUBTITLE (24/30)
+Limits, resets & widgets
+
+PROMOTIONAL TEXT (136/170)
+Check remaining AI usage and reset times across your accounts. Customise your dashboard and widgets, and compare usage trends over time.
+
+DESCRIPTION (1609/4000)
+Keep track of your AI accounts in one place. Requota shows remaining usage, reset times and available credit balances, with widgets for a quick check throughout the day.
+
+Connect your accounts directly on your iPhone or iPad, including multiple accounts from the same provider. Give each a name, organise them by workstream and see which has allowance left.
+
+• Choose your view: rings, square tiles or compact bars. Search, filter, sort or arrange accounts in your own order.
+• Customise each account: show usage remaining or used, choose which limits and reset countdowns appear, and set your colours.
+• Add Home Screen and Lock Screen widgets: follow one account or use compact rows to see several together. Tap through to an account's details.
+• Explore your history: compare accounts on interactive charts, check recent burn rates and time-to-zero estimates, and view activity heatmaps with daily breakdowns.
+• Set your alerts: configure low-allowance warnings, reset reminders and reminders to use remaining allowance before a reset. Adjust notification rules for each provider.
+• Follow account events: look back at observed resets, early resets, plan changes and banked reset activity where available.
+
+Supported providers
+Codex, Claude, Grok, Gemini CLI / Code Assist, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp.
+
+Credentials are stored in your device's Keychain. Usage history is stored locally. The source code is public, with a link in Settings.
+
+Requires an account with a supported provider.
+
+Requota is an independent app and is not affiliated with the listed providers.
+
+KEYWORDS (92/100)
+quota,allowance,credits,balance,agents,coding,monitor,notifications,history,charts,burn,rate
+
+SUPPORT URL
+https://github.com/dotdioscorea/eyeballs/issues
+
+PRIVACY POLICY URL
+https://dotdioscorea.github.io/eyeballs/
+
+COPYRIGHT
+2026 Aaron Rucinski
+
+RECOMMENDED CATEGORIES
+Utilities; optional secondary category: Productivity
+
+PRICE
+Free, as selected by the owner.
+
+SCREENSHOT ORDER
+1. See what’s left.
+2. Six accounts. One widget.
+3. Keep it compact.
+4. Compare your usage.
+5. Find your patterns.
+6. Usage and resets.
+
+Screenshots use native captures with illustrative account data; original captures are included.
+The listing and screenshots are saved as a draft in App Store Connect. The app has not been submitted for review.

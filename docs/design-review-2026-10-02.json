@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-02",
+  "product": "Requota",
+  "reviewer": {
+    "tool": "Claude Code CLI",
+    "requested_model": "claude-opus-5-5",
+    "observed_model": "claude-opus-5-5",
+    "scope": "Read-only access to anonymous simulator screenshots and named chart source files"
+  },
+  "evidence": {
+    "screenshots": [
+      "app icon",
+      "cards",
+      "compact bars",
+      "square tiles",
+      "account history",
+      "six-account Home Screen rows",
+      "widget account editor"
+    ],
+    "limits": [
+      "The initial icon-only pass could not open the other images; the follow-up supplied exact paths.",
+      "The initial review did not show single-account ring widget faces or twelve-row widgets.",
+      "Widget and app screenshots used separate anonymous fixture sets."
+    ]
+  },
+  "changes": [
+    "Requota name and quota-ring Q mark; thicker icon strokes and a clear tail.",
+    "Percentage text fits the ring centre without horizontal compression, including four-ring layouts.",
+    "Higher-contrast values and larger text in dense widgets; remove their decorative heading.",
+    "Distinct metric colours; individual history and activity use the corresponding ring colour.",
+    "Show every configured metric in tiles and name the allowance window in reset labels.",
+    "Keep search and provider filters visible in every layout.",
+    "Keep reported credits visible alongside quotas, including when an allowance is exhausted.",
+    "Fixed chart date domains and selection snapped to observed dates; tooltips remain within the chart.",
+    "Thin short-window traces on long periods, with user-controlled metric visibility.",
+    "Consumption heatmaps with a 24-hour day strip, weekday/hour matrix and aligned calendar month.",
+    "One set of shared period controls for account comparison heatmaps.",
+    "Tappable reset-event markers, with nearby events grouped.",
+    "Current-cycle percentage burn rates for 1h, 6h and 12h, with time-to-zero or reset-first status.",
+    "Preserve configured metric names across downgrades; distinguish known plan or allowance changes from resets and start a new forecast/history baseline."
+  ],
+  "decisions": [
+    "Retain each account timestamp, as requested, rather than hiding fresh timestamps.",
+    "Continue lines across observed gaps; unavailable readings remain breaks. Do not add gap-count captions.",
+    "Do not automatically hide short-window metrics chosen by the user.",
+    "Consumption excludes reset drops and does not distribute long unobserved intervals across buckets.",
+    "Quota-level heatmaps remain an optional view.",
+    "Percentages are allowance points, not tokens. Amount charts require reported counters and matching units.",
+    "Credit balances do not imply active credit charging. Credit-usage and model/fast-mode breakdowns require provider-specific evidence.",
+    "Preserve installation, Keychain, App Group and widget identifiers during the rebrand."
+  ],
+  "implementation_order": [
+    "Common account/dashboard/widget/history/event/estimate behaviour",
+    "Provider-specific details, starting with Codex and Claude where exposed"
+  ],
+  "validation": {
+    "unit_tests_passed": 102,
+    "distinct_native_ui_checks_passed": 7,
+    "native_checks": [
+      "Persistent compact search/display settings and debug export",
+      "Six selected Home Screen rows survive app termination and open the selected account",
+      "Four-ring 100% app displays and exhausted-allowance credits",
+      "Fixed-domain selection, event detail sheet, day strip and calendar month",
+      "Release Demo restoration and events",
+      "Square tiles, saved drag order and comparison charts",
+      "Account picker and four-ring 100% small widget"
+    ],
+    "live_protocol_checks": [
+      "Cline native registration, identity, balance, refresh and renewed identity/balance",
+      "Claude authenticated profile plan and rate-limit tier"
+    ],
+    "limits": [
+      "Completed Gemini authorization remains for the owner\u2019s existing account.",
+      "Cline\u2019s completed browser/API authorization is distinct from native iPhone presentation/cancellation."
+    ]
+  },
+  "live_check": {
+    "provider": "Claude",
+    "endpoint": "api.anthropic.com/api/oauth/profile",
+    "http_status": 200,
+    "observed_non_identity_fields": {
+      "organization_type": "claude_max",
+      "rate_limit_tier": "default_claude_max_20x"
+    },
+    "identity_values_saved": false
+  },
+  "final_review": {
+    "observed_model": "claude-opus-5-5",
+    "native_screens_inspected": 6,
+    "release_blockers": [],
+    "follow_up_changes": [
+      "Summary bars use their usage-ring colour.",
+      "Shorten tiled weekly time to Wk time and dense weekly labels to Wk."
+    ],
+    "retained_choices": [
+      "Provider/account palettes are adapted to distinguish adjacent ring colours; colours follow the configured rings, rather than imposing one global colour for a metric.",
+      "Keep provider credit precision.",
+      "Retain optional short-window traces and per-account timestamps."
+    ],
+    "remaining_polish": [
+      "Calendar text contrast and event target spacing can be refined further.",
+      "Tile header alignment when extra credit information is present."
+    ]
+  }
+}
