@@ -48,5 +48,5 @@ Private protocol artifacts remain under ignored `artifacts/`. Credentials stay o
 ## Local checks
 
 - Signed simulator build succeeded.
-- The final native unit result will be recorded after the recovery checks. Activation policy/transport tests covering permission, plan and allowance checks, moving/fixed deadlines, tier changes, inactive Codex secondary windows, separate accounts, persistence, deletion and interrupted requests. The earlier native Claude live check also passed.
+- Final native unit suite: 211 executed, 5 opt-in live checks skipped, 206 passed, no failures. This includes the native Claude request check and 20 activation policy/transport tests covering permission, plan and allowance checks, moving/fixed deadlines, tier changes, inactive Codex secondary windows, separate accounts, persistence, deletion and interrupted requests. The earlier native Claude live check also passed.
 - Native UI: per-provider settings persist after relaunch and Claude's additional permission is presented explicitly. The existing available/spent Claude reset panel check also passed. A separate native UI test passed manual activation, automatic activation across three saved Codex accounts, and repeat prevention after relaunch. Its controlled provider fixture runs only in Debug simulator builds and is excluded from Release.
