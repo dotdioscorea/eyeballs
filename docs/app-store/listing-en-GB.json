@@ -7,7 +7,7 @@
     "name": "Requota: AI Usage Tracker",
     "subtitle": "Limits, resets & widgets",
     "promotionalText": "Check remaining AI usage and reset times across your accounts. Customise your dashboard and widgets, and compare usage trends over time.",
-    "description": "Keep track of your AI accounts in one place. Requota shows remaining usage, reset times and available credit balances, with widgets for a quick check throughout the day.\n\nConnect your accounts directly on your iPhone or iPad, including multiple accounts from the same provider. Give each a name, organise them by workstream and see which has allowance left.\n\n• Choose your view: rings, square tiles or compact bars. Search, filter, sort or arrange accounts in your own order.\n• Customise each account: show usage remaining or used, choose which limits and reset countdowns appear, and set your colours.\n• Add Home Screen and Lock Screen widgets: follow one account or use compact rows to see several together. Tap through to an account's details.\n• Explore your history: compare accounts on interactive charts, check recent burn rates and time-to-zero estimates, and view activity heatmaps with daily breakdowns.\n• Set your alerts: configure low-allowance warnings, reset reminders and reminders to use remaining allowance before a reset. Adjust notification rules for each provider.\n• Follow account events: look back at observed resets, early resets, plan changes and banked reset activity where available.\n\nSupported providers\nCodex, Claude, Grok, Gemini CLI / Code Assist, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp. Available details can include credit balances, extra spending and model-specific allowances.\n\nCredentials are stored in your device's Keychain. Usage history is stored locally. The source code is public, with a link in Settings.\n\nRequires an account with a supported provider. Available limits, balances and reset details depend on the provider and plan. History builds from readings collected by Requota. Background and widget refresh timing is controlled by iOS.\n\nRequota is an independent app and is not affiliated with the listed providers.",
+    "description": "Keep track of your AI accounts in one place. Requota shows remaining usage, reset times and available credit balances, with widgets for a quick check throughout the day.\n\nConnect your accounts directly on your iPhone or iPad, including multiple accounts from the same provider. Give each a name, organise them by workstream and see which has allowance left.\n\n• Choose your view: rings, square tiles or compact bars. Search, filter, sort or arrange accounts in your own order.\n• Customise each account: show usage remaining or used, choose which limits and reset countdowns appear, and set your colours.\n• Add Home Screen and Lock Screen widgets: follow one account or use compact rows to see several together. Tap through to an account's details.\n• Explore your history: compare accounts on interactive charts, check recent burn rates and time-to-zero estimates, and view activity heatmaps with daily breakdowns.\n• Set your alerts: configure low-allowance warnings, reset reminders and reminders to use remaining allowance before a reset. Adjust notification rules for each provider.\n• Follow account events: look back at observed resets, early resets, plan changes and banked reset activity where available.\n\nSupported providers\nCodex, Claude, Grok, Gemini CLI / Code Assist, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp.\n\nCredentials are stored in your device's Keychain. Usage history is stored locally. The source code is public, with a link in Settings.\n\nRequires an account with a supported provider.\n\nRequota is an independent app and is not affiliated with the listed providers.",
     "keywords": "quota,allowance,credits,balance,agents,coding,monitor,notifications,history,charts,burn,rate",
     "supportURL": "https://github.com/dotdioscorea/eyeballs/issues",
     "privacyPolicyURL": "https://dotdioscorea.github.io/eyeballs/",
@@ -25,7 +25,6 @@
     {
       "id": "01-overview",
       "headline": "See what’s left.",
-      "caption": "All your AI accounts in one view.",
       "asset": "assets/01-overview.png",
       "source": "docs/app-store/assets/01-overview.png",
       "sourceBuild": null,
@@ -36,7 +35,6 @@
     {
       "id": "02-widgets",
       "headline": "Six accounts. One widget.",
-      "caption": "Check remaining usage from your Home Screen.",
       "asset": "assets/02-widgets.png",
       "source": "docs/app-store/assets/02-widgets.png",
       "sourceBuild": null,
@@ -47,7 +45,6 @@
     {
       "id": "03-compact",
       "headline": "Keep it compact.",
-      "caption": "Limits and reset times in less space.",
       "asset": "assets/03-compact.png",
       "source": "docs/app-store/assets/03-compact.png",
       "sourceBuild": null,
@@ -58,7 +55,6 @@
     {
       "id": "04-charts",
       "headline": "Compare your usage.",
-      "caption": "History across accounts and providers.",
       "asset": "assets/04-charts.png",
       "source": "docs/app-store/assets/04-charts.png",
       "sourceBuild": null,
@@ -69,7 +65,6 @@
     {
       "id": "05-activity",
       "headline": "Find your patterns.",
-      "caption": "See activity by day and account.",
       "asset": "assets/05-activity.png",
       "source": "docs/app-store/assets/05-activity.png",
       "sourceBuild": null,
@@ -80,7 +75,6 @@
     {
       "id": "06-rings",
       "headline": "Usage and resets.",
-      "caption": "Track each allowance and its next reset.",
       "asset": "assets/06-rings.png",
       "source": "docs/app-store/assets/06-rings.png",
       "sourceBuild": null,
@@ -93,7 +87,7 @@
     "Six iPhone images at 1320 × 2868 and five iPad images at 2064 × 2752. PNG files are opaque and use sRGB.",
     "The actual app is captured on dedicated simulators using an isolated screenshot fixture. No credentials or real account data are used.",
     "Account names, plans and histories are illustrative. Forty days of distinct activity include idle periods and consistent quota resets; the final history values match the overview.",
-    "Store artwork adds framing and short captions around native captures. The widget image also includes a close-up crop of the actual widget. Original captures are included for inspection.",
+    "Store artwork adds framing and a title around native captures. The widget image also includes a close-up crop of the actual widget. Original captures are included for inspection.",
     "The screenshots reflect the working branch, including responsive tablet layouts and more realistic demo histories. They have not been uploaded to App Store Connect."
   ],
   "research": {
@@ -140,7 +134,6 @@
     {
       "id": "01-overview",
       "headline": "See what’s left.",
-      "caption": "All your AI accounts in one view.",
       "asset": "assets/ipad/01-overview.png",
       "source": "docs/app-store/assets/ipad/01-overview.png",
       "sourceBuild": null,
@@ -151,7 +144,6 @@
     {
       "id": "03-compact",
       "headline": "Keep it compact.",
-      "caption": "Limits and reset times in less space.",
       "asset": "assets/ipad/03-compact.png",
       "source": "docs/app-store/assets/ipad/03-compact.png",
       "sourceBuild": null,
@@ -162,7 +154,6 @@
     {
       "id": "04-charts",
       "headline": "Compare your usage.",
-      "caption": "History across accounts and providers.",
       "asset": "assets/ipad/04-charts.png",
       "source": "docs/app-store/assets/ipad/04-charts.png",
       "sourceBuild": null,
@@ -173,7 +164,6 @@
     {
       "id": "05-activity",
       "headline": "Find your patterns.",
-      "caption": "See activity by day and account.",
       "asset": "assets/ipad/05-activity.png",
       "source": "docs/app-store/assets/ipad/05-activity.png",
       "sourceBuild": null,
@@ -184,7 +174,6 @@
     {
       "id": "06-rings",
       "headline": "Usage and resets.",
-      "caption": "Track each allowance and its next reset.",
       "asset": "assets/ipad/06-rings.png",
       "source": "docs/app-store/assets/ipad/06-rings.png",
       "sourceBuild": null,

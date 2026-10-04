@@ -74,7 +74,7 @@ def main():
     text_lines += ["RECOMMENDED CATEGORIES", "Utilities; optional secondary category: Productivity", "",
                    "PRICE", listing["recommendations"]["pricing"], "", "SCREENSHOT ORDER"]
     for number, shot in enumerate(listing["screenshots"], 1):
-        text_lines += [f"{number}. {shot['headline']}", shot["caption"]]
+        text_lines += [f"{number}. {shot['headline']}"]
     text_lines += ["", "Screenshots use native captures with illustrative account data; original captures are included.",
                    "The listing has not been entered into App Store Connect or submitted for review.", ""]
     text_output = "\n".join(text_lines)
