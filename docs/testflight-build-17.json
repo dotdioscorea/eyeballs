@@ -1,0 +1,71 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "17",
+  "source_commit": "82ee4dda6763c3fd53771ce9d46fb39136f91410",
+  "source_tag": "testflight/1.0-17",
+  "build_id": "985fa292-7625-49e9-b812-f95abdc4dee0",
+  "ipa_sha256": "0b0a4d119a1499e5dd2e9885f69461252078fc9de2471c88d931abbde2ed2f30",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true,
+    "sdk": "iphoneos26.5",
+    "privacy_manifests": 2,
+    "non_exempt_encryption": false
+  },
+  "apple_status_checked_at_utc": "2026-10-04T16:28:44.614569+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "build": "17",
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 175,
+    "opt_in_live_tests_skipped": 3,
+    "native_ui_checks_passed": 6,
+    "native_ui_checks": [
+      "Demo restoration and layouts",
+      "History selection, events and calendar",
+      "Provider notification preferences and persistence",
+      "Low-allowance, approaching-reset and scheduled reset delivery with app closed",
+      "Six-account widget persistence and account deep links",
+      "Both Codex system sign-in options, login-page presentation and cancellation"
+    ],
+    "limits": [
+      "Simulator checks do not establish physical-device background refresh frequency.",
+      "Completed live provider authorization was not repeated for this build; provider integrations are unchanged from build 16."
+    ]
+  },
+  "app_store_draft": {
+    "state": "PREPARE_FOR_SUBMISSION",
+    "selected_build": "17",
+    "release_type": "MANUAL",
+    "submitted_for_review": false,
+    "price": "Free",
+    "selected_territories": 175,
+    "available_in_new_territories": true,
+    "privacy_label": "Data Not Collected",
+    "privacy_responses_published": true,
+    "age_rating": "4+ with regional exceptions",
+    "categories": [
+      "Utilities",
+      "Productivity"
+    ],
+    "iphone_screenshots": 6,
+    "ipad_screenshots": 5,
+    "all_screenshots_processed": true,
+    "review_contact_configured": true,
+    "demo_review_notes_match": true,
+    "content_rights_declaration": "Pending owner confirmation"
+  }
+}
