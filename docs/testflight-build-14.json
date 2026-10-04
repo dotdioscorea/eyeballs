@@ -1,0 +1,49 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "14",
+  "source_commit": "bf4ebc2866cbfcfdd4d7c8bd0037473a847cf0af",
+  "source_tag": "testflight/1.0-14",
+  "build_id": "671d1307-88c0-4b8e-98ab-2ca44e97dd94",
+  "ipa_sha256": "901bd3edf36180c7d6388f0c5ad15561b2cfc230321fecc3acfb9dda5cc95ec7",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true
+  },
+  "apple_status_checked_at_utc": "2026-10-04T01:41:33.979269+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "internal_tester_assignments": 1,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "build": "14",
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 152,
+    "opt_in_native_live_tests_rerun": false,
+    "native_ui_checks_passed": 4,
+    "native_ui_checks": [
+      "iPhone 15 credit tiles, four-ring 100% and Updates settings with background/resume",
+      "Four-ring cards/tiles/detail and exhausted allowance with credits",
+      "Six-account widget after app termination with correct row deep link",
+      "Release Demo restoration"
+    ],
+    "final_tile_only_change_rechecked_with_two_affected_ui_tests": true,
+    "review_model": "claude-opus-5-5",
+    "validation_details": "refresh-layout-validation-2026-10-04.json",
+    "limits": [
+      "iOS decides background delivery; actual cadence needs observation on physical devices.",
+      "The main app fetches usage; widgets request main-app background work and read protected summaries. Widget reloads are not new history samples.",
+      "Final screenshots cover iPhone 15 at default text size; narrow phones and larger accessibility text sizes remain manual checks.",
+      "Lock Screen and balance-only rings-widget changes have source/compile validation; on-device visual checks remain outstanding."
+    ]
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "product": "Requota",
+  "source_commit": "bf4ebc2866cbfcfdd4d7c8bd0037473a847cf0af",
+  "date": "2026-10-04",
+  "tests": {
+    "unit_passed": 152,
+    "unit_opt_in_skipped": 3,
+    "distinct_native_ui_checks_passed": 4,
+    "native_ui_checks": [
+      "iPhone 15 credit tiles, four-ring 100% and Updates settings with background/resume",
+      "Four-ring cards/tiles/detail and exhausted allowance with credits",
+      "Six-account widget after app termination with correct row deep link",
+      "Release Demo restoration"
+    ],
+    "final_legend_only_change_rechecked": [
+      "Credit tiles and Updates settings",
+      "Four-ring cards/tiles/detail"
+    ]
+  },
+  "refresh_behaviour": {
+    "foreground_default_minutes": 1,
+    "foreground_options_minutes": [
+      1,
+      2,
+      5,
+      10
+    ],
+    "background_refresh_eligibility_minutes": 15,
+    "background_processing_eligibility_minutes": 30,
+    "background_processing_requires_network": true,
+    "background_processing_requires_charging": false,
+    "schedule_next_before_network": true,
+    "preserve_earlier_pending_request": true,
+    "widget_timeline_can_request_main_app_refresh": true,
+    "stale_widget_refresh_eligible_immediately": true,
+    "finish_inflight_foreground_with_finite_assertion": true,
+    "background_delivery_guaranteed": false,
+    "history_samples_are_observed_only": true,
+    "credentials_shared_with_widgets": false,
+    "primary_documentation": [
+      "https://developer.apple.com/documentation/uikit/using-background-tasks-to-update-your-app",
+      "https://developer.apple.com/documentation/backgroundtasks/bgtaskrequest/earliestbegindate",
+      "https://developer.apple.com/documentation/uikit/extending-your-app-s-background-execution-time",
+      "https://developer.apple.com/documentation/widgetkit/keeping-a-widget-up-to-date"
+    ]
+  },
+  "design_review": {
+    "requested_model": "claude-opus-5-5",
+    "observed_models": [
+      "claude-opus-5-5"
+    ],
+    "findings_resolved": [
+      "Credit text height compression",
+      "Legend percentage association and weekly-time label truncation",
+      "Inconsistent ring centre captions in tiles",
+      "Empty allowance array hiding account-widget credits",
+      "Undersized balance in rings-layout widgets"
+    ],
+    "final_verdict": "No material issue visible in the final iPhone 15 tile screenshot.",
+    "fixture_provenance": "App credit stress and mixed-provider widget tests intentionally use different anonymous datasets."
+  },
+  "limits": [
+    "iOS decides background delivery; actual cadence needs observation on physical devices.",
+    "The main app fetches usage; widgets request main-app background work and read protected summaries. Widget reloads are not new history samples.",
+    "Final screenshots cover iPhone 15 at default text size; narrow phones and larger accessibility text sizes remain manual checks.",
+    "Lock Screen and balance-only rings-widget changes have source/compile validation; on-device visual checks remain outstanding."
+  ],
+  "evidence": {
+    "final_tile_image_sha256": "848480116f0804a432d3ff70e99e7a35497b47baf107a22ba54a6f042422d92c",
+    "final_tile_review": "**Verdict: ship \u2014 nothing visible in this screenshot blocks release.**\n\n- **Weekly time labels:** no truncation. \"Wk time 43%\", \"45%\", \"50%\", \"52%\" and \"55%\" all render in full, as does \"5h time 60%\" on the densest tile (Personal: four readings plus credits).\n- **Legend layout:** rows sit leading-aligned with the Credits row, and values stay beside their labels. This matches `DashboardView.swift:244-248`, where the legend `HStack` is framed leading with no trailing `Spacer`.\n- **Credits rows:** \"1,234.57\" and \"15\" are unclipped, and the credit-only Research tile (\"0.5 Credits\") is centred cleanly.\n- **Unresolved material issues:** none visible. The half-visible \"Co\u2026\" filter chip and the bottom row sitting against the tab bar are ordinary scroll edges, not clipping.\n\nThis covers one iPhone 15 screenshot at default text size. The test results and the widget image are as you reported them; I did not check them."
+  }
+}
