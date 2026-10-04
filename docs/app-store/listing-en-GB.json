@@ -1,0 +1,127 @@
+{
+  "status": "draft-for-owner-review",
+  "preparedOn": "2026-10-04",
+  "locale": "en-GB",
+  "appVersion": "1.0",
+  "metadata": {
+    "name": "Requota: AI Usage Tracker",
+    "subtitle": "Limits, resets & widgets",
+    "promotionalText": "Check remaining AI usage and reset times across your accounts. Customise your dashboard and widgets, and compare usage trends over time.",
+    "description": "Keep track of your AI accounts in one place. Requota shows remaining usage, reset times and available credit balances, with widgets for a quick check throughout the day.\n\nConnect your accounts directly on your iPhone, including multiple accounts from the same provider. Give each a name, organise them by workstream and see which has allowance left.\n\n• Choose your view: rings, square tiles or compact bars. Search, filter, sort or arrange accounts in your own order.\n• Customise each account: show usage remaining or used, choose which limits and reset countdowns appear, and set your colours.\n• Add Home Screen and Lock Screen widgets: follow one account or use compact rows to see several together. Tap through to an account's details.\n• Explore your history: compare accounts on interactive charts, check recent burn rates and time-to-zero estimates, and view activity heatmaps with daily breakdowns.\n• Set your alerts: configure low-allowance warnings, reset reminders and reminders to use remaining allowance before a reset. Adjust notification rules for each provider.\n• Follow account events: look back at observed resets, early resets, plan changes and banked reset activity where available.\n\nSupported providers\nCodex, Claude, Grok, Gemini CLI / Code Assist, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp. Available details can include credit balances, extra spending and model-specific allowances.\n\nCredentials are stored in your iPhone's Keychain. Usage history is stored locally. The source code is public, with a link in Settings.\n\nRequires an account with a supported provider. Available limits, balances and reset details depend on the provider and plan. History builds from readings collected by Requota. Background and widget refresh timing is controlled by iOS.\n\nRequota is an independent app and is not affiliated with the listed providers.",
+    "keywords": "quota,allowance,credits,balance,agents,coding,monitor,notifications,history,charts,burn,rate",
+    "supportURL": "https://github.com/dotdioscorea/eyeballs/issues",
+    "privacyPolicyURL": "https://dotdioscorea.github.io/eyeballs/",
+    "marketingURL": null,
+    "copyright": "2026 Aaron Rucinski"
+  },
+  "recommendations": {
+    "primaryCategory": "Utilities",
+    "secondaryCategory": "Productivity",
+    "pricing": "Owner to choose; the copy does not assume a price or a paid tier.",
+    "localisations": "Start with this English listing; adapt spelling for en-US if that localisation is added.",
+    "whatsNew": "Omit for the initial App Store version; write short factual notes for subsequent updates."
+  },
+  "screenshots": [
+    {
+      "id": "01-overview",
+      "headline": "Your AI usage at a glance",
+      "caption": "Remaining allowance and reset times across your accounts.",
+      "asset": "assets/01-overview.png",
+      "source": "artifacts/build14-release-screenshots/7EB8733A-C6ED-4277-B263-7B817AFDA726.png",
+      "sourceBuild": 14,
+      "capture": "Tiles with Codex and Claude, including a second Codex account."
+    },
+    {
+      "id": "02-widgets",
+      "headline": "Multiple accounts in one widget",
+      "caption": "Choose rings or compact rows for your Home Screen.",
+      "asset": "assets/02-widgets.png",
+      "source": "artifacts/build15-accessory-shots/3F28D5AF-C1FF-4837-9C8B-9591AFE67954.png",
+      "sourceBuild": 15,
+      "capture": "Home Screen with the six-account rows widget. Recapture a clean simulator Home Screen without the UI-test runner icon."
+    },
+    {
+      "id": "03-compact",
+      "headline": "More accounts, less scrolling",
+      "caption": "Compact bars, saved order and provider filters.",
+      "asset": "assets/03-compact.png",
+      "source": "artifacts/build14-release-screenshots/1F877A56-09B8-440B-8E48-6E6FA8AE509B.png",
+      "sourceBuild": 14,
+      "capture": "Compact overview using fictional account names and reported-shaped sample metrics."
+    },
+    {
+      "id": "04-charts",
+      "headline": "Compare usage across accounts",
+      "caption": "Usage history, rate charts and interactive comparisons.",
+      "asset": "assets/04-charts.png",
+      "source": "artifacts/build16-release-shots/E5F5546E-3347-4C14-AB89-E512EDF69B10.png",
+      "sourceBuild": 16,
+      "capture": "Shared Lines chart with three selected accounts; retain their matching readout below the plot."
+    },
+    {
+      "id": "05-activity",
+      "headline": "See your usage patterns",
+      "caption": "Activity heatmaps with a breakdown for each day.",
+      "asset": "assets/05-activity.png",
+      "source": "artifacts/build16-release-shots/12CB6FB3-FCB1-4045-B5DD-CF8AA8D51945.png",
+      "sourceBuild": 16,
+      "capture": "Combined monthly Activity with a completed sample month; companion image or inset can show the day breakdown."
+    },
+    {
+      "id": "06-rings",
+      "headline": "Choose what each ring shows",
+      "caption": "Usage remaining and time to reset, in your colours.",
+      "asset": "assets/06-rings.png",
+      "source": "artifacts/build14-release-screenshots/4B42EE4C-D6CC-470F-84CC-0AACE56CBA09.png",
+      "sourceBuild": 14,
+      "capture": "Cards with short-window usage, weekly usage and weekly time."
+    }
+  ],
+  "screenshotNotes": [
+    "These are visual direction drafts using existing simulator sample captures, not the final App Store upload images.",
+    "Recapture all approved compositions from the release candidate, with consistent status bars and sample account names. Leave sample data clearly identified.",
+    "Lead with the overview and dense widget; keep headings short and show the actual app UI without replacing its values or controls.",
+    "Add a real Lock Screen capture once the screenshot direction is approved; the accessory preview screen is not a substitute for a Lock Screen screenshot.",
+    "The iOS target includes iPad. Prepare native iPad screenshots as well as the required iPhone screenshot sizes before submission. Use Apple's current screenshot specifications."
+  ],
+  "research": {
+    "checkedOn": "2026-10-04",
+    "approach": "A concise benefit-led opening, concrete features and a short availability note. Emphasise multiple accounts per provider, custom layouts and dense widgets. Avoid claims of continuous tracking, guaranteed alerts or universal token/cost measurement.",
+    "comparisons": [
+      {
+        "name": "AI Token Limits",
+        "url": "https://apps.apple.com/ca/app/ai-token-limits/id6803703387",
+        "observations": "Leads with remaining limits and direct phone access, then groups widgets, provider values and privacy. Its listing specifies one account per provider; Requota can make multi-account support more prominent."
+      },
+      {
+        "name": "AI Limits & Reset Tracker",
+        "url": "https://apps.apple.com/us/app/ai-limits-reset-tracker/id6758946226",
+        "observations": "Closest feature breadth: multiple accounts, reset timers, pace, widgets, history and heatmaps. Its copy is extensive; use a shorter version of that feature coverage for Requota."
+      },
+      {
+        "name": "Usage for Claude",
+        "url": "https://apps.apple.com/us/app/usage-for-claude/id6755173244",
+        "observations": "Makes subscription limits, trends and widgets understandable. Requota's opening should be similarly concrete while describing its broader provider coverage. The listing contains mixed platform copy, so avoid treating every listed feature as an iPhone feature."
+      },
+      {
+        "name": "CodexBar - Usage of AI",
+        "url": "https://apps.apple.com/us/app/codexbar-usage-of-ai/id6760216772",
+        "observations": "Promotes comparisons, detailed data and open source, while clearly explaining its Mac companion requirement. Requota connects on the iPhone; describe that positively without comparison claims."
+      }
+    ],
+    "appleReferences": [
+      {
+        "name": "Creating Your Product Page",
+        "url": "https://developer.apple.com/app-store/product-page"
+      },
+      {
+        "name": "Platform version information",
+        "url": "https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information"
+      },
+      {
+        "name": "Screenshot specifications",
+        "url": "https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications"
+      }
+    ]
+  }
+}
