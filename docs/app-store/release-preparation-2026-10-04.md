@@ -1,10 +1,10 @@
 # Requota 1.0 release preparation
 
-Build **1.0 (17)** is available to the existing internal and external TestFlight groups. Apple approved its external beta review. The source is merge commit `82ee4dda6763c3fd53771ce9d46fb39136f91410`, tagged `testflight/1.0-17`; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) is merged into `main`.
+Build **1.0 (18)** is available to the existing internal and external TestFlight groups. Apple approved its external beta review. Its binary source is `afc88f322825184cbeb347bb9725c0fc3ce66109`, tagged `testflight/1.0-18`. [PR #2](https://github.com/dotdioscorea/requota/pull/2) contains the Claude reset fix and source rename.
 
 ## App Store Connect
 
-The [version draft](https://appstoreconnect.apple.com/apps/6818509879/distribution/ios/version/inflight) has build 17 selected and remains **Prepare for Submission**. No App Store review submission or public release was made. Release is set to **manual**.
+The [version draft](https://appstoreconnect.apple.com/apps/6818509879/distribution/ios/version/inflight) has build 18 selected and remains **Prepare for Submission**. No App Store review submission or public release was made. Release is set to **manual**.
 
 - English UK title, subtitle, description, promotional text, keywords, support URL and copyright are saved.
 - Six iPhone and five iPad screenshots finished processing, in the agreed order.
@@ -18,9 +18,9 @@ Content Rights is saved as “Yes” on the owner’s confirmation of the necess
 
 ## Validation
 
-175 unit tests passed; three opt-in live tests were skipped. Six native simulator checks passed: Demo restoration, history/events, notification settings, delivery while the app is closed, six-account widget persistence/deep links, and both Codex sign-in sheets and cancellation. Completed provider authorization was not repeated for this build.
+186 unit tests passed, including a live native Claude identity/plan/usage/reset-inventory check; three other opt-in live tests were skipped. Three native simulator checks passed: Claude available/spent reset panels, Demo restoration, and six-account widget persistence/account links. [The reset handoff](../claude-reset-fix-2026-10-04.md) records the original gaps and verification limits.
 
-The exact uploaded IPA was checked for matching app/widget versions, distribution signatures, the shared App Group, both privacy manifests, background modes/task identifiers and the encryption declaration. It was built with the iOS 26.5 SDK. See [the release record](../testflight-build-17.json) for the package hash and Apple status.
+The exact uploaded IPA was checked for matching app/widget versions, distribution signatures, the shared App Group, both privacy manifests, background modes/task identifiers and the encryption declaration. It was built with the iOS 26.5 SDK. See [the release record](../testflight-build-18.json) for the package hash and Apple status.
 
 ## Administration
 

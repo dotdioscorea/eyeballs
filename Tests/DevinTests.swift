@@ -1,6 +1,6 @@
 import XCTest
 import CryptoKit
-@testable import Eyeballs
+@testable import Requota
 
 final class DevinTests: XCTestCase {
     static func profile(plan: String = "Free", daily: Any? = 100, weekly: Any? = 75) -> [String: Any] {

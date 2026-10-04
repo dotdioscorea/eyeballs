@@ -106,7 +106,7 @@ struct AccountWidgetView: View {
                     }
                 }
             } else { WidgetEmptyView() }
-        }.widgetURL(entry.accounts.first.map { accountURL($0) } ?? URL(string: "eyeballs://accounts")!)
+        }.widgetURL(entry.accounts.first.map { accountURL($0) } ?? URL(string: "requota://accounts")!)
             .environment(\.colorScheme, .dark).containerBackground(Color(hex: 0x1B1E1B), for: .widget)
     }
 }
@@ -149,7 +149,7 @@ struct OverviewWidgetView: View {
                     }
                 }.frame(maxHeight: .infinity, alignment: .center)
             }
-        }.widgetURL(URL(string: "eyeballs://accounts")!).environment(\.colorScheme, .dark).containerBackground(Color(hex: 0x1B1E1B), for: .widget)
+        }.widgetURL(URL(string: "requota://accounts")!).environment(\.colorScheme, .dark).containerBackground(Color(hex: 0x1B1E1B), for: .widget)
     }
 }
 struct CompactWidgetRow: View {
@@ -225,7 +225,7 @@ struct CompactWidgetRow: View {
 struct WidgetEmptyView: View {
     var body: some View { VStack(alignment: .leading, spacing: 8) { Text("No accounts").font(.headline); Text("Open Requota to add an account.").font(.caption).foregroundStyle(.secondary) } }
 }
-private func accountURL(_ account: AgentAccount) -> URL { URL(string: "eyeballs://account/\(account.id)")! }
+private func accountURL(_ account: AgentAccount) -> URL { URL(string: "requota://account/\(account.id)")! }
 private func widgetStatus(_ account: AgentAccount, at date: Date, readings: [MetricReading]) -> String {
     if account.needsLogin { return "Reconnect in Requota" }
     if let snapshot = account.snapshot, snapshot.isStale(at: date) { return "Updated \(snapshot.updatedAt.formatted(date: .omitted, time: .shortened)) · stale" }
@@ -234,7 +234,7 @@ private func widgetStatus(_ account: AgentAccount, at date: Date, readings: [Met
     return account.snapshot.map { "Updated \($0.updatedAt.formatted(date: .omitted, time: .shortened))" } ?? "No reading"
 }
 @main
-struct EyeballsWidgets: WidgetBundle {
+struct RequotaWidgets: WidgetBundle {
     var body: some Widget { AccountWidget(); AccountRowsWidget(); OverviewWidget(); LockScreenWidget() }
 }
 struct AccountRowsWidget: Widget {

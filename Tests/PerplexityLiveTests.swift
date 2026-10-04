@@ -1,5 +1,5 @@
 import XCTest
-@testable import Eyeballs
+@testable import Requota
 
 // Opt-in check using a private session created by this app's email protocol.
 // Never use exported browser cookies. The normal test suite performs no login.

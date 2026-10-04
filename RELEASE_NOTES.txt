@@ -1,3 +1,4 @@
-- Adaptive iPad account grids and wider charts.
-- Inline Activity breakdowns on larger screens.
-- Improved Demo accounts and usage history.
+Claude banked reset counts and expiry dates.
+Detect reset use after usage resumes.
+More reset details in optional debug reports.
+Repository and source project renamed to Requota.

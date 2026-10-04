@@ -4,5 +4,5 @@ Open Settings → Demo for isolated sample access. Thirteen labelled sample acco
 
 We request acceptance of this demonstration path because sharing third-party credentials would expose unrelated private accounts. We can respond to requests for additional testing access.
 
-Privacy: https://dotdioscorea.github.io/eyeballs/
-Source and support: https://github.com/dotdioscorea/eyeballs
+Privacy: https://dotdioscorea.github.io/requota/
+Source and support: https://github.com/dotdioscorea/requota

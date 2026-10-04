@@ -12,7 +12,7 @@ struct SettingsView: View {
             Section {
                 NavigationLink("Updates") { UpdateSettingsView() }
                 NavigationLink("Privacy & storage") { PrivacyView() }
-                Link("Source code", destination: URL(string: "https://github.com/dotdioscorea/eyeballs")!)
+                Link("Source code", destination: URL(string: "https://github.com/dotdioscorea/requota")!)
                 NavigationLink("Report a problem") { ProblemReportView() }
             }
             Section {
@@ -68,7 +68,7 @@ struct PrivacyView: View {
                 Button(cleared ? "Diagnostics cleared" : "Clear diagnostics") { Diagnostics.clear(); cleared = true }.disabled(cleared)
             }
             Section {
-                Link("Privacy policy", destination: URL(string: "https://dotdioscorea.github.io/eyeballs/")!)
+                Link("Privacy policy", destination: URL(string: "https://dotdioscorea.github.io/requota/")!)
             }
         }.font(.subheadline).scrollContentBackground(.hidden).background(Theme.background)
             .navigationTitle("Privacy & storage").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
@@ -115,7 +115,7 @@ struct ProblemReportView: View {
         } catch { exportError = "Could not create the debug bundle." }
     }
     private func openIssue() {
-        var url = URLComponents(string: "https://github.com/dotdioscorea/eyeballs/issues/new")!
+        var url = URLComponents(string: "https://github.com/dotdioscorea/requota/issues/new")!
         let body = String(details.prefix(6000)) + "\n\nApp: \(Diagnostics.version)\niOS: \(UIDevice.current.systemVersion)" + (includeDebug ? "\n\nAttach requota-debug.json here." : "")
         url.queryItems = [URLQueryItem(name: "title", value: String(title.prefix(160))), URLQueryItem(name: "body", value: body)]
         if let url = url.url { openURL(url) }

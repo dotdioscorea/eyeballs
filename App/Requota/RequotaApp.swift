@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         if let value = response.notification.request.content.userInfo["accountID"] as? String, let id = UUID(uuidString: value) {
-            Task { @MainActor [weak self] in self?.session.open(URL(string: "eyeballs://account/\(id.uuidString)")!) }
+            Task { @MainActor [weak self] in self?.session.open(URL(string: "requota://account/\(id.uuidString)")!) }
         }
         completionHandler()
     }
@@ -69,7 +69,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 }
 
 @main
-struct EyeballsApp: App {
+struct RequotaApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @Environment(\.scenePhase) private var phase
     @AppStorage("foreground-refresh-minutes") private var foregroundInterval = 1

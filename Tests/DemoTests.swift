@@ -1,5 +1,5 @@
 import XCTest
-@testable import Eyeballs
+@testable import Requota
 
 @MainActor
 final class DemoTests: XCTestCase {
@@ -103,7 +103,7 @@ final class DemoTests: XCTestCase {
         let live = AccountStore(location: directory.appendingPathComponent("real/accounts.json"), vault: MemoryVault(), integratesWithSystem: false)
         let account = Fixture.account(Fixture.credential("real")); try live.connect(account, credential: Fixture.credential("real"))
         let session = AccountSession(live: live, demoLocation: directory.appendingPathComponent("demo/accounts.json"), restoresMode: false, integratesWithSystem: false, publishMode: { _ in })
-        session.open(URL(string: "eyeballs://account/\(DemoData.id(1))")!)
+        session.open(URL(string: "requota://account/\(DemoData.id(1))")!)
         XCTAssertTrue(session.isDemo); XCTAssertEqual(session.current.notificationAccountID, DemoData.id(1))
         session.open(URL(string: "eyeballs://account/\(account.id)")!)
         XCTAssertFalse(session.isDemo); XCTAssertEqual(live.notificationAccountID, account.id)

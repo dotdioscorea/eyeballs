@@ -1,7 +1,7 @@
 import CryptoKit
 import Security
 import XCTest
-@testable import Eyeballs
+@testable import Requota
 
 final class AuthenticationTests: XCTestCase {
     let callback = URL(string: "http://127.0.0.1:1455/auth/callback")!

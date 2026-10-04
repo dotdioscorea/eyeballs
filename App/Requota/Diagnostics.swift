@@ -2,7 +2,7 @@ import Foundation
 import CoreFoundation
 import UIKit
 
-enum DiagnosticStage: String, Codable { case signInStarted, identityVerified, usageVerified, signInFailed, refreshSucceeded, refreshFailed, refreshCycle, http, usageParsed }
+enum DiagnosticStage: String, Codable { case signInStarted, identityVerified, usageVerified, signInFailed, refreshSucceeded, refreshFailed, refreshCycle, http, usageParsed, resetCompared }
 enum DiagnosticFailure: String, Codable {
     case cancelled, timeout, callback, identity, signedOut, permission, throttled, response, accountMismatch, network, other
     static func category(_ error: Error) -> Self {
@@ -47,6 +47,24 @@ struct DiagnosticEvent: Codable {
     var refresh: RefreshCycleDiagnostic?
     // Local only; replaced with a bundle-local alias during export.
     var connection: String?
+    var resets: ResetComparisonDiagnostic?
+}
+struct ResetComparisonDiagnostic: Codable {
+    var previousAvailable: Int?
+    var currentAvailable: Int?
+    var previousGrantRemaining: Int?
+    var currentGrantRemaining: Int?
+    var previousWeeklyUsed: Double?
+    var currentWeeklyUsed: Double?
+    var events: [AccountEvent.Kind]
+    static func make(previous: UsageSnapshot?, current: UsageSnapshot, events: [AccountEvent]) -> Self {
+        Self(previousAvailable: previous?.bankedResets.map { $0.reduce(0) { $0 + $1.count } },
+             currentAvailable: current.bankedResets.map { $0.reduce(0) { $0 + $1.count } },
+             previousGrantRemaining: previous?.resetInventory.map { $0.grants.reduce(0) { $0 + $1.remaining } },
+             currentGrantRemaining: current.resetInventory.map { $0.grants.reduce(0) { $0 + $1.remaining } },
+             previousWeeklyUsed: previous?.windows.first(where: EventDetection.weekly)?.safePercent,
+             currentWeeklyUsed: current.windows.first(where: EventDetection.weekly)?.safePercent, events: events.map(\.kind))
+    }
 }
 enum DiagnosticValueType: String, Codable { case missing, null, number, string, boolean, object, array, other }
 enum UsageCalculation: String, Codable { case reportedPercentage, protoZero, legacyIncludedBudget, onDemandBudget, unavailable, providerWindows }
@@ -56,6 +74,8 @@ struct UsageParsingDiagnostic: Codable {
     var fields: [KnownUsageField: DiagnosticValueType]
     var calculation: UsageCalculation
     var readings: [DiagnosticReading]
+    var resetResponse: ResetResponse?
+    enum ResetResponse: String, Codable { case missing, null, parsed, surface, clientVersion, ineligible, invalid }
     enum KnownUsageField: String, Codable, CaseIterable {
         case creditUsagePercent, currentPeriod, periodType, periodStart, periodEnd, isUnifiedBillingUser
         case monthlyLimit, used, onDemandCap, onDemandUsed, prepaidBalance
@@ -64,9 +84,9 @@ struct UsageParsingDiagnostic: Codable {
         case kimiUsages, kimiWallet, kimiLegacyUsage
         case ampUsageText
         case devinUserStatus, devinPlanStatus, dailyQuotaRemainingPercent, weeklyQuotaRemainingPercent, dailyQuotaResetAtUnix, weeklyQuotaResetAtUnix, overageBalanceMicros, acuConsumed, acuLimit, devinModels
-        case credits, spend, modelUsage, additionalRateLimits, extraUsage, scopedLimits, weeklyBreakdown
+        case credits, spend, modelUsage, additionalRateLimits, extraUsage, scopedLimits, weeklyBreakdown, resetProgram, resetGrants, resetEligibility
     }
-    enum CodingKeys: String, CodingKey { case fields, calculation, readings }
+    enum CodingKeys: String, CodingKey { case fields, calculation, readings, resetResponse }
     init(fields: [KnownUsageField: DiagnosticValueType], calculation: UsageCalculation, readings: [DiagnosticReading]) {
         self.fields = fields; self.calculation = calculation; self.readings = readings
     }
@@ -78,12 +98,14 @@ struct UsageParsingDiagnostic: Codable {
         }
         calculation = try container.decode(UsageCalculation.self, forKey: .calculation)
         readings = try container.decode([DiagnosticReading].self, forKey: .readings)
+        resetResponse = try container.decodeIfPresent(ResetResponse.self, forKey: .resetResponse)
     }
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(Dictionary(uniqueKeysWithValues: fields.map { ($0.key.rawValue, $0.value) }), forKey: .fields)
         try container.encode(calculation, forKey: .calculation)
         try container.encode(readings, forKey: .readings)
+        try container.encodeIfPresent(resetResponse, forKey: .resetResponse)
     }
     static func type(_ value: Any?) -> DiagnosticValueType {
         guard let value else { return .missing }
@@ -150,17 +172,31 @@ struct UsageParsingDiagnostic: Codable {
             fields[.fiveHour] = type(object["five_hour"]); fields[.sevenDay] = type(object["seven_day"])
             fields[.extraUsage] = type(object["extra_usage"]); fields[.spend] = type(object["spend"])
             fields[.scopedLimits] = type(object["limits"]); fields[.weeklyBreakdown] = type(object["seven_day_breakdown"])
+            fields[.resetProgram] = type(object["cedar_ember"])
+            let program = object["cedar_ember"] as? [String: Any] ?? [:]
+            fields[.resetGrants] = type(program["grants"]); fields[.resetEligibility] = type(program["eligible"])
         }
         let readings = (snapshot?.windows ?? []).map { window -> DiagnosticReading in
             guard let raw = window.usedPercent else { return .missing }
             guard raw.isFinite, raw >= 0 else { return .invalid }
             return raw == 0 ? .zeroUsed : raw >= 100 ? .fullUsed : .partialUsed
         }
-        return Self(fields: fields, calculation: calculation, readings: readings)
+        var diagnostic = Self(fields: fields, calculation: calculation, readings: readings)
+        if provider == .claude {
+            let program = object["cedar_ember"] as? [String: Any] ?? [:]
+            if object["cedar_ember"] == nil { diagnostic.resetResponse = .missing }
+            else if object["cedar_ember"] is NSNull { diagnostic.resetResponse = .null }
+            else if snapshot?.resetInventory != nil { diagnostic.resetResponse = .parsed }
+            else if program["ineligible_reason"] as? String == "surface" { diagnostic.resetResponse = .surface }
+            else if program["ineligible_reason"] as? String == "cli_version" { diagnostic.resetResponse = .clientVersion }
+            else if program["eligible"] as? Bool == false { diagnostic.resetResponse = .ineligible }
+            else { diagnostic.resetResponse = .invalid }
+        }
+        return diagnostic
     }
 }
 struct DebugBundle: Codable {
-    var schemaVersion = 4
+    var schemaVersion = 5
     var createdAt: Date
     var appVersion: String
     var systemVersion: String
@@ -182,6 +218,8 @@ struct DebugBundle: Codable {
         var configuredMetricCount: Int
         var missingUsageCount: Int
         var missingTimeCount: Int
+        var bankedResetCount: Int?
+        var resetInventoryAgeSeconds: Int?
     }
     struct RefreshStatus: Codable {
         var backgroundRefresh: String
@@ -201,10 +239,10 @@ enum Diagnostics {
     // Only typed fields are accepted. Never store URLs, HTTP bodies, error messages,
     // OAuth state, labels, email addresses or credentials. Local UUIDs are
     // retained for correlation and replaced with anonymous aliases in exports.
-    static func record(_ stage: DiagnosticStage, provider: Provider? = nil, status: Int? = nil, failure: DiagnosticFailure? = nil, privateSession: Bool? = nil, endpoint: DiagnosticEndpoint? = nil, parsing: UsageParsingDiagnostic? = nil, refresh: RefreshCycleDiagnostic? = nil) {
+    static func record(_ stage: DiagnosticStage, provider: Provider? = nil, status: Int? = nil, failure: DiagnosticFailure? = nil, privateSession: Bool? = nil, endpoint: DiagnosticEndpoint? = nil, parsing: UsageParsingDiagnostic? = nil, refresh: RefreshCycleDiagnostic? = nil, resets: ResetComparisonDiagnostic? = nil) {
         lock.lock(); defer { lock.unlock() }
         var events = load().filter { $0.date > Date.now.addingTimeInterval(-7 * 86400) }
-        events.append(DiagnosticEvent(date: .now, provider: provider ?? context?.provider, stage: stage, status: status, endpoint: endpoint, failure: failure, privateSession: privateSession, parsing: parsing, refresh: refresh, connection: context?.accountID.uuidString))
+        events.append(DiagnosticEvent(date: .now, provider: provider ?? context?.provider, stage: stage, status: status, endpoint: endpoint, failure: failure, privateSession: privateSession, parsing: parsing, refresh: refresh, connection: context?.accountID.uuidString, resets: resets))
         events = Array(events.suffix(100))
         do {
             try FileManager.default.createDirectory(at: location.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -264,7 +302,9 @@ enum Diagnostics {
                                                   windowCount: account.snapshot?.windows.count ?? 0,
                                                   configuredMetricCount: account.displaySettings.rings.count,
                                                   missingUsageCount: account.snapshot?.windows.filter { $0.safePercent == nil }.count ?? 0,
-                                                  missingTimeCount: account.readings(at: now).filter { $0.definition.kind == .time && $0.percent == nil }.count)
+                                                  missingTimeCount: account.readings(at: now).filter { $0.definition.kind == .time && $0.percent == nil }.count,
+                                                  bankedResetCount: account.snapshot?.bankedResets.map { $0.reduce(0) { $0 + $1.count } },
+                                                  resetInventoryAgeSeconds: account.snapshot?.resetInventory.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.checkedAt)))) })
                     }, events: safeEvents)
     }
     static var version: String { "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"))" }
@@ -273,7 +313,7 @@ enum Diagnostics {
         return try encoder.encode(bundle)
     }
     static func export(_ data: Data) throws -> URL {
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("EyeballsReports")
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("RequotaReports")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let path = folder.appendingPathComponent("requota-debug.json")
         try data.write(to: path, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])

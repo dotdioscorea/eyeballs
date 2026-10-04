@@ -71,7 +71,7 @@ struct UsageClient {
             endpoint = "https://chatgpt.com/backend-api/wham/usage"
         case .claude:
             expectedIssuer = "https://platform.claude.com"
-            endpoint = "https://api.anthropic.com/api/oauth/usage"
+            endpoint = "https://api.anthropic.com/api/oauth/usage?cedar_ember=1"
         case .gemini:
             expectedIssuer = GeminiAuth.issuer
             endpoint = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota"
@@ -106,7 +106,12 @@ struct UsageClient {
         request.setValue("Requota/1.0", forHTTPHeaderField: "User-Agent")
         request.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
         if provider == .codex, let id = credential.accountID { request.setValue(id, forHTTPHeaderField: "ChatGPT-Account-Id") }
-        if provider == .claude { request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta") }
+        if provider == .claude {
+            request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+            // The reset-grant response is gated on the Claude Code client surface.
+            // Keep our own product identity in the header as well.
+            request.setValue("claude-cli/2.1.287 (external, cli) Requota/1.0", forHTTPHeaderField: "User-Agent")
+        }
         if provider == .grok {
             request.setValue("xai-grok-cli", forHTTPHeaderField: "x-xai-token-auth")
             let teamID = credential.accountID?.hasPrefix("Team:") == true ? credential.accountID?.dropFirst(5).description : nil
@@ -135,7 +140,8 @@ struct UsageClient {
             tier = assist["paidTier"] as? [String: Any] ?? assist["currentTier"] as? [String: Any]
             let project = try GeminiAuth.quotaProject(assist)
             raw = try await geminiRequest("retrieveUserQuota", body: ["project": project], credential: credential)
-        } else { raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: account.provider == .devin ? .signedOut : .usageAccessDenied) }
+        } else if account.provider == .claude { raw = try await claudeUsage(credential: credential) }
+        else { raw = try await ProviderHTTP.json(request(provider: account.provider, credential: credential), unauthorizedError: account.provider == .devin ? .signedOut : .usageAccessDenied) }
         var parsed: UsageSnapshot?
         defer { Diagnostics.record(.usageParsed, provider: account.provider, parsing: .make(provider: account.provider, raw: raw, snapshot: parsed)) }
         var snapshot: UsageSnapshot
@@ -191,6 +197,19 @@ struct UsageClient {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         guard let object = try await ProviderHTTP.json(request, unauthorizedError: .usageAccessDenied) as? [String: Any] else { throw UsageError.invalidResponse }
         return object
+    }
+
+    static func claudeUsage(credential: AccountCredential,
+                            transport: (URLRequest) async throws -> (Data, HTTPURLResponse) = ProviderHTTP.data) async throws -> Any {
+        var request = try request(provider: .claude, credential: credential)
+        var (data, response) = try await transport(request)
+        // An unsupported opt-in query must not break ordinary usage. Authentication,
+        // throttling and network failures retain their normal handling.
+        if [400, 404, 422].contains(response.statusCode) {
+            request.url = URL(string: "https://api.anthropic.com/api/oauth/usage")!
+            (data, response) = try await transport(request)
+        }
+        return try ProviderHTTP.decodeJSON(data, response: response, unauthorizedError: .usageAccessDenied)
     }
 
 }
@@ -259,7 +278,7 @@ enum UsageParser {
             return BankedReset(id: "banked-" + key, title: String((credit["title"] as? String ?? "Usage reset").prefix(100)), expiresAt: expiry)
         }.sorted { ($0.expiresAt ?? .distantFuture) < ($1.expiresAt ?? .distantFuture) }
     }
-    static func claude(_ raw: Any) throws -> UsageSnapshot {
+    static func claude(_ raw: Any, now: Date = .now) throws -> UsageSnapshot {
         guard let object = raw as? [String: Any], object["five_hour"] != nil || object["seven_day"] != nil || object["limits"] != nil else { throw UsageError.invalidResponse }
         var windows: [UsageWindow] = []
         for (key, title, duration) in [("five_hour", "5-hour window", 18000.0), ("seven_day", "Weekly", 604800.0), ("seven_day_opus", "Opus weekly", 604800.0), ("seven_day_sonnet", "Sonnet weekly", 604800.0), ("seven_day_cowork", "Cowork weekly", 604800.0), ("seven_day_oauth_apps", "Connected apps weekly", 604800.0)] {
@@ -268,7 +287,9 @@ enum UsageParser {
         }
         claudeScopedWindows(object, windows: &windows)
         let details = claudeDetails(object, windows: &windows)
-        return UsageSnapshot(windows: windows, details: details)
+        let inventory = claudeResetInventory(object["cedar_ember"], now: now)
+        let banked = inventory.map { availableClaudeResets($0, now: now) }
+        return UsageSnapshot(windows: windows, updatedAt: now, bankedResets: banked, details: details, resetInventory: inventory)
     }
     static func claudePlan(_ raw: Any) -> (plan: String?, context: String?) {
         guard let object = raw as? [String: Any], let organization = object["organization"] as? [String: Any],

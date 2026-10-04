@@ -63,6 +63,7 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
     var allowanceContext: String?
     var details: ProviderDetails?
     var remainingAllowances: [RemainingAllowance]?
+    var resetInventory: ResetInventory?
     var nextReset: Date? { windows.compactMap(\.resetsAt).filter { $0 > .now }.min() }
     func isStale(at date: Date = .now) -> Bool {
         date.timeIntervalSince(updatedAt) > 30 * 60 || windows.contains { $0.resetDue(at: date) }
@@ -74,6 +75,24 @@ struct BankedReset: Codable, Equatable, Identifiable, Sendable {
     var title: String
     var count: Int = 1
     var expiresAt: Date?
+    var firstDetectedAt: Date?
+    var usableNow: Bool?
+}
+
+// Only display-safe grant data is persisted. Provider redemption handles are hashed.
+struct ResetInventory: Codable, Equatable, Sendable {
+    var checkedAt: Date
+    var grants: [ResetGrant]
+}
+struct ResetGrant: Codable, Equatable, Identifiable, Sendable {
+    var id: String
+    var remaining: Int
+    var total: Int?
+    var startsAt: Date?
+    var expiresAt: Date?
+    var paused: Bool
+    var usableNow: Bool?
+    var windowIDs: [String]
     var firstDetectedAt: Date?
 }
 

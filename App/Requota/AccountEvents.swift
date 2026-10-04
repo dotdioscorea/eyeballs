@@ -61,6 +61,16 @@ enum EventDetection {
         guard chronological else { return Result(snapshot: current, events: []) }
         let allowanceChanged = previous.map { AllowanceChanges.snapshotChanged($0, current) } ?? false
         if allowanceChanged { events.append(AccountEvent(id: "\(accountID):allowance:\(now.timeIntervalSince1970)", accountID: accountID, kind: .allowanceChanged, date: now, detectedAt: now, previousPlan: previous?.plan, plan: current.plan)) }
+        var usedGrants: [(ResetGrant, Int)] = []
+        if let old = previous?.resetInventory, let new = current.resetInventory, new.checkedAt > old.checkedAt {
+            for grant in new.grants {
+                guard let before = old.grants.first(where: { $0.id == grant.id }), before.remaining > grant.remaining,
+                      !before.paused, !grant.paused, before.total == grant.total,
+                      grant.expiresAt.map({ $0 > now }) ?? true else { continue }
+                usedGrants.append((grant, before.remaining - grant.remaining))
+            }
+        }
+        let confirmedUse = usedGrants.reduce(0) { $0 + $1.1 }
         var early = false
         for window in current.windows {
             if allowanceChanged { continue }
@@ -69,17 +79,27 @@ enum EventDetection {
                let next = window.resetsAt, next > reset {
                 event(.weeklyReset, key: window.id + "-" + String(reset.timeIntervalSince1970), date: reset, window: window.title, windowID: window.id)
             } else if let reset = old.resetsAt, reset > now.addingTimeInterval(300),
-                      let before = old.safePercent, let after = window.safePercent, before >= 5, after <= 1, before - after >= 5 {
+                      (usedGrants.contains { $0.0.windowIDs.contains(window.id) } || significantDrop(old, window)) {
                 early = true
-                event(.earlyReset, key: window.id + "-" + String(now.timeIntervalSince1970), window: window.title, windowID: window.id, inferred: true)
+                event(.earlyReset, key: window.id + "-" + String(now.timeIntervalSince1970), window: window.title, windowID: window.id, inferred: confirmedUse == 0)
             }
+        }
+        if confirmedUse > 0 {
+            event(.bankedUsed, key: String(now.timeIntervalSince1970), count: confirmedUse)
+        }
+        if var inventory = snapshot.resetInventory {
+            for index in inventory.grants.indices {
+                inventory.grants[index].firstDetectedAt = previous?.resetInventory?.grants.first(where: { $0.id == inventory.grants[index].id })?.firstDetectedAt ?? now
+            }
+            snapshot.resetInventory = inventory
         }
         if var resets = snapshot.bankedResets {
             let old = previous?.bankedResets
             for index in resets.indices {
                 let matching = old?.first { $0.id == resets[index].id }
                     ?? old?.first { $0.title == resets[index].title && $0.expiresAt == resets[index].expiresAt }
-                resets[index].firstDetectedAt = matching?.firstDetectedAt ?? matching.map { _ in previous!.updatedAt } ?? now
+                resets[index].firstDetectedAt = matching?.firstDetectedAt ?? matching.map { _ in previous!.updatedAt }
+                    ?? snapshot.resetInventory?.grants.first(where: { $0.id == resets[index].id })?.firstDetectedAt ?? now
                 if let expiry = resets[index].expiresAt, expiry <= now {
                     event(.bankedExpired, key: resets[index].id + "-" + String(expiry.timeIntervalSince1970), date: expiry, count: resets[index].count)
                 }
@@ -93,13 +113,30 @@ enum EventDetection {
                     event(.bankedExpired, key: item.id + "-" + String(item.expiresAt!.timeIntervalSince1970), date: item.expiresAt, count: item.count)
                 }
                 let removed = before - after - expired
-                if removed > 0 { event(early ? .bankedUsed : .bankedRemoved, key: String(now.timeIntervalSince1970), count: removed, inferred: early) }
+                // The provider's grant counter takes precedence over usage inference.
+                // Pause/surface/eligibility changes must not masquerade as redemption.
+                if removed > 0 && current.resetInventory == nil {
+                    event(early ? .bankedUsed : .bankedRemoved, key: String(now.timeIntervalSince1970), count: removed, inferred: early)
+                }
             } else if after > (before ?? 0) {
                 event(.bankedDetected, key: String(now.timeIntervalSince1970), count: after - (before ?? 0))
             }
             snapshot.bankedResets = resets
         }
+        if current.resetInventory == nil, let known = previous?.resetInventory {
+            for item in previous?.bankedResets ?? [] where item.expiresAt.map({ $0 <= now }) == true {
+                event(.bankedExpired, key: item.id + "-" + String(item.expiresAt!.timeIntervalSince1970), date: item.expiresAt, count: item.count)
+            }
+            snapshot.resetInventory = known
+            snapshot.bankedResets = previous?.bankedResets?.filter { $0.expiresAt.map { $0 > now } ?? true }
+        }
         return Result(snapshot: snapshot, events: events)
+    }
+    private static func significantDrop(_ before: UsageWindow, _ after: UsageWindow) -> Bool {
+        guard let old = before.safePercent, let new = after.safePercent else { return false }
+        // A reset can already have accrued new use by the next reading. Keep a
+        // substantial drop requirement so small provider corrections are ignored.
+        return old >= 5 && old - new >= 5 && new <= max(1, old / 2)
     }
 }
 

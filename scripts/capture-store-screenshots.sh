@@ -20,8 +20,8 @@ assert device['state']=='Booted', 'Boot the dedicated simulator first'
 PY
 xcrun simctl status_bar "$capture_device" override --time '9:41' --dataNetwork wifi --wifiMode active --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
 xcodegen generate
-xcodebuild build -project Eyeballs.xcodeproj -scheme Eyeballs -destination "platform=iOS Simulator,id=$capture_device" -derivedDataPath DerivedData/StoreCapture ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- > "${capture_run}-build.log" 2>&1
-xcrun simctl install "$capture_device" DerivedData/StoreCapture/Build/Products/Debug-iphonesimulator/Eyeballs.app
+xcodebuild build -project Requota.xcodeproj -scheme Requota -destination "platform=iOS Simulator,id=$capture_device" -derivedDataPath DerivedData/StoreCapture ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- > "${capture_run}-build.log" 2>&1
+xcrun simctl install "$capture_device" DerivedData/StoreCapture/Build/Products/Debug-iphonesimulator/Requota.app
 # A capture does not need an automation runner installed on its Home Screen.
 xcrun simctl uninstall "$capture_device" com.dotdioscorea.eyeballs.uitests.xctrunner 2>/dev/null || true
 for capture_pair in 01-overview:tiles 03-compact:bars 04-charts:charts 05-activity:activity 06-rings:cards; do

@@ -1,5 +1,5 @@
 import XCTest
-@testable import Eyeballs
+@testable import Requota
 
 @MainActor
 final class SignInTests: XCTestCase {

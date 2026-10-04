@@ -4,7 +4,7 @@ For isolated sample access, open Settings → Demo. A Demo bar identifies sample
 
 We request acceptance of this isolated demonstration path because sharing third-party subscription credentials would expose unrelated private accounts. We can respond to requests for additional testing access.
 
-Privacy: https://dotdioscorea.github.io/eyeballs/
-Source and support: https://github.com/dotdioscorea/eyeballs
+Privacy: https://dotdioscorea.github.io/requota/
+Source and support: https://github.com/dotdioscorea/requota
 
 Build 8 remains in its original external beta review. These instructions describe build 10 and must not be presented as capabilities of build 8.

@@ -1,5 +1,5 @@
 import XCTest
-@testable import Eyeballs
+@testable import Requota
 
 final class AmpTests: XCTestCase {
     private let profile: [String: Any] = ["ok": true, "result": ["id": "account-a", "email": "private@example.test"]]
