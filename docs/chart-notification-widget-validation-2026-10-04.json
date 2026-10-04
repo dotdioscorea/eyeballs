@@ -1,0 +1,123 @@
+{
+  "product": "Requota",
+  "source_commit": "8f859c14affd0607914a1538b9b60a01f22679d6",
+  "date": "2026-10-04",
+  "tests": {
+    "unit_passed": 162,
+    "unit_opt_in_skipped": 3,
+    "distinct_native_ui_checks_passed": 6,
+    "native_ui_checks": [
+      "Connected-provider filters; bounded pinch/pan, optional smoothing and shared rate chart",
+      "Notification controls and per-provider overrides persist across relaunch",
+      "Fresh low-allowance and caught-up approaching-reset alerts; scheduled reset delivered while app backgrounded",
+      "Exact shared circular, rectangular and inline accessory content at accessory dimensions",
+      "History selection bounds, event popups and calendar heatmaps",
+      "Six-account Home Screen widget persistence after app termination and account row deep link"
+    ],
+    "test_runs": [
+      {
+        "bundle": "build15-final-delivery.xcresult",
+        "unit_passed": 162,
+        "ui_passed": 2,
+        "ui_failed": 1,
+        "failure": "Accessory text query expected an exact static label; SwiftUI exposes the combined account/metric accessibility label. Screenshot showed correct ring rendering. Query corrected and test rerun."
+      },
+      {
+        "bundle": "build15-accessory-regression.xcresult",
+        "ui_passed": 4,
+        "ui_failed": 0
+      }
+    ],
+    "last_change_after_simulator_checks": "Added known reset dates to accessory timelines so relative text switches to Reset due at the deadline. Release compilation verifies extension packaging."
+  },
+  "notifications": {
+    "low_remaining_default_percent": 10,
+    "low_reading_max_age_hours": 6,
+    "unused_allowance_default_lead_hours": 24,
+    "unused_allowance_default_minimum_percent": 10,
+    "global_rules_and_connected_provider_overrides": true,
+    "existing_preferences_migrated": true,
+    "late_lead_window_catch_up": true,
+    "durable_once_per_cycle_warning_ledger": true,
+    "pending_reminder_limit": 50,
+    "foreground_alerts_retained_in_notification_center": true,
+    "permission_and_pending_status_in_settings": true,
+    "diagnostic_schema": 4,
+    "diagnostics_include_rules_and_typed_scheduling_outcomes": true,
+    "fresh_delivery_test_clears_only_known_fixture_notifications": true
+  },
+  "charts": {
+    "minimum_zoom_span_minutes": 15,
+    "pan_clamped_to_observed_history": true,
+    "zoom_anchor_preserved": true,
+    "historical_viewport_preserved_on_refresh": true,
+    "following_viewport_advances_on_refresh": true,
+    "rate_averaging_hours": [
+      1,
+      6,
+      12
+    ],
+    "rate_max_gap_hours": 6,
+    "minimum_rate_coverage_minutes": 15,
+    "rate_intervals_elapsed_time_weighted": true,
+    "rate_resets_plan_changes_unknowns_and_unit_changes_are_breaks": true,
+    "percentage_rate_unit": "percentage points per hour",
+    "smooth_opt_in": true,
+    "smooth_resets_remain_hard": true,
+    "smooth_observed_zero_and_full_remain_exact": true,
+    "legend_wraps_and_highlights_selected_series": true,
+    "same_provider_series_have_distinct_dash_patterns": true
+  },
+  "lock_screen": {
+    "kind": "RequotaLockScreen",
+    "families": [
+      "accessoryCircular",
+      "accessoryRectangular",
+      "accessoryInline"
+    ],
+    "selectable_account_metric_and_amount": true,
+    "credentials_shared": false,
+    "account_deep_link": true,
+    "layout_check": "Extension uses the exact shared content rendered by a DEBUG-only app harness at accessory sizes. Harness is compiled out of Release.",
+    "known_deadlines_have_timeline_entries": true,
+    "actual_system_gallery_masking_and_vibrancy_verified": false
+  },
+  "design_review": {
+    "requested_model": "claude-opus-5-5",
+    "observed_models": [
+      "claude-opus-5-5"
+    ],
+    "final_verdict": "No material shipping defects in the four screenshots or three source files reviewed.",
+    "findings_resolved": [
+      "Gesture baseline and parent-scroll interaction",
+      "Tooltip matching before limiting comparison series",
+      "Warning re-arm for no-reset quotas and reset-time key jitter",
+      "100% circular accessory fitting",
+      "Distinct same-provider swatches, wrapping interactive legend and lime Smooth state",
+      "Collapsed disabled-provider controls",
+      "Accessory entries at known reset deadlines"
+    ],
+    "physical_device_follow_ups": [
+      "System Lock Screen masking, vibrancy and inline truncation beside date",
+      "Narrow and accessibility text layouts",
+      "Longer-term delivery with Focus and notification grouping"
+    ]
+  },
+  "limits": [
+    "Background refresh timing remains controlled by iOS. Low-allowance and observed-event detection require successful provider refreshes.",
+    "Rate averaging describes consumption between recorded samples, not instantaneous token throughput. Intervals longer than six hours remain unknown.",
+    "No provider login or usage protocol changed; opt-in live networking tests were not rerun.",
+    "The iOS 18 simulator omits Wallpaper settings. Actual Lock Screen gallery configuration was not tested; shared content, intent selection logic and release compilation were checked."
+  ],
+  "evidence": {
+    "screenshot_sha256": {
+      "accessory_content": "516a90d27cf40c22a95f52e84192fb8936084992deb3d5cfa86ee2efbae685b8",
+      "notification_controls": "19b8d0e045924b9bd272287fc78f71ddd487518dea9edc53543294fb16674cfe",
+      "provider_off": "81d7461b5440b43ddc2d2027a3388ce80ebfd3a28c0c0c580b219591cd67b0ee",
+      "fresh_warnings": "9a89d1871895a8b597e4fe475fcdf83b68a2888d5369d6842385741f22760ee9",
+      "reset_due_in_background": "48a434914219e1cc78909ebe6464d10630129db2ed76c887161b83f48c8955e3",
+      "shared_legend": "0c8874838818bb6e1f514af3aaced682c1c283ba5d1d7104c5e3667ea8d1fd2a",
+      "six_account_home_widget": "e468863ca931e96db3ee8d0f6b08ad9f9b8fecd3364b74fc2ab822a06c323a57"
+    }
+  }
+}
