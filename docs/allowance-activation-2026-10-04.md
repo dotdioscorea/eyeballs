@@ -1,6 +1,6 @@
 # Allowance activation
 
-TestFlight **1.0 (19)** is available to the existing internal and external tester groups. Apple approved external beta testing. [PR #3](https://github.com/dotdioscorea/requota/pull/3) is merged into main; the binary source is `e60b7f2`, tagged `testflight/1.0-19`. See [the release record](testflight-build-19.json).
+TestFlight **1.0 (20)** is available to the existing internal and external tester groups. Apple approved external beta testing. [PR #5](https://github.com/dotdioscorea/requota/pull/5) adds per-account settings and compact controls; the binary source is `6e5ef5c`, tagged `testflight/1.0-20`. See [the release record](testflight-build-20.json). The original adapters shipped in [PR #3](https://github.com/dotdioscorea/requota/pull/3), build 19.
 
 ## Behaviour
 
@@ -45,7 +45,7 @@ A rounded 0% reading alone does not prove a week is unstarted. The current candi
 
 Private protocol artifacts remain under ignored `artifacts/`. Credentials stay outside Git. Local diagnostics include activation stages, endpoint categories, status and failure categories, candidate/clock status, deadline distance and observation age, without prompts, generated responses or credentials.
 
-## Local checks
+## Initial checks (build 19)
 
 - Signed simulator build succeeded.
 - Final native unit suite: 211 executed, 5 opt-in live checks skipped, 206 passed, no failures. This includes the native Claude request check and 20 activation policy/transport tests covering permission, plan and allowance checks, moving/fixed deadlines, tier changes, inactive Codex secondary windows, separate accounts, persistence, deletion and interrupted requests. The earlier native Claude live check also passed.
