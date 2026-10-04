@@ -28,6 +28,95 @@ final class EyeballsUITests: XCTestCase {
             if alert.waitForExistence(timeout: 3), alert.buttons["Remove"].exists { alert.buttons["Remove"].tap() }
         }
     }
+    func testChartGesturesRateLegendAndProviderFilters() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--native-provider-fixture", "--exit-demo-test"]; app.launch()
+        XCTAssertTrue(app.buttons["layout-cards"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Codex"].exists)
+        XCTAssertFalse(app.buttons["Gemini"].exists)
+        app.tabBars.buttons["Charts"].tap()
+        let plot = app.otherElements["history-plot"].firstMatch
+        XCTAssertTrue(plot.waitForExistence(timeout: 10))
+        let original = plot.value as? String
+        let before = XCTAttachment(screenshot: app.screenshot()); before.name = "Shared charts and wrapping legend"; before.lifetime = .keepAlways; add(before)
+        plot.pinch(withScale: 2, velocity: 1)
+        XCTAssertNotEqual(plot.value as? String, original)
+        XCTAssertTrue(app.buttons["reset-chart-view"].exists)
+        let zoomed = plot.value as? String
+        plot.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5)).press(forDuration: 0.05, thenDragTo: plot.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)))
+        XCTAssertNotEqual(plot.value as? String, zoomed)
+        let zoom = XCTAttachment(screenshot: app.screenshot()); zoom.name = "Pinched and panned chart"; zoom.lifetime = .keepAlways; add(zoom)
+        app.buttons["reset-chart-view"].tap()
+        XCTAssertEqual(plot.value as? String, original)
+        let toggle = app.switches["chart-smooth"]
+        XCTAssertTrue(toggle.exists); if toggle.value as? String != "1" { toggle.tap() }
+        let smooth = XCTAttachment(screenshot: app.screenshot()); smooth.name = "Smoothed usage comparison"; smooth.lifetime = .keepAlways; add(smooth)
+        app.buttons["Rate"].tap()
+        XCTAssertTrue(plot.exists)
+        let rate = XCTAttachment(screenshot: app.screenshot()); rate.name = "Averaged rate chart"; rate.lifetime = .keepAlways; add(rate)
+    }
+    func testLockScreenAccessoryLayouts() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--accessory-preview"]; app.launch()
+        XCTAssertTrue(app.staticTexts["Accessory previews"].waitForExistence(timeout: 10))
+        // Accessory content exposes a combined account/metric label to VoiceOver.
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "100%")).firstMatch.exists); XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "0%")).firstMatch.exists)
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "Accessory content at circular rectangular and inline sizes"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+    func testLowAndResetRemindersDeliverWhileAppClosed() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["notification-settings"].tap()
+        let enabled = app.switches["notifications-enabled"]
+        XCTAssertTrue(enabled.waitForExistence(timeout: 5))
+        if enabled.value as? String == "1" { enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap() }
+        app.terminate(); app.launchArguments += ["--notification-fixture", "--reset-notification-fixture"]; app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["notification-settings"].tap()
+        XCTAssertTrue(enabled.waitForExistence(timeout: 5)); enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        let home = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        if home.alerts.firstMatch.waitForExistence(timeout: 2), home.alerts.firstMatch.buttons["Allow"].exists { home.alerts.firstMatch.buttons["Allow"].tap() }
+        XCTAssertEqual(enabled.value as? String, "1")
+        XCUIDevice.shared.press(.home)
+        home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.01)).press(forDuration: 0.05, thenDragTo: home.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)))
+        home.swipeUp()
+        print("NOTIFICATION CENTER\n" + home.debugDescription)
+        let warning = home.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "weekly reset approaching")).firstMatch
+        XCTAssertTrue(warning.waitForExistence(timeout: 10))
+        let group = home.scrollViews.matching(NSPredicate(format: "identifier == %@ AND label CONTAINS %@", "ListCell", "Grouped")).firstMatch
+        if group.exists { group.tap() }
+        let low = home.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Weekly low")).firstMatch
+        XCTAssertTrue(low.waitForExistence(timeout: 5))
+        let warnings = XCTAttachment(screenshot: home.screenshot()); warnings.name = "Delivered low allowance and approaching reset warnings"; warnings.lifetime = .keepAlways; add(warnings)
+        let reset = home.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "weekly reset due")).firstMatch
+        XCTAssertTrue(reset.waitForExistence(timeout: 50))
+        let due = XCTAttachment(screenshot: home.screenshot()); due.name = "Scheduled weekly reset with app closed"; due.lifetime = .keepAlways; add(due)
+        XCUIDevice.shared.press(.home)
+    }
+    func testNotificationControlsAndProviderPersistence() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        XCTAssertTrue(app.tabBars.buttons["Settings"].waitForExistence(timeout: 10)); app.tabBars.buttons["Settings"].tap()
+        app.buttons["notification-settings"].tap()
+        XCTAssertTrue(app.switches["notifications-enabled"].waitForExistence(timeout: 5))
+        let enabled = app.switches["notifications-enabled"]
+        if enabled.value as? String != "1" {
+            enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+            let home = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+            if home.alerts.firstMatch.waitForExistence(timeout: 4), home.alerts.firstMatch.buttons["Allow"].exists { home.alerts.firstMatch.buttons["Allow"].tap() }
+        }
+        XCTAssertEqual(enabled.value as? String, "1")
+        let initial = XCTAttachment(screenshot: app.screenshot()); initial.name = "Notification permission and low allowance controls"; initial.lifetime = .keepAlways; add(initial)
+        for _ in 0..<5 { if app.buttons["Claude, Default"].isHittable || app.buttons["Claude"].isHittable { break }; app.swipeUp() }
+        let claude = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Claude")).firstMatch
+        XCTAssertTrue(claude.exists); claude.tap()
+        XCTAssertTrue(app.switches["Use default settings"].waitForExistence(timeout: 5))
+        if app.switches["Use default settings"].value as? String == "1" { app.switches["Use default settings"].coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap() }
+        XCTAssertTrue(app.switches["Notify for this provider"].exists)
+        app.switches["Notify for this provider"].coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        let custom = XCTAttachment(screenshot: app.screenshot()); custom.name = "Claude notification override"; custom.lifetime = .keepAlways; add(custom)
+        app.terminate(); app.launch()
+        app.tabBars.buttons["Settings"].tap(); app.buttons["notification-settings"].tap()
+        for _ in 0..<6 { if app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Claude")).firstMatch.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.buttons["Claude, Off"].exists)
+        // Restore the fixture's defaults for later tests.
+        app.buttons["Claude, Off"].tap(); app.switches["Use default settings"].coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+    }
     func testReleaseDemoAndRestoration() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
         XCTAssertTrue(app.tabBars.buttons["Settings"].waitForExistence(timeout: 10)); app.tabBars.buttons["Settings"].tap()
@@ -474,7 +563,7 @@ final class EyeballsUITests: XCTestCase {
         XCTAssertTrue(parameter.waitForExistence(timeout: 20))
         parameter.buttons.firstMatch.tap()
         XCTAssertTrue(home.staticTexts["Personal"].waitForExistence(timeout: 5))
-        home.cells.containing(.staticText, identifier: "Personal").allElementsBoundByIndex.first { $0.isHittable }!.tap()
+        home.staticTexts["Personal"].firstMatch.tap()
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); shot.name = "Widget configured with Personal"; shot.lifetime = .keepAlways; add(shot)
         XCUIDevice.shared.press(.home); app.terminate()
         XCTAssertTrue(home.staticTexts["Personal"].firstMatch.waitForExistence(timeout: 15))
@@ -522,15 +611,15 @@ final class EyeballsUITests: XCTestCase {
         XCTAssertTrue(addAccount.waitForExistence(timeout: 20))
         addAccount.tap()
         XCTAssertTrue(home.staticTexts["Personal"].waitForExistence(timeout: 10))
-        home.cells.containing(.staticText, identifier: "Personal").allElementsBoundByIndex.first { $0.isHittable }!.tap()
+        home.staticTexts["Personal"].firstMatch.tap()
         XCTAssertTrue(addAccount.waitForExistence(timeout: 10)); addAccount.tap()
         XCTAssertTrue(home.staticTexts["Work"].waitForExistence(timeout: 10))
-        home.cells.containing(.staticText, identifier: "Work").allElementsBoundByIndex.first { $0.isHittable }!.tap()
+        home.staticTexts["Work"].firstMatch.tap()
         for name in ["Research", "Mac mini", "Travel", "Studio"] {
             if !addAccount.isHittable { home.tables.firstMatch.swipeUp() }
             XCTAssertTrue(addAccount.waitForExistence(timeout: 10)); addAccount.tap()
             XCTAssertTrue(home.staticTexts[name].waitForExistence(timeout: 10))
-            home.cells.containing(.staticText, identifier: name).allElementsBoundByIndex.first { $0.isHittable }!.tap()
+            home.staticTexts[name].firstMatch.tap()
         }
         let rows = home.cells.containing(.staticText, identifier: "Rows").firstMatch
         if !rows.isHittable { home.tables.firstMatch.swipeUp() }

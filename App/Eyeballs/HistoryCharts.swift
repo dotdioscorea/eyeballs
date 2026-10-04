@@ -30,7 +30,7 @@ struct HistoryMeasureMenu: View {
                 Picker("Units", selection: Binding(get: { units.contains(unit) ? unit : units.first ?? "" }, set: { unit = $0 })) { ForEach(units, id: \.self) { Text($0).tag($0) } }
             }
         } label: {
-            HStack(spacing: 4) { Text(measure == .amount ? (units.contains(unit) ? unit : units.first ?? "Amount") : activity ? "Allowance used" : measure.title); Image(systemName: "chevron.down").font(.system(size: 8)) }.font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 4) { Text(measure == .amount ? (units.contains(unit) ? unit : units.first ?? "Amount") : activity ? "Allowance used" : measure.title); Image(systemName: "chevron.down").font(.system(size: 8)) }.font(.caption).foregroundStyle(Theme.accent)
         }
     }
 }
@@ -220,7 +220,11 @@ struct ChartsView: View {
     @State private var days = 7
     @State private var rangeEnd = Date.now
     @State private var measure = HistoryMeasure.remaining
-    @State private var heatmaps = false
+    @State private var kind = HistoryChartKind.lines
+    @AppStorage("chart-smooth") private var smooth = false
+    @State private var averagingHours = 1
+    @State private var highlighted: String?
+    private var heatmaps: Bool { kind == .activity }
     @State private var unit = ""
     @State private var heatmapPeriod = HeatmapPeriod.weekly
     @State private var heatmapDate = Date.now
@@ -242,44 +246,67 @@ struct ChartsView: View {
     private var units: [String] { Array(Set(available.filter { $0.window.usedAmount != nil }.compactMap { $0.window.amountUnit })).sorted() }
     private var activeUnit: String { units.contains(unit) ? unit : units.first ?? "" }
     private var names: [UUID: String] { Dictionary(uniqueKeysWithValues: store.accounts.map { ($0.id, $0.title) }) }
-    private func samples(_ id: UUID) -> [UsageHistorySample] { (store.histories[id] ?? []).filter { domain.contains($0.date) } }
+    private func samples(_ id: UUID) -> [UsageHistorySample] { store.histories[id] ?? [] }
     private var plots: [HistoryPlotSeries] {
-        visible.map { series in HistoryPlotSeries(id: series.id, title: series.title, color: series.account.color,
-            segments: HistorySeries.segments(samples: samples(series.account.id), windowID: series.window.id, measure: measure, unit: measure == .amount ? activeUnit : nil),
-            subdued: days >= 7 && series.window.duration.map { $0 <= 21600 } == true,
-            dashed: series.window.id != (series.account.window(for: .weekly) ?? series.account.snapshot?.windows.first)?.id) }
+        visible.map { series in
+            let accountEvents = store.events.filter { $0.accountID == series.account.id }
+            let data = HistorySeries.plot(samples: samples(series.account.id), windowID: series.window.id, measure: measure, unit: measure == .amount ? activeUnit : nil, events: accountEvents)
+            return HistoryPlotSeries(id: series.id, title: series.title, color: series.account.color,
+                segments: kind == .rate ? HistoryRate.segments(samples: samples(series.account.id), windowID: series.window.id, measure: measure, unit: activeUnit, events: accountEvents, averagingHours: averagingHours) : data.segments,
+                dashPattern: pattern(for: series), hardSegments: kind == .rate ? [] : data.transitions,
+                subdued: days >= 7 && series.window.duration.map { $0 <= 21600 } == true,
+                dashed: series.window.id != (series.account.window(for: .weekly) ?? series.account.snapshot?.windows.first)?.id)
+        }
     }
     private var events: [ChartEventGroup] {
         let relevant = store.accounts.flatMap { account in
-            ChartEvents.groups(events: store.events.filter { $0.accountID == account.id }, windows: visible.filter { $0.account.id == account.id }.map(\.window), domain: domain).flatMap(\.events)
+            ChartEvents.groups(events: store.events.filter { $0.accountID == account.id }, windows: visible.filter { $0.account.id == account.id }.map(\.window), domain: rangeEnd.addingTimeInterval(-UsageHistoryStore.retention)...rangeEnd).flatMap(\.events)
         }
-        return ChartEvents.groups(events: relevant, windows: visible.map(\.window), domain: domain)
+        return ChartEvents.groups(events: relevant, windows: visible.map(\.window), domain: rangeEnd.addingTimeInterval(-UsageHistoryStore.retention)...rangeEnd)
     }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Picker("Chart type", selection: $heatmaps) { Text("Lines").tag(false); Text("Activity").tag(true) }.pickerStyle(.segmented)
+                Picker("Chart type", selection: $kind) { ForEach(HistoryChartKind.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
                 HStack {
                     Button { choosing = true } label: { HStack(spacing: 5) { Image(systemName: "slider.horizontal.3"); Text("Accounts & metrics") }.font(.caption) }.accessibilityIdentifier("chart-accounts")
                     Spacer()
-                    HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: heatmaps && heatmapMode == .activity)
+                    HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate || (heatmaps && heatmapMode == .activity))
                 }
                 if visible.isEmpty { Text("No metrics selected.").font(.subheadline).foregroundStyle(.secondary) }
                 else if heatmaps { activityCharts }
                 else {
                     HistoryPeriodPicker(days: $days)
+                    HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours)
                     VStack(alignment: .leading, spacing: 14) {
                         if plots.flatMap({ $0.segments.flatMap { $0 } }).isEmpty { Text("History starts with successful refreshes.").font(.caption).foregroundStyle(.secondary) }
-                        else { HistoryPlot(series: plots, domain: domain, measure: measure, unit: activeUnit, events: events, accountNames: names, height: 280) }
-                        ForEach(visible) { series in HStack(spacing: 6) { Circle().fill(series.account.color).frame(width: 6, height: 6); Text(series.title).font(.caption).foregroundStyle(.secondary) } }
+                        else { HistoryPlot(series: plots, domain: domain, measure: measure, unit: activeUnit, events: events, accountNames: names, height: 280, smooth: smooth, rate: kind == .rate, highlighted: highlighted) }
+                        ChartLegendLayout {
+                            ForEach(visible) { series in
+                                Button { highlighted = highlighted == series.id ? nil : series.id } label: {
+                                    HStack(spacing: 6) {
+                                        Path { path in path.move(to: .init(x: 0, y: 3)); path.addLine(to: .init(x: 20, y: 3)) }.stroke(series.account.color, style: StrokeStyle(lineWidth: 2, dash: pattern(for: series))).frame(width: 20, height: 6)
+                                        Text(series.title).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                    }.opacity(highlighted == nil || highlighted == series.id ? 1 : 0.4)
+                                }.buttonStyle(.plain).accessibilityLabel(series.title).accessibilityValue(highlighted == series.id ? "Highlighted" : "Visible")
+                            }
+                        }.accessibilityIdentifier("chart-legend")
                     }.panel()
                 }
             }.padding(16).frame(maxWidth: 750).frame(maxWidth: .infinity)
         }.background(Theme.background).navigationTitle("Charts").navigationBarTitleDisplayMode(.inline).refreshable { await store.refreshAll(); rangeEnd = .now }
             .sheet(isPresented: $choosing) { selectionSheet }
             .onAppear { rangeEnd = .now }
-            .onChange(of: heatmaps) { _, value in if value && measure == .remaining && heatmapMode == .activity { measure = .used } }
+            .onChange(of: store.accounts.compactMap { $0.snapshot?.updatedAt }.max()) { _, _ in rangeEnd = .now }
+            .onChange(of: kind) { _, value in if measure == .remaining && (value == .rate || (value == .activity && heatmapMode == .activity)) { measure = .used } }
             .onChange(of: heatmapMode) { _, value in if value == .activity && measure == .remaining { measure = .used } }
+    }
+    private func pattern(for series: Series) -> [CGFloat] {
+        let peers = store.accounts.filter { $0.provider == series.account.provider }.sorted { $0.id.uuidString < $1.id.uuidString }
+        let rank = peers.firstIndex { $0.id == series.account.id } ?? 0
+        let patterns: [[CGFloat]] = [[], [7, 3], [2, 3], [8, 3, 2, 3], [10, 3, 2, 3, 2, 3]]
+        let main = series.window.id == (series.account.window(for: .weekly) ?? series.account.snapshot?.windows.first)?.id
+        return main ? patterns[rank % patterns.count] : patterns[(rank + 1) % patterns.count] + [2, 2]
     }
     private var activityCharts: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -310,5 +337,32 @@ struct ChartsView: View {
             }.navigationTitle("Chart accounts").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { choosing = false } } }
         }
+    }
+}
+
+
+enum HistoryChartKind: String, CaseIterable, Identifiable {
+    case lines, rate, activity
+    var id: String { rawValue }
+    var title: String { switch self { case .lines: return "Lines"; case .rate: return "Rate"; case .activity: return "Activity" } }
+}
+struct HistoryLineOptions: View {
+    @Binding var smooth: Bool
+    var rate: Bool
+    @Binding var averagingHours: Int
+    @State private var info = false
+    var body: some View {
+        HStack {
+            if rate {
+                Menu {
+                    Picker("Rate averaging", selection: $averagingHours) { Text("1h average").tag(1); Text("6h average").tag(6); Text("12h average").tag(12) }
+                } label: { HStack(spacing: 4) { Text("\(averagingHours)h average"); Image(systemName: "chevron.down").font(.system(size: 8)) }.font(.caption) }
+            } else { Toggle("Smooth", isOn: $smooth).font(.caption).fixedSize().accessibilityIdentifier("chart-smooth") }
+            Spacer()
+            Button { info = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Chart information")
+        }.tint(Theme.accent)
+            .alert(rate ? "Burn rate" : "Usage lines", isPresented: $info) { Button("OK", role: .cancel) {} } message: {
+                Text(rate ? "Rates average consumption between readings. Gaps up to 6 hours are spread evenly; longer gaps and resets are excluded. Averages need at least 15 minutes of readings. pp/h means percentage points per hour, not tokens." : "Pinch to zoom, drag to move through time, and hold to inspect readings. Smooth curves keep reported values and 0%/100% endpoints. Resets stay as steps; gaps over 6 hours remain empty.")
+            }
     }
 }

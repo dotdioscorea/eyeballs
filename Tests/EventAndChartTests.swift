@@ -43,7 +43,9 @@ final class EventAndChartTests: XCTestCase {
         XCTAssertTrue(reminders.contains { $0.body.contains("60%") }); XCTAssertTrue(reminders.allSatisfy { $0.accountID == account.id && $0.date > now })
         var rules = ResetNotificationRules(); rules.minimumRemaining = 70; rules.bankedExpiry = false
         XCTAssertEqual(ResetReminderPlan.make(accounts: [account], rules: rules, now: now).count, 1)
-        XCTAssertEqual(ResetReminderPlan.make(accounts: Array(repeating: account, count: 100), rules: ResetNotificationRules(), now: now).count, 50)
+        let many = (0..<100).map { _ in AgentAccount(provider: .codex, snapshot: account.snapshot) }
+        let fullPlan = ResetReminderPlan.make(accounts: many, rules: ResetNotificationRules(), now: now)
+        XCTAssertEqual(ReminderLedger.pendingPlan(fullPlan, ledger: [:], now: now).count, 50)
     }
     func testHeatmapsAverageObservedLevelsWithoutFillingMissingHoursOrConfusingZero() throws {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!

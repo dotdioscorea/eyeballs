@@ -20,6 +20,10 @@ enum SimulatorFixtures {
             }
             let provider = Provider.allCases[index % 3]
             var windows = [UsageWindow(id: "session", title: "5-hour window", usedPercent: Double(12 + index * 9), resetsAt: now.addingTimeInterval(10800 - Double(index * 600)), duration: 18000), UsageWindow(id: "week", title: "Weekly", usedPercent: Double(20 + index * 8), resetsAt: now.addingTimeInterval(259200 + Double(index * 14400)), duration: 604800)]
+            if ProcessInfo.processInfo.arguments.contains("--notification-fixture"), index < 3 {
+                windows[1].usedPercent = index == 0 ? 95 : 40
+                windows[1].resetsAt = now.addingTimeInterval(index == 2 ? 45 : 12 * 3600)
+            }
             let boundary = ProcessInfo.processInfo.arguments.contains("--ring-boundaries")
             if boundary && index == 0 { windows[1].usedPercent = 0 }
             if boundary && index == 3 { windows[1].usedPercent = 100 }

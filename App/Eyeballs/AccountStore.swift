@@ -14,7 +14,7 @@ final class AccountStore: ObservableObject {
     @Published var notificationRules = UserDefaults.standard.data(forKey: "notification-rules").flatMap { try? JSONDecoder().decode(ResetNotificationRules.self, from: $0) } ?? ResetNotificationRules()
     private let eventFile: AccountEventFile
     private var loadedEvents = false
-    private var notificationGeneration = 0
+    @Published var notificationProviderRules = UserDefaults.standard.data(forKey: "notification-provider-rules").flatMap { try? JSONDecoder().decode([String: ResetNotificationRules].self, from: $0) } ?? [:]
     @Published var refreshing: Set<UUID> = []
     @Published var error: String?
     @Published var notificationsEnabled = UserDefaults.standard.bool(forKey: "reset-notifications")
@@ -78,6 +78,7 @@ final class AccountStore: ObservableObject {
         }
         #endif
         if publishesWidgetSummaries, loadedAccounts { publishWidgets() }
+        if self.integratesWithSystem, loadedAccounts { Task { await scheduleNotifications() } }
     }
     private func recordHistory(_ snapshot: UsageSnapshot, id: UUID) {
         let samples = historyStore.append(snapshot, to: histories[id] ?? [])
@@ -304,6 +305,7 @@ final class AccountStore: ObservableObject {
     func saveNotificationRules() {
         guard !isDemo else { return }
         if let data = try? JSONEncoder().encode(notificationRules) { UserDefaults.standard.set(data, forKey: "notification-rules") }
+        if let data = try? JSONEncoder().encode(notificationProviderRules) { UserDefaults.standard.set(data, forKey: "notification-provider-rules") }
         Task { await scheduleNotifications() }
     }
     private func observe(_ snapshot: UsageSnapshot, previous: UsageSnapshot?, id: UUID) -> UsageSnapshot {
@@ -323,8 +325,8 @@ final class AccountStore: ObservableObject {
         events = Array(events.filter { $0.detectedAt > Date.now.addingTimeInterval(-90 * 86400) }.sorted { $0.detectedAt < $1.detectedAt }.suffix(2000))
         saveEvents()
         if integratesWithSystem, notificationsEnabled {
-            for event in fresh where notificationRules.announces(event.kind) {
-                guard let account = accounts.first(where: { $0.id == event.accountID }) else { continue }
+            for event in fresh {
+                guard let account = accounts.first(where: { $0.id == event.accountID }), (notificationProviderRules[account.provider.rawValue] ?? notificationRules).announces(event.kind) else { continue }
                 // The reset-date reminder already covers normal resets. Do not send it twice.
                 if event.kind == .weeklyReset { continue }
                 let content = UNMutableNotificationContent()
@@ -335,21 +337,9 @@ final class AccountStore: ObservableObject {
             }
         }
     }
-    private func scheduleNotifications() async {
-        guard integratesWithSystem, notificationsEnabled else { return }
-        notificationGeneration += 1; let generation = notificationGeneration
-        let center = UNUserNotificationCenter.current()
-        let old = await center.pendingNotificationRequests()
-        guard generation == notificationGeneration, notificationsEnabled else { return }
-        center.removePendingNotificationRequests(withIdentifiers: old.filter { $0.identifier.hasPrefix("reminder-") || $0.identifier.hasPrefix("reset-") }.map(\.identifier))
-        for reminder in ResetReminderPlan.make(accounts: accounts, rules: notificationRules) {
-            guard generation == notificationGeneration, notificationsEnabled else { return }
-            let content = UNMutableNotificationContent()
-            content.title = reminder.title; content.body = reminder.body; content.sound = .default
-            content.userInfo = ["accountID": reminder.accountID.uuidString]
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, reminder.date.timeIntervalSinceNow), repeats: false)
-            try? await center.add(UNNotificationRequest(identifier: reminder.id, content: content, trigger: trigger))
-        }
+    func scheduleNotifications() async {
+        guard integratesWithSystem else { return }
+        await NotificationDelivery.shared.update(accounts: accounts, rules: notificationRules, overrides: notificationProviderRules, enabled: notificationsEnabled)
     }
     private func persist() {
         guard loadedAccounts else { return }

@@ -114,3 +114,24 @@ struct RowsIntent: WidgetConfigurationIntent {
     @Parameter(title: "Sort", default: .selected) var sort: WidgetOrder
     @Parameter(title: "Rows", default: .automatic) var rows: WidgetRows
 }
+
+enum LockScreenMetric: String, AppEnum {
+    case primary, week, session, weekTime, sessionTime, credits
+    static var typeDisplayRepresentation: TypeDisplayRepresentation = "Metric"
+    static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [.primary: "Primary metric", .week: "Weekly usage", .session: "5-hour usage", .weekTime: "Weekly time", .sessionTime: "5-hour time", .credits: "Credit balance"]
+    func reading(for account: AgentAccount, amount: WidgetAmount, at date: Date) -> MetricReading? {
+        if self == .credits { return nil }
+        if self == .primary { return account.readings(at: date, settings: WidgetMetrics.account.settings(for: account, amount: amount)).primary }
+        let session = self == .session || self == .sessionTime
+        guard let window = account.window(for: session ? .session : .weekly) else { return nil }
+        let time = self == .weekTime || self == .sessionTime
+        let settings = AccountDisplay(direction: amount == .used ? .used : amount == .remaining ? .remaining : account.displaySettings.direction, rings: [RingDefinition(windowID: window.id, kind: time ? .time : .usage)])
+        return account.readings(at: date, settings: settings).first
+    }
+}
+struct LockScreenIntent: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Lock Screen account"
+    @Parameter(title: "Account") var account: AccountEntity?
+    @Parameter(title: "Metric", default: .primary) var metric: LockScreenMetric
+    @Parameter(title: "Amounts", default: .account) var amount: WidgetAmount
+}

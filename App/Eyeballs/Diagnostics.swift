@@ -160,13 +160,16 @@ struct UsageParsingDiagnostic: Codable {
     }
 }
 struct DebugBundle: Codable {
-    var schemaVersion = 3
+    var schemaVersion = 4
     var createdAt: Date
     var appVersion: String
     var systemVersion: String
     var device: String
     var widgetCacheAvailable: Bool
     var widgetAccountCount: Int
+    var notificationRules: ResetNotificationRules
+    var notificationProviderRules: [String: ResetNotificationRules]
+    var notifications: NotificationDeliveryStatus
     var refresh: RefreshStatus
     var accounts: [AccountStatus]
     var events: [DiagnosticEvent]
@@ -249,6 +252,8 @@ enum Diagnostics {
         return DebugBundle(createdAt: now, appVersion: version, systemVersion: UIDevice.current.systemVersion,
                     device: UIDevice.current.model, widgetCacheAvailable: WidgetCache.location != nil,
                     widgetAccountCount: WidgetCache.read().count,
+                    notificationRules: UserDefaults.standard.data(forKey: "notification-rules").flatMap { try? JSONDecoder().decode(ResetNotificationRules.self, from: $0) } ?? ResetNotificationRules(),
+                    notificationProviderRules: UserDefaults.standard.data(forKey: "notification-provider-rules").flatMap { try? JSONDecoder().decode([String: ResetNotificationRules].self, from: $0) } ?? [:], notifications: .saved,
                     refresh: DebugBundle.RefreshStatus(backgroundRefresh: RefreshSettings.backgroundStatus, lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
                                                        foregroundIntervalMinutes: RefreshSettings.foregroundMinutes,
                                                        appScheduling: RefreshSchedulingDiagnostics.read(widget: false), widgetScheduling: RefreshSchedulingDiagnostics.read(widget: true),

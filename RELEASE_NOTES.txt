@@ -1,3 +1,4 @@
-- Roomier tiles and credit balances capped at two decimals.
-- Faster foreground refreshes and improved background scheduling.
-- Added update settings and refresh diagnostics.
+- Lock Screen widgets with selectable metrics.
+- Chart zoom, pan, smoothing and averaged burn rates.
+- Connected-provider filters and compact, interactive legends.
+- Notification thresholds and provider controls; fixed late reset reminders.

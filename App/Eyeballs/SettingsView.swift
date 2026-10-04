@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
     @EnvironmentObject private var store: AccountStore
@@ -6,8 +7,7 @@ struct SettingsView: View {
     var body: some View {
         List {
             Section {
-                Toggle("Notifications", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value) } }))
-                if store.notificationsEnabled { NavigationLink("Notification settings") { NotificationSettingsView() } }
+                NavigationLink { NotificationSettingsView() } label: { LabeledContent("Notifications", value: store.notificationsEnabled ? "On" : "Off") }.accessibilityIdentifier("notification-settings")
             }
             Section {
                 NavigationLink("Updates") { UpdateSettingsView() }
@@ -124,30 +124,94 @@ struct ProblemReportView: View {
 
 struct NotificationSettingsView: View {
     @EnvironmentObject private var store: AccountStore
+    @Environment(\.scenePhase) private var phase
+    @Environment(\.openURL) private var openURL
+    @State private var status = NotificationDeliveryStatus.saved
+    @State private var testMessage: String?
+    private var providers: [Provider] { Provider.allCases.filter { provider in store.accounts.contains { $0.provider == provider } } }
     var body: some View {
         Form {
-            Section("Resets") {
-                Toggle("Weekly reset", isOn: $store.notificationRules.weeklyReset)
-                Toggle("Detected early reset", isOn: $store.notificationRules.earlyReset)
-                Toggle("Banked reset changes", isOn: $store.notificationRules.bankedChanges)
-                Toggle("Banked reset expiry", isOn: $store.notificationRules.bankedExpiry)
-                if store.notificationRules.bankedExpiry {
-                    Picker("Expiry warning", selection: $store.notificationRules.bankedExpiryHours) {
-                        ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) }
+            Section {
+                Toggle("Enable notifications", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value); await reload() } })).accessibilityIdentifier("notifications-enabled")
+                LabeledContent("iOS permission", value: status.authorization)
+                LabeledContent("Alerts", value: status.alerts)
+                LabeledContent("Scheduled reminders", value: String(status.scheduled))
+                Button("Open iPhone settings") { openURL(URL(string: UIApplication.openSettingsURLString)!) }
+                Button("Test notification") { Task {
+                    do { try await NotificationDelivery.shared.test(); testMessage = "Test scheduled for 3 seconds from now." }
+                    catch { testMessage = "Could not schedule the test." }
+                } }.disabled(!store.notificationsEnabled || status.authorization == "Denied")
+                if let testMessage { Text(testMessage).font(.caption).foregroundStyle(.secondary) }
+                if status.schedulingFailed { Text("Some reminders could not be scheduled. Try enabling notifications again.").font(.caption).foregroundStyle(.orange) }
+            } footer: { Text("Reset reminders can arrive while the app is closed. Low usage and early resets need a successful refresh. Focus and iOS notification settings can delay alerts.") }
+            NotificationRuleControls(rules: $store.notificationRules)
+            if !providers.isEmpty {
+                Section("Providers") {
+                    ForEach(providers) { provider in
+                        NavigationLink { ProviderNotificationSettings(provider: provider) } label: {
+                            LabeledContent(provider.name, value: store.notificationProviderRules[provider.rawValue].map { $0.enabled ? "Custom" : "Off" } ?? "Default")
+                        }
                     }
                 }
             }
-            Section("Allowance reminder") {
-                Toggle("Before weekly reset", isOn: $store.notificationRules.allowanceReminder)
-                if store.notificationRules.allowanceReminder {
-                    Picker("Notify", selection: $store.notificationRules.allowanceHours) {
-                        ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) }
-                    }
-                    Stepper("At least \(store.notificationRules.minimumRemaining)% remaining", value: $store.notificationRules.minimumRemaining, in: 0...100, step: 5)
-                }
-            }
-            Section { Toggle("Usage parsing failures", isOn: $store.notificationRules.parsingFailures) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Notifications").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
-            .onChange(of: store.notificationRules) { _, _ in store.saveNotificationRules() }
+            .task { await reload() }
+            .onChange(of: phase) { _, value in if value == .active { Task { await reload() } } }
+            .onChange(of: store.notificationRules) { _, _ in store.saveNotificationRules(); Task { await reload() } }
+            .onChange(of: store.notificationProviderRules) { _, _ in store.saveNotificationRules(); Task { await reload() } }
+    }
+    private func reload() async { await store.scheduleNotifications(); status = await NotificationDelivery.shared.status() }
+}
+struct ProviderNotificationSettings: View {
+    let provider: Provider
+    @EnvironmentObject private var store: AccountStore
+    private var custom: Bool { store.notificationProviderRules[provider.rawValue] != nil }
+    private var rules: Binding<ResetNotificationRules> {
+        Binding(get: { store.notificationProviderRules[provider.rawValue] ?? store.notificationRules }, set: { store.notificationProviderRules[provider.rawValue] = $0 })
+    }
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Use default settings", isOn: Binding(get: { !custom }, set: { defaults in
+                    if defaults { store.notificationProviderRules.removeValue(forKey: provider.rawValue) }
+                    else { store.notificationProviderRules[provider.rawValue] = store.notificationRules }
+                }))
+                if custom { Toggle("Notify for this provider", isOn: rules.enabled) }
+            }
+            if custom, rules.wrappedValue.enabled { NotificationRuleControls(rules: rules) }
+        }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle(provider.name).navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .onChange(of: store.notificationProviderRules) { _, _ in store.saveNotificationRules() }
+    }
+}
+struct NotificationRuleControls: View {
+    @Binding var rules: ResetNotificationRules
+    var body: some View {
+        Section("Low allowance") {
+            Toggle("Low remaining allowance", isOn: $rules.lowAllowance)
+            if rules.lowAllowance {
+                Picker("Remaining threshold", selection: $rules.lowThreshold) { ForEach([0, 5, 10, 15, 20, 25, 50], id: \.self) { Text("\($0)%").tag($0) } }
+            }
+        }
+        Section("Resets") {
+            Toggle("Weekly reset", isOn: $rules.weeklyReset)
+            Toggle("Other window resets", isOn: $rules.sessionReset)
+            Toggle("Detected early reset", isOn: $rules.earlyReset)
+            Toggle("Banked reset changes", isOn: $rules.bankedChanges)
+            Toggle("Banked reset expiry", isOn: $rules.bankedExpiry)
+            if rules.bankedExpiry {
+                Picker("Expiry warning", selection: $rules.bankedExpiryHours) { ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) } }
+            }
+        }
+        Section("Before weekly reset") {
+            Toggle("Unused allowance reminder", isOn: $rules.allowanceReminder)
+            if rules.allowanceReminder {
+                Picker("Notify", selection: $rules.allowanceHours) { ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) } }
+                Stepper("At least \(rules.minimumRemaining)% remaining", value: $rules.minimumRemaining, in: 0...100, step: 5)
+            }
+        }
+        Section("Account changes") {
+            Toggle("Plan or allowance changes", isOn: $rules.allowanceChanges)
+            Toggle("Usage parsing failures", isOn: $rules.parsingFailures)
+        }
     }
 }

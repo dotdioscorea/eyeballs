@@ -36,7 +36,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         completionHandler()
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound])
+        completionHandler([.banner, .list, .sound])
     }
     func scheduleRefresh() {
         guard !session.isDemo, store.accounts.contains(where: { !$0.needsLogin }) else { return }
@@ -75,6 +75,15 @@ struct EyeballsApp: App {
     @AppStorage("foreground-refresh-minutes") private var foregroundInterval = 1
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--accessory-preview") { AccessoryPreviewView() }
+            else { content }
+            #else
+            content
+            #endif
+        }
+    }
+    private var content: some View {
             AccountSessionView(session: delegate.session).preferredColorScheme(.dark).tint(Theme.accent)
                 .task(id: phase == .active ? foregroundInterval : 0) {
                     guard phase == .active else { return }
@@ -87,6 +96,5 @@ struct EyeballsApp: App {
                     if value == .active || value == .background { delegate.scheduleRefresh() }
                 }
                 .onChange(of: delegate.store.accounts.count) { _, _ in delegate.scheduleRefresh() }
-        }
     }
 }

@@ -83,6 +83,7 @@ struct DashboardView: View {
         .refreshable { await store.refreshAll() }
         .sheet(isPresented: $adding) { AddAccountView() }
         .sheet(isPresented: $reordering) { reorderSheet }
+        .onChange(of: connectedProviders) { _, providers in if let filter, !providers.contains(filter) { self.filter = nil } }
     }
     private var controls: some View {
         VStack(spacing: compact ? 6 : 10) {
@@ -111,11 +112,12 @@ struct DashboardView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     filterButton("All", selected: filter == nil) { filter = nil }
-                    ForEach(Provider.allCases) { provider in filterButton(provider.name, selected: filter == provider) { filter = provider } }
+                    ForEach(connectedProviders) { provider in filterButton(provider.name, selected: filter == provider) { filter = provider } }
                 }
             }
         }.padding(.horizontal, 16).padding(.vertical, compact ? 4 : 10).background(Theme.background)
     }
+    private var connectedProviders: [Provider] { Provider.allCases.filter { provider in store.accounts.contains { $0.provider == provider } } }
     private func adoptCustomOrder() {
         if sort != .manual { store.reorder(sort.sorted(store.accounts).map(\.id)); sortValue = AccountSort.manual.rawValue }
     }

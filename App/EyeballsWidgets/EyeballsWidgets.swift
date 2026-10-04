@@ -235,7 +235,7 @@ private func widgetStatus(_ account: AgentAccount, at date: Date, readings: [Met
 }
 @main
 struct EyeballsWidgets: WidgetBundle {
-    var body: some Widget { AccountWidget(); AccountRowsWidget(); OverviewWidget() }
+    var body: some Widget { AccountWidget(); AccountRowsWidget(); OverviewWidget(); LockScreenWidget() }
 }
 struct AccountRowsWidget: Widget {
     var body: some WidgetConfiguration {

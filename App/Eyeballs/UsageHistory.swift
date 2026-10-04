@@ -57,6 +57,9 @@ struct UsageHistoryView: View {
     @State private var heatmapWindow = ""
     @State private var measure = HistoryMeasure.remaining
     @State private var unit = ""
+    @State private var kind = HistoryChartKind.lines
+    @AppStorage("chart-smooth") private var smooth = false
+    @State private var averagingHours = 1
     private var domain: ClosedRange<Date> { rangeEnd.addingTimeInterval(-Double(days) * 86400)...rangeEnd }
     private var visible: [UsageHistorySample] { samples.filter { domain.contains($0.date) } }
     private var units: [String] { Array(Set(samples.flatMap(\.windows).filter { $0.usedAmount != nil }.compactMap(\.amountUnit))).sorted() }
@@ -70,18 +73,23 @@ struct UsageHistoryView: View {
     private var plottedWindows: [UsageWindow] { windows.filter { !hiddenWindows.contains($0.id) && (measure != .amount || $0.amountUnit == activeUnit) } }
     private var series: [HistoryPlotSeries] {
         plottedWindows.map { window in
-            HistoryPlotSeries(id: window.id, title: window.shortTitle, color: account.usageColor(for: window.id), segments: HistorySeries.segments(samples: visible, windowID: window.id, measure: measure, unit: measure == .amount ? activeUnit : nil), subdued: days >= 7 && window.duration.map { $0 <= 21600 } == true)
+            let data = HistorySeries.plot(samples: samples, windowID: window.id, measure: measure, unit: measure == .amount ? activeUnit : nil, events: events)
+            return HistoryPlotSeries(id: window.id, title: window.shortTitle, color: account.usageColor(for: window.id),
+                segments: kind == .rate ? HistoryRate.segments(samples: samples, windowID: window.id, measure: measure, unit: activeUnit, events: events, averagingHours: averagingHours) : data.segments,
+                hardSegments: kind == .rate ? [] : data.transitions, subdued: days >= 7 && window.duration.map { $0 <= 21600 } == true)
         }
     }
     var body: some View {
         VStack(spacing: 18) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text("Usage history").font(.headline); Spacer(); HistoryMeasureMenu(measure: $measure, unit: $unit, units: units) }
+                HStack { Text("Usage history").font(.headline); Spacer(); HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate) }
+                Picker("History chart type", selection: $kind) { Text("Lines").tag(HistoryChartKind.lines); Text("Rate").tag(HistoryChartKind.rate) }.pickerStyle(.segmented)
                 HistoryPeriodPicker(days: $days)
+                HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours)
                 if series.flatMap({ $0.segments.flatMap { $0 } }).isEmpty { Text(plottedWindows.isEmpty ? "Choose a metric." : "History starts with successful refreshes.").font(.caption).foregroundStyle(.secondary) }
                 else {
                     HistoryPlot(series: series, domain: domain, measure: measure, unit: activeUnit,
-                                events: ChartEvents.groups(events: events, windows: plottedWindows, domain: domain), accountNames: [account.id: account.title])
+                                events: ChartEvents.groups(events: events, windows: plottedWindows, domain: rangeEnd.addingTimeInterval(-UsageHistoryStore.retention)...rangeEnd), accountNames: [account.id: account.title], smooth: smooth, rate: kind == .rate)
                 }
                 if !windows.isEmpty { windowLegend }
                 if !windows.isEmpty { Divider(); BurnRateView(samples: samples, windows: windows, events: events) }
@@ -98,6 +106,7 @@ struct UsageHistoryView: View {
             }
         }.onAppear { rangeEnd = .now; measure = account.displaySettings.direction == .remaining ? .remaining : .used }
             .onChange(of: samples.last?.date) { _, _ in rangeEnd = .now }
+            .onChange(of: kind) { _, value in if value == .rate && measure == .remaining { measure = .used } }
     }
     private var windowLegend: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -131,22 +140,7 @@ enum HistorySeries {
         }
         return result
     }
-    // Lines connect observed readings, including across long gaps and reset drops.
-    // Unavailable readings remain breaks instead of being treated as zero.
     static func segments(samples: [UsageHistorySample], windowID: String, measure: HistoryMeasure = .used, unit: String? = nil) -> [[Point]] {
-        var result: [[Point]] = []; var current: [Point] = []
-        var previous: UsageHistorySample?
-        for sample in samples {
-            defer { previous = sample }
-            guard let window = sample.windows.first(where: { $0.id == windowID }), let percent = measure.value(window), measure != .amount || unit == nil || window.amountUnit == unit else {
-                if !current.isEmpty { result.append(current); current = [] }; continue
-            }
-            if let previous, AllowanceChanges.contextChanged(previous.allowanceContext, sample.allowanceContext) || previous.windows.first(where: { $0.id == windowID }).map({ AllowanceChanges.windowChanged($0, window) }) == true {
-                if !current.isEmpty { result.append(current); current = [] }
-            }
-            current.append(Point(date: sample.date, usedPercent: percent))
-        }
-        if !current.isEmpty { result.append(current) }
-        return result
+        plot(samples: samples, windowID: windowID, measure: measure, unit: unit).segments
     }
 }

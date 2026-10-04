@@ -36,7 +36,7 @@ struct RemainingAllowanceHistoryView: View {
                     }.tint(.primary)
                 }
                 HistoryPeriodPicker(days: $days)
-                let segments = RemainingAllowanceSeries.segments(samples.filter { domain.contains($0.date) }, metric: selected.id)
+                let segments = RemainingAllowanceSeries.segments(samples, metric: selected.id)
                 if !segments.isEmpty {
                     HistoryPlot(series: [.init(id: selected.id, title: selected.title, color: account.color, segments: segments, subdued: false)], domain: domain,
                                 measure: .amount, unit: "remaining", events: [], accountNames: [account.id: account.title])
