@@ -245,8 +245,7 @@ struct AccountTile: View {
                                         Circle().fill(MetricColor.color(index, base: account.color)).frame(width: 4, height: 4)
                                         Text(tileTitle(reading)).foregroundStyle(.secondary).lineLimit(1)
                                         Text(reading.value).fontWeight(.medium).fixedSize()
-                                        Spacer(minLength: 0)
-                                    }
+                                    }.frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }.font(.system(size: 10)).monospacedDigit()
                             if let balance {
