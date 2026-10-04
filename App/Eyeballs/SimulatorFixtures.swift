@@ -7,6 +7,14 @@ enum SimulatorFixtures {
     static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled }
     static func accounts(now: Date = .now) -> [AgentAccount] {
         (0..<8).map { index in
+            if ProcessInfo.processInfo.arguments.contains("--provider-stats-fixture"), [2, 4, 5].contains(index) {
+                let provider: Provider = index == 2 ? .grok : index == 4 ? .copilot : .gemini
+                let snapshot: UsageSnapshot
+                if index == 2 { snapshot = try! UsageParser.grok(["config": ["creditUsagePercent": 100, "onDemandUsed": ["val": "1234"]]]) }
+                else if index == 4 { snapshot = try! UsageParser.copilot(["token_based_billing": true, "quota_snapshots": ["premium_interactions": ["entitlement": 1500, "credits_used": 1500, "percent_remaining": 0, "overage_count": 40, "overage_entitlement": 100, "overage_permitted": true], "chat": ["unlimited": true, "credits_used": 2.5]]]) }
+                else { snapshot = try! UsageParser.gemini(["buckets": [["modelId": "gemini-2.5-pro", "tokenType": "REQUESTS", "remainingFraction": 0.5, "remainingAmount": "123"]]]) }
+                return AgentAccount(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index + 1))!, provider: provider, label: index == 2 ? "Research" : index == 4 ? "Travel" : "Studio", snapshot: snapshot, addedAt: now)
+            }
             if ProcessInfo.processInfo.arguments.contains("--credit-tile-fixture"), index == 2 {
                 return AgentAccount(id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!, provider: .cline, label: "Research", snapshot: UsageSnapshot(creditBalance: "0.500012345678", updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture"), addedAt: now)
             }

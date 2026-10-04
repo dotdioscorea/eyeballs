@@ -31,17 +31,19 @@ enum ChartViewport {
     }
 }
 
-// Horizontal pan owns only the plot area. Vertical drags remain available to the
-// enclosing page; holding selects readings, and two fingers zoom around the pinch.
+// Drag the plot to inspect; pinch or use two fingers to move time. The x-axis
+// accepts one-finger pan. Vertical drags remain available to the enclosing page.
 struct ChartGestures: UIViewRepresentable {
     var pan: (Double, Bool) -> Void
     var zoom: (Double, Double, Bool) -> Void
     var select: (Double) -> Void
+    var inspect = true
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeUIView(context: Context) -> UIView {
         let view = UIView(); view.backgroundColor = .clear
+        if !inspect { view.isAccessibilityElement = true; view.accessibilityIdentifier = "chart-timeline"; view.accessibilityLabel = "Drag timeline to move through history" }
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.panned(_:)))
-        pan.maximumNumberOfTouches = 1; pan.delegate = context.coordinator
+        pan.minimumNumberOfTouches = inspect ? 2 : 1; pan.maximumNumberOfTouches = 2; pan.delegate = context.coordinator
         let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinched(_:)))
         pinch.delegate = context.coordinator
         let hold = UILongPressGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.held(_:)))
@@ -49,7 +51,9 @@ struct ChartGestures: UIViewRepresentable {
         context.coordinator.hold = hold
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped(_:)))
         tap.require(toFail: hold)
-        for gesture in [pan, pinch, hold, tap] { view.addGestureRecognizer(gesture) }
+        let scrub = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.scrubbed(_:)))
+        scrub.maximumNumberOfTouches = 1; scrub.delegate = context.coordinator
+        for gesture in inspect ? [pan, pinch, scrub, hold, tap] : [pan, pinch] { view.addGestureRecognizer(gesture) }
         return view
     }
     func updateUIView(_ view: UIView, context: Context) { context.coordinator.owner = self }
@@ -76,6 +80,7 @@ struct ChartGestures: UIViewRepresentable {
             gesture.scale = 1
             owner.zoom(scale, gesture.location(in: gesture.view).x / max(1, gesture.view?.bounds.width ?? 1), gesture.state == .ended || gesture.state == .cancelled)
         }
+        @objc func scrubbed(_ gesture: UIPanGestureRecognizer) { if gesture.state == .began || gesture.state == .changed || gesture.state == .ended { picked(gesture) } }
         @objc func held(_ gesture: UILongPressGestureRecognizer) { if gesture.state == .began || gesture.state == .changed { picked(gesture) } }
         @objc func tapped(_ gesture: UITapGestureRecognizer) { picked(gesture) }
         private func picked(_ gesture: UIGestureRecognizer) { owner.select(max(0, min(1, gesture.location(in: gesture.view).x / max(1, gesture.view?.bounds.width ?? 1)))) }

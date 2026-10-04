@@ -20,6 +20,33 @@ extension UsageParser {
     static func metricKey(_ parts: [String]) -> String {
         SHA256.hash(data: Data(parts.joined(separator: "|").utf8)).prefix(12).map { String(format: "%02x", $0) }.joined()
     }
+    static func copilotDetails(_ object: [String: Any], windows: inout [UsageWindow], reset: Date?) -> ProviderDetails? {
+        let snapshots = object["quota_snapshots"] as? [String: [String: Any]] ?? [:]
+        let credits = object["token_based_billing"] as? Bool == true
+        var items: [ProviderUsageDetails] = []
+        for (key, title) in [("premium_interactions", credits ? "AI credits" : "Premium requests"), ("chat", "Chat"), ("completions", "Completions")] {
+            guard let quota = snapshots[key] else { continue }
+            let cap = positiveAmount(quota["entitlement"]).flatMap { $0 > 0 ? $0 : nil }
+            let remaining = positiveAmount(quota["quota_remaining"])
+            let used = credits ? positiveAmount(quota["credits_used"]) ?? positiveAmount(quota["used"]) : positiveAmount(quota["used"]) ?? remaining.flatMap { left in cap.flatMap { left <= $0 ? $0 - left : nil } }
+            let unit = credits ? "AI credits" : key == "completions" ? "completions" : "requests"
+            if used != nil || cap != nil || remaining != nil || quota["unlimited"] as? Bool == true {
+                items.append(.init(id: "copilot-" + key, title: title, used: used, limit: cap, remaining: remaining, unit: unit, unlimited: quota["unlimited"] as? Bool))
+            }
+        }
+        if let quota = snapshots["premium_interactions"] {
+            let used = positiveAmount(quota["overage_count"])
+            let cap = positiveAmount(quota["overage_entitlement"]).flatMap { $0 > 0 ? $0 : nil }
+            let enabled = quota["overage_permitted"] as? Bool
+            if used != nil || cap != nil || enabled != nil {
+                let unit = credits ? "AI credits" : "requests"
+                items.append(.init(id: "copilot-overage", title: "Additional usage", used: used, limit: cap, remaining: used.flatMap { used in cap.map { max(0, $0 - used) } }, unit: unit, enabled: enabled))
+                if let used, let cap { windows.append(.init(id: "additional-budget", title: "Additional budget", usedPercent: used / cap * 100, resetsAt: date(quota["quota_reset_at"]) ?? reset, usedAmount: used, limitAmount: cap, amountUnit: unit)) }
+            }
+        }
+        guard !items.isEmpty else { return nil }
+        var result = ProviderDetails(); result.usage = items; return result
+    }
     static func messageEstimate(_ raw: Any?) -> MessageEstimate? {
         guard let values = raw as? [Any], values.count == 2,
               let lower = positiveAmount(values[0]), let upper = positiveAmount(values[1]),

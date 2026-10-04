@@ -37,22 +37,87 @@ final class EyeballsUITests: XCTestCase {
         let plot = app.otherElements["history-plot"].firstMatch
         XCTAssertTrue(plot.waitForExistence(timeout: 10))
         let original = plot.value as? String
-        let before = XCTAttachment(screenshot: app.screenshot()); before.name = "Shared charts and wrapping legend"; before.lifetime = .keepAlways; add(before)
+        let before = XCTAttachment(screenshot: app.screenshot()); before.name = "Shared charts and stable readout"; before.lifetime = .keepAlways; add(before)
         plot.pinch(withScale: 2, velocity: 1)
         XCTAssertNotEqual(plot.value as? String, original)
         XCTAssertTrue(app.buttons["reset-chart-view"].exists)
         let zoomed = plot.value as? String
-        plot.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.5)).press(forDuration: 0.05, thenDragTo: plot.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)))
+        let timeline = plot
+        timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 1.08)).press(forDuration: 0.05, thenDragTo: timeline.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 1.08)))
         XCTAssertNotEqual(plot.value as? String, zoomed)
         let zoom = XCTAttachment(screenshot: app.screenshot()); zoom.name = "Pinched and panned chart"; zoom.lifetime = .keepAlways; add(zoom)
         app.buttons["reset-chart-view"].tap()
         XCTAssertEqual(plot.value as? String, original)
-        let toggle = app.switches["chart-smooth"]
-        XCTAssertTrue(toggle.exists); if toggle.value as? String != "1" { toggle.tap() }
+        let toggle = app.buttons["chart-smooth"]
+        XCTAssertTrue(toggle.exists); if toggle.value as? String != "On" { toggle.tap() }
         let smooth = XCTAttachment(screenshot: app.screenshot()); smooth.name = "Smoothed usage comparison"; smooth.lifetime = .keepAlways; add(smooth)
         app.buttons["Rate"].tap()
         XCTAssertTrue(plot.exists)
         let rate = XCTAttachment(screenshot: app.screenshot()); rate.name = "Averaged rate chart"; rate.lifetime = .keepAlways; add(rate)
+    }
+    func testContinuousChartReadoutAndAccountSelection() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Charts"].tap()
+        let plot = app.otherElements["history-plot"].firstMatch
+        XCTAssertTrue(plot.waitForExistence(timeout: 10))
+        let original = plot.value as? String
+        plot.coordinate(withNormalizedOffset: CGVector(dx: 0.72, dy: 0.5)).tap()
+        let date = app.descendants(matching: .any)["chart-selected-date"].firstMatch
+        XCTAssertNotEqual(date.label, "Latest readings")
+        let firstDate = date.label
+        plot.coordinate(withNormalizedOffset: CGVector(dx: 0.72, dy: 0.5)).press(forDuration: 0.05, thenDragTo: plot.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)))
+        XCTAssertNotEqual(date.label, firstDate)
+        XCTAssertEqual(plot.value as? String, original, "Scrubbing inspects without panning")
+        XCTAssertTrue(app.buttons["Clear chart selection"].exists)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Continuous readout below plot"; shot.lifetime = .keepAlways; add(shot)
+        app.buttons["chart-provider-codex"].tap()
+        let personal = "00000000-0000-0000-0000-000000000001:week"
+        XCTAssertTrue(app.buttons["chart-reading-" + personal].exists)
+        XCTAssertFalse(app.buttons["chart-reading-00000000-0000-0000-0000-000000000002:week"].exists)
+        app.buttons.matching(NSPredicate(format: "label == %@", "Accounts & metrics")).firstMatch.tap()
+        let account = app.buttons["chart-account-00000000-0000-0000-0000-000000000001"]
+        XCTAssertTrue(account.waitForExistence(timeout: 5)); XCTAssertEqual(account.value as? String, "On")
+        account.tap(); XCTAssertEqual(account.value as? String, "Off")
+        let metric = app.buttons["chart-metric-" + personal]
+        metric.tap(); XCTAssertEqual(metric.value as? String, "On")
+        let filters = XCTAttachment(screenshot: app.screenshot()); filters.name = "Collapsible accounts and metric swatches"; filters.lifetime = .keepAlways; add(filters)
+        app.buttons.matching(NSPredicate(format: "label == %@", "Accounts & metrics")).firstMatch.tap()
+        app.buttons["chart-provider-all"].tap()
+        XCTAssertTrue(app.buttons["chart-reading-" + personal].exists)
+        XCTAssertTrue(app.buttons["chart-reading-00000000-0000-0000-0000-000000000002:week"].exists, "Provider filtering preserves selection")
+    }
+    func testCombinedActivityAndDayBreakdown() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test"]; app.launch()
+        app.tabBars.buttons["Charts"].tap(); app.buttons["Activity"].tap()
+        XCTAssertTrue(app.otherElements["combined-activity"].firstMatch.waitForExistence(timeout: 5))
+        app.buttons["Monthly"].firstMatch.tap()
+        let cell = app.buttons["heatmap-cell-monthly-2"]
+        XCTAssertTrue(cell.waitForExistence(timeout: 5)); XCTAssertEqual(app.buttons.matching(identifier: "heatmap-cell-monthly-2").count, 1)
+        let map = XCTAttachment(screenshot: app.screenshot()); map.name = "Combined monthly Activity"; map.lifetime = .keepAlways; add(map)
+        cell.tap()
+        XCTAssertTrue(app.staticTexts["DAY CONSUMPTION"].waitForExistence(timeout: 5)); XCTAssertTrue(app.staticTexts["Coverage"].exists)
+        XCTAssertTrue(app.staticTexts["Personal"].exists); XCTAssertTrue(app.staticTexts["Work"].exists)
+        let breakdown = XCTAttachment(screenshot: app.screenshot()); breakdown.name = "Combined Activity day breakdown"; breakdown.lifetime = .keepAlways; add(breakdown)
+        app.buttons["Done"].tap()
+        app.buttons["chart-provider-codex"].tap()
+        XCTAssertTrue(app.staticTexts["Average quota used"].exists)
+    }
+    func testAdditionalProviderStatistics() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--provider-stats-fixture", "--exit-demo-test"]; app.launch()
+        app.buttons["compact-mode"].tap()
+        app.buttons["sort-accounts"].tap(); app.buttons["Custom order"].tap()
+        app.buttons["account-Research"].tap()
+        for _ in 0..<3 { if app.staticTexts["Amount spent"].isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Amount spent"].exists); XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "12.34")).firstMatch.exists)
+        let grok = XCTAttachment(screenshot: app.screenshot()); grok.name = "Grok reported on-demand spend"; grok.lifetime = .keepAlways; add(grok)
+        app.navigationBars.buttons["Requota"].tap(); app.buttons["account-Travel"].tap()
+        for _ in 0..<4 { if app.staticTexts["Additional usage"].isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["Additional usage"].exists); XCTAssertTrue(app.staticTexts["Unlimited"].exists)
+        let copilot = XCTAttachment(screenshot: app.screenshot()); copilot.name = "Copilot additional budget and unlimited counters"; copilot.lifetime = .keepAlways; add(copilot)
+        app.navigationBars.buttons["Requota"].tap(); app.buttons["account-Studio"].tap()
+        for _ in 0..<6 { if app.buttons["configure-display"].isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(app.staticTexts["123 left"].exists)
+        let gemini = XCTAttachment(screenshot: app.screenshot()); gemini.name = "Gemini actual remaining request count"; gemini.lifetime = .keepAlways; add(gemini)
     }
     func testLockScreenAccessoryLayouts() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--accessory-preview"]; app.launch()

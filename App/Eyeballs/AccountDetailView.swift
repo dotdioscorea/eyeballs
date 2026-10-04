@@ -61,7 +61,7 @@ struct AccountDetailView: View {
                                 }
                             }.frame(maxWidth: .infinity, alignment: .leading).panel()
                         }
-                        if account.snapshot?.remainingAllowances?.isEmpty == false {
+                        if account.snapshot?.remainingAllowances?.isEmpty == false, account.snapshot?.windows.isEmpty != false {
                             RemainingAllowanceHistoryView(samples: store.histories[id] ?? [], account: account)
                         } else if account.snapshot?.windows.isEmpty == false || (store.histories[id] ?? []).contains(where: { !$0.windows.isEmpty }) {
                             UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id })
@@ -80,7 +80,7 @@ struct AccountDetailView: View {
                         if let updated = account.snapshot?.updatedAt { Text("Last updated \(updated.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }
                         Button("Remove account", role: .destructive) { removing = true }.font(.subheadline).padding(.top, 8).accessibilityIdentifier("remove-connection")
                     }.padding(22).frame(maxWidth: 600).frame(maxWidth: .infinity)
-                }.background(Theme.background).refreshable { await store.refresh(id) }
+                }.id(account.id).background(Theme.background).refreshable { await store.refresh(id) }
                     .navigationTitle(account.title).navigationBarTitleDisplayMode(.inline)
                     .toolbar(.hidden, for: .tabBar)
                     .toolbar { ToolbarItem(placement: .topBarTrailing) {

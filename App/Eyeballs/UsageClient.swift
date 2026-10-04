@@ -311,7 +311,11 @@ enum UsageParser {
             windows.append(UsageWindow(id: "product-" + product, title: product, usedPercent: amount, resetsAt: end, duration: duration))
         }
         let balance = cent(config["prepaidBalance"]).map { String(format: "$%.2f", $0 / 100) }
-        return UsageSnapshot(windows: windows, plan: ((config["subscriptionTier"] ?? object["subscriptionTier"]) as? String)?.replacingOccurrences(of: "_", with: " ").capitalized, creditBalance: balance, billingEndsAt: date(config["billingPeriodEnd"]))
+        var details = ProviderDetails()
+        if let used = cent(config["onDemandUsed"]) {
+            details.spending.append(.init(id: "grok-on-demand", title: "On-demand usage", used: used / 100, limit: cent(config["onDemandCap"]).flatMap { $0 > 0 ? $0 / 100 : nil }, currency: "USD", resetsAt: date(config["billingPeriodEnd"])))
+        }
+        return UsageSnapshot(windows: windows, plan: ((config["subscriptionTier"] ?? object["subscriptionTier"]) as? String)?.replacingOccurrences(of: "_", with: " ").capitalized, creditBalance: balance, billingEndsAt: date(config["billingPeriodEnd"]), details: details.isEmpty ? nil : details)
     }
     static func gemini(_ raw: Any) throws -> UsageSnapshot {
         guard let object = raw as? [String: Any], let buckets = object["buckets"] as? [[String: Any]] else { throw UsageError.invalidResponse }
@@ -328,7 +332,12 @@ enum UsageParser {
             else if bucket["remainingFraction"] == nil, bucket["remainingAmount"] as? String == "0" { used = 100 }
             return UsageWindow(id: id, title: model + (token.isEmpty ? "" : " · " + token), usedPercent: used, resetsAt: date(bucket["resetTime"]))
         }
-        return UsageSnapshot(windows: windows)
+        let amounts = windows.compactMap { window -> RemainingAllowance? in
+            guard let bucket = buckets.first(where: { (safeLabel($0["modelId"]) ?? "Quota") + ":" + ($0["tokenType"] as? String ?? "") == window.id }),
+                  let value = positiveAmount(bucket["remainingAmount"]), value <= 1_000_000_000_000, value.rounded() == value else { return nil }
+            return RemainingAllowance(id: "gemini-" + metricKey([window.id]), title: window.title, remaining: Int(value))
+        }
+        return UsageSnapshot(windows: windows, remainingAllowances: amounts.isEmpty ? nil : amounts)
     }
     // Microsoft's chatEntitlementService consumes the same quota snapshots.
     // Unlimited categories and categories without allocation are not finite rings.
@@ -362,7 +371,13 @@ enum UsageParser {
                 windows.append(UsageWindow(id: id, title: label, usedPercent: max(0, 100 - left / total * 100), resetsAt: reset))
             }
         }
-        return UsageSnapshot(windows: windows, plan: object["copilot_plan"] as? String, billingEndsAt: reset)
+        let details = copilotDetails(object, windows: &windows, reset: reset)
+        for index in windows.indices {
+            if let counter = details?.usage?.first(where: { $0.id == "copilot-" + windows[index].id }) {
+                windows[index].usedAmount = counter.used; windows[index].amountUnit = counter.unit
+            }
+        }
+        return UsageSnapshot(windows: windows, plan: object["copilot_plan"] as? String, billingEndsAt: reset, details: details)
     }
     static func cline(_ raw: Any, subject: String) throws -> UsageSnapshot {
         let data = try ClineAuth.unwrap(raw)

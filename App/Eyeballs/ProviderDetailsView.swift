@@ -4,6 +4,17 @@ struct ProviderDetailsView: View {
     let details: ProviderDetails
     var breakdownColor: Color = Color(hex: 0x8FC8EC)
     var body: some View {
+        ForEach(details.usage ?? []) { item in
+            VStack(alignment: .leading, spacing: 12) {
+                HStack { Text(item.title).font(.subheadline.weight(.semibold)); Spacer(); if let enabled = item.enabled { Text(enabled ? "Enabled" : "Disabled").font(.caption).foregroundStyle(.secondary) } }
+                if let used = item.used { row("Used", item.amount(used)) }
+                if item.unlimited == true { row("Allowance", "Unlimited") }
+                else {
+                    if let limit = item.limit { row("Allowance", item.amount(limit)) }
+                    if let remaining = item.remaining { row("Remaining", item.amount(remaining)) }
+                }
+            }.panel().accessibilityIdentifier("provider-usage-" + item.id)
+        }
         ForEach(details.spending) { spend in
             VStack(alignment: .leading, spacing: 12) {
                 HStack {

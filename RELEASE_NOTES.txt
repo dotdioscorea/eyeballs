@@ -1,4 +1,5 @@
-- Lock Screen widgets with selectable metrics.
-- Chart zoom, pan, smoothing and averaged burn rates.
-- Connected-provider filters and compact, interactive legends.
-- Notification thresholds and provider controls; fixed late reset reminders.
+- Connected usage lines and smoother curves.
+- Drag-to-inspect values below charts.
+- Provider filters and expandable account/metric selection.
+- Combined Activity heatmaps with day breakdowns.
+- More Copilot, Grok and Gemini usage details.

@@ -7,6 +7,8 @@ struct UsageHistorySample: Codable, Equatable, Identifiable {
     var windows: [UsageWindow]
     var allowanceContext: String?
     var remainingAllowances: [RemainingAllowance]?
+    var creditBalance: String?
+    var providerDetails: ProviderDetails?
     var id: Date { date }
 }
 struct UsageHistoryStore {
@@ -21,7 +23,7 @@ struct UsageHistoryStore {
     func append(_ snapshot: UsageSnapshot, to samples: [UsageHistorySample], now: Date = .now) -> [UsageHistorySample] {
         guard snapshot.updatedAt <= now.addingTimeInterval(60), snapshot.updatedAt >= now.addingTimeInterval(-Self.retention) else { return samples }
         var samples = samples.filter { $0.date >= now.addingTimeInterval(-Self.retention) }
-        let sample = UsageHistorySample(date: snapshot.updatedAt, windows: snapshot.windows, allowanceContext: snapshot.allowanceContext ?? snapshot.plan, remainingAllowances: snapshot.remainingAllowances)
+        let sample = UsageHistorySample(date: snapshot.updatedAt, windows: snapshot.windows, allowanceContext: snapshot.allowanceContext ?? snapshot.plan, remainingAllowances: snapshot.remainingAllowances, creditBalance: snapshot.creditBalance, providerDetails: snapshot.details?.historySnapshot)
         if let last = samples.last {
             guard sample.date > last.date else { return samples }
             // Coalesce an unchanged tail while preserving its starting point.
@@ -30,6 +32,8 @@ struct UsageHistoryStore {
                 let anchor = samples[samples.count - 2]
                 if last.windows == sample.windows, anchor.windows == sample.windows,
                    last.remainingAllowances == sample.remainingAllowances, anchor.remainingAllowances == sample.remainingAllowances,
+                   last.creditBalance == sample.creditBalance, anchor.creditBalance == sample.creditBalance,
+                   last.providerDetails == sample.providerDetails, anchor.providerDetails == sample.providerDetails,
                    last.allowanceContext == sample.allowanceContext, anchor.allowanceContext == sample.allowanceContext,
                    sample.date.timeIntervalSince(anchor.date) < 300 { samples.removeLast() }
             }
@@ -76,7 +80,7 @@ struct UsageHistoryView: View {
             let data = HistorySeries.plot(samples: samples, windowID: window.id, measure: measure, unit: measure == .amount ? activeUnit : nil, events: events)
             return HistoryPlotSeries(id: window.id, title: window.shortTitle, color: account.usageColor(for: window.id),
                 segments: kind == .rate ? HistoryRate.segments(samples: samples, windowID: window.id, measure: measure, unit: activeUnit, events: events, averagingHours: averagingHours) : data.segments,
-                hardSegments: kind == .rate ? [] : data.transitions, subdued: days >= 7 && window.duration.map { $0 <= 21600 } == true)
+                hardSegments: kind == .rate ? [] : data.transitions, bridgeSegments: kind == .rate ? [] : data.bridges, subdued: days >= 7 && window.duration.map { $0 <= 21600 } == true)
         }
     }
     var body: some View {
@@ -85,13 +89,12 @@ struct UsageHistoryView: View {
                 HStack { Text("Usage history").font(.headline); Spacer(); HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate) }
                 Picker("History chart type", selection: $kind) { Text("Lines").tag(HistoryChartKind.lines); Text("Rate").tag(HistoryChartKind.rate) }.pickerStyle(.segmented)
                 HistoryPeriodPicker(days: $days)
-                HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours)
+                HStack { windowLegend; Spacer(minLength: 8); HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours) }
                 if series.flatMap({ $0.segments.flatMap { $0 } }).isEmpty { Text(plottedWindows.isEmpty ? "Choose a metric." : "History starts with successful refreshes.").font(.caption).foregroundStyle(.secondary) }
                 else {
-                    HistoryPlot(series: series, domain: domain, measure: measure, unit: activeUnit,
+                    HistoryPlot(series: series, domain: domain, measure: kind == .rate && measure == .remaining ? .used : measure, unit: activeUnit,
                                 events: ChartEvents.groups(events: events, windows: plottedWindows, domain: rangeEnd.addingTimeInterval(-UsageHistoryStore.retention)...rangeEnd), accountNames: [account.id: account.title], smooth: smooth, rate: kind == .rate)
                 }
-                if !windows.isEmpty { windowLegend }
                 if !windows.isEmpty { Divider(); BurnRateView(samples: samples, windows: windows, events: events) }
             }.panel()
             if let window = windows.first(where: { $0.id == heatmapWindow }) ?? windows.first(where: EventDetection.weekly) ?? windows.first {
@@ -99,14 +102,14 @@ struct UsageHistoryView: View {
                     HStack {
                         Text("Activity").font(.headline)
                         Spacer()
-                        Picker("Activity metric", selection: Binding(get: { window.id }, set: { heatmapWindow = $0 })) { ForEach(windows) { Text($0.shortTitle).tag($0.id) } }.tint(.primary)
+                        Picker("Activity metric", selection: Binding(get: { window.id }, set: { heatmapWindow = $0 })) { ForEach(windows) { Text($0.shortTitle).tag($0.id) } }.font(.caption).lineLimit(1).frame(maxWidth: 200, alignment: .trailing).tint(.primary)
                     }
                     UsageHeatmap(samples: samples, window: window, color: account.usageColor(for: window.id), events: events)
                 }.panel()
             }
         }.onAppear { rangeEnd = .now; measure = account.displaySettings.direction == .remaining ? .remaining : .used }
             .onChange(of: samples.last?.date) { _, _ in rangeEnd = .now }
-            .onChange(of: kind) { _, value in if value == .rate && measure == .remaining { measure = .used } }
+
     }
     private var windowLegend: some View {
         ScrollView(.horizontal, showsIndicators: false) {

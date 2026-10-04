@@ -7,7 +7,14 @@ struct ProviderDetails: Codable, Equatable, Sendable {
     var spending: [SpendingDetails] = []
     var breakdowns: [UsageBreakdown] = []
     var models: [ModelAccess] = []
-    var isEmpty: Bool { credits == nil && spending.isEmpty && breakdowns.isEmpty && models.isEmpty }
+    var usage: [ProviderUsageDetails]? = nil
+    var historySnapshot: Self? {
+        // Keep observed balances and counters. Model-access catalogues are static
+        // capability metadata and would overwhelm a retained usage history.
+        var copy = self; copy.models = []; copy.breakdowns = []
+        return copy.isEmpty ? nil : copy
+    }
+    var isEmpty: Bool { credits == nil && spending.isEmpty && breakdowns.isEmpty && models.isEmpty && (usage?.isEmpty ?? true) }
 }
 
 struct CreditDetails: Codable, Equatable, Sendable {
@@ -66,4 +73,16 @@ struct ModelAccess: Codable, Equatable, Identifiable, Sendable {
         if creditsWouldEnable == true { return "Needs credits" }
         return available == false ? "Unavailable" : "Unknown"
     }
+}
+
+struct ProviderUsageDetails: Codable, Equatable, Identifiable, Sendable {
+    var id: String
+    var title: String
+    var used: Double?
+    var limit: Double?
+    var remaining: Double?
+    var unit: String
+    var unlimited: Bool?
+    var enabled: Bool?
+    func amount(_ value: Double) -> String { value.formatted(.number.precision(.fractionLength(0...2))) + " " + unit }
 }
