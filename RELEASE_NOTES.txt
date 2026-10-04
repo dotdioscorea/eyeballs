@@ -1,3 +1,3 @@
-Optional automatic and manual weekly activation for Codex and Claude.
-Activation requests and confirmed countdowns in Events.
-Activation and countdown details in optional debug reports.
+Automatic weekly activation per account.
+Start week beside the toggle; explanation in an info popover.
+Existing activation preferences retained on upgrade.

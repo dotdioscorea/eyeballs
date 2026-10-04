@@ -115,11 +115,12 @@ final class AccountStoreTests: XCTestCase {
         let vault = MemoryVault(); let store = store(vault: vault)
         let originalCredential = Fixture.credential("a"); let original = Fixture.account(originalCredential)
         try store.connect(original, credential: originalCredential)
+        let connectedAccounts = store.accounts
         let impostor = Fixture.credential("b")
         var replacement = Fixture.account(impostor); replacement.id = original.id
         XCTAssertThrowsError(try store.connect(replacement, credential: impostor))
         XCTAssertEqual(vault.values[original.id], originalCredential)
-        XCTAssertEqual(store.accounts, [original])
+        XCTAssertEqual(store.accounts, connectedAccounts)
     }
     func testOneExpiredAccountDoesNotInvalidateTheOther() async throws {
         let vault = MemoryVault()
@@ -310,8 +311,9 @@ final class AccountStoreTests: XCTestCase {
         })
         try store.connect(account, credential: credential)
         let history = store.histories
+        let connectedAccounts = store.accounts
         let outcome = await store.refresh(account.id)
-        XCTAssertEqual(outcome, .cancelled); XCTAssertEqual(store.accounts, [account]); XCTAssertEqual(store.histories, history)
+        XCTAssertEqual(outcome, .cancelled); XCTAssertEqual(store.accounts, connectedAccounts); XCTAssertEqual(store.histories, history)
         XCTAssertEqual(vault.values[account.id]?.refreshToken, "rotated-before-cancellation")
     }
 

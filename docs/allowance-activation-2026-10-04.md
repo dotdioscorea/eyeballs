@@ -4,8 +4,8 @@ TestFlight **1.0 (19)** is available to the existing internal and external teste
 
 ## Behaviour
 
-- Settings → Allowance activation provides an off-by-default setting per provider. It applies independently to each saved account of that provider.
-- Account pages provide a manual Start week action. It refreshes usage before deciding whether a request is needed.
+- Settings → Allowance activation and account pages provide an off-by-default setting per account. Existing provider opt-ins migrate once to existing accounts; new connections default to off.
+- Start week sits beside the Automatic toggle. An info popover holds the explanation. It refreshes usage before deciding whether a request is needed.
 - Automatic activation runs during app refreshes. It has no separate server or always-running widget process.
 - Requests contain fixed short text and no tools, notes or usage history.
 - Attempts are saved before sending. Interrupted or failed sends are not automatically retried within the week. Failures before sending can retry after a saved backoff; malformed model responses prompt a problem report. Observed usage followed by a new unused window can re-arm activation after an early reset.
@@ -50,3 +50,9 @@ Private protocol artifacts remain under ignored `artifacts/`. Credentials stay o
 - Signed simulator build succeeded.
 - Final native unit suite: 211 executed, 5 opt-in live checks skipped, 206 passed, no failures. This includes the native Claude request check and 20 activation policy/transport tests covering permission, plan and allowance checks, moving/fixed deadlines, tier changes, inactive Codex secondary windows, separate accounts, persistence, deletion and interrupted requests. The earlier native Claude live check also passed.
 - Native UI: per-provider settings persist after relaunch and Claude's additional permission is presented explicitly. The existing available/spent Claude reset panel check also passed. A separate native UI test passed manual activation, automatic activation across three saved Codex accounts, and repeat prevention after relaunch. Its controlled provider fixture runs only in Debug simulator builds and is excluded from Release.
+
+## Account controls update for build 20
+
+Automatic activation is now saved per account. Existing provider opt-ins migrate to existing connections only; new accounts default to off. Account pages and Settings share the controls. Start week sits beside Automatic, with the explanation in an info popover. Larger text can use a stacked fallback.
+
+Validation: 213 native unit tests executed, 6 opt-in live checks skipped, 207 passed, no failures. The 22 activation tests include selected-account isolation, one-time migration, relaunches, reconnects and stale editors. Two native UI checks passed independent settings, Claude permission, row alignment, popover visibility, manual and automatic requests and repeat prevention after relaunch. Screenshots were visually checked. Request adapters and countdown verification are unchanged; the live unused-week check above remains pending.

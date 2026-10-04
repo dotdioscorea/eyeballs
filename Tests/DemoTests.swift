@@ -13,6 +13,7 @@ final class DemoTests: XCTestCase {
         let live = AccountStore(location: path, vault: vault, integratesWithSystem: false)
         let credential = Fixture.credential("real"); let real = Fixture.account(credential)
         try live.connect(real, credential: credential)
+        let connectedAccounts = live.accounts
         let before = try Data(contentsOf: path)
         var modes: [Bool] = []
         let session = AccountSession(live: live, demoLocation: directory.appendingPathComponent("demo/accounts.json"), restoresMode: false, integratesWithSystem: false, publishMode: { modes.append($0) })
@@ -27,7 +28,7 @@ final class DemoTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: path), before)
         XCTAssertEqual(vault.values, [real.id: credential])
         session.endDemo()
-        XCTAssertTrue(session.current === live); XCTAssertEqual(live.accounts, [real]); XCTAssertEqual(modes, [true, false])
+        XCTAssertTrue(session.current === live); XCTAssertEqual(live.accounts, connectedAccounts); XCTAssertEqual(modes, [true, false])
         session.startDemo()
         XCTAssertEqual(session.demo?.accounts.count, Provider.allCases.count + 2)
         XCTAssertFalse(session.demo!.accounts.contains { $0.id == sample.id })

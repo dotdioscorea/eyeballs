@@ -33,18 +33,15 @@ struct SettingsView: View {
 
 struct ActivationSettingsView: View {
     @EnvironmentObject private var store: AccountStore
-    private var providers: [Provider] { Provider.allCases.filter { provider in store.accounts.contains { $0.provider == provider } && AllowanceActivation.supported(provider) } }
+    private var accounts: [AgentAccount] { store.accounts.filter { AllowanceActivation.supported($0.provider) } }
     var body: some View {
         Form {
             Section {
-                ForEach(providers) { provider in
-                    Toggle(provider.name, isOn: Binding(get: { store.activationProviders[provider.rawValue] == true }, set: { store.activationProviders[provider.rawValue] = $0; store.saveActivationSettings() }))
+                ForEach(accounts) { account in
+                    ActivationControls(account: account, showsAccount: true)
                 }
-                if providers.isEmpty { Text("No accounts with activation support.").foregroundStyle(.secondary) }
-            } header: { Text("Start unused weeks automatically") } footer: {
-                Text("Sends a small request during refreshes. Uses included allowance. Claude accounts need activation permission, enabled on their account page.")
+                if accounts.isEmpty { Text("No accounts with activation support.").foregroundStyle(.secondary) }
             }
-            Section { Text("Calendar-based allowances reset automatically. Credit balances do not have a countdown to start.").font(.subheadline).foregroundStyle(.secondary) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Allowance activation").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
     }
 }
