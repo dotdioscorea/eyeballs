@@ -224,8 +224,23 @@ final class EyeballsUITests: XCTestCase {
         let detail = XCTAttachment(screenshot: app.screenshot()); detail.name = "Four rings 100 percent detail"; detail.lifetime = .keepAlways; add(detail)
         app.navigationBars.buttons.firstMatch.tap()
         app.buttons["account-Mac mini"].tap()
-        XCTAssertTrue(app.staticTexts["Credits"].exists); XCTAssertTrue(app.staticTexts["15.00"].exists)
+        XCTAssertTrue(app.staticTexts["Credits"].exists); XCTAssertTrue(app.staticTexts["15"].exists)
         XCTAssertTrue(app.staticTexts["Weekly allowance exhausted"].exists)
+    }
+    func testCreditTilesAndUpdateSettings() {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-fixture", "--ring-boundaries", "--credit-tile-fixture", "--exit-demo-test"]; app.launch()
+        XCTAssertTrue(app.buttons["layout-tiles"].waitForExistence(timeout: 10))
+        if app.buttons["Clear search"].exists { app.buttons["Clear search"].tap() }
+        app.buttons["sort-accounts"].tap(); app.buttons["Custom order"].tap(); app.buttons["layout-tiles"].tap()
+        XCTAssertTrue(app.staticTexts["1,234.57"].exists); XCTAssertTrue(app.staticTexts["0.5"].exists)
+        XCTAssertFalse(app.staticTexts["1234.567891234"].exists)
+        let tiles = XCTAttachment(screenshot: app.screenshot()); tiles.name = "Credit tiles four rings and balance-only"; tiles.lifetime = .keepAlways; add(tiles)
+        app.tabBars.buttons["Settings"].tap(); app.buttons["Updates"].tap()
+        XCTAssertTrue(app.staticTexts["Background App Refresh"].exists)
+        XCTAssertFalse(app.tabBars.firstMatch.isHittable)
+        let settings = XCTAttachment(screenshot: app.screenshot()); settings.name = "Update settings"; settings.lifetime = .keepAlways; add(settings)
+        XCUIDevice.shared.press(.home); app.activate()
+        XCTAssertTrue(app.staticTexts["Background App Refresh"].waitForExistence(timeout: 5))
     }
     func testCompactDisplayConfigurationAndCopyCleanup() {
         let app = XCUIApplication(); app.launchArguments = ["--ui-fixture"]; app.launch()

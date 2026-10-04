@@ -64,6 +64,7 @@ final class AccountStore: ObservableObject {
             let fresh = SimulatorFixtures.accounts()
             for index in accounts.indices { if let sample = fresh.first(where: { $0.id == accounts[index].id }) {
                 accounts[index].snapshot = sample.snapshot
+                accounts[index].provider = sample.provider
                 if ProcessInfo.processInfo.arguments.contains("--ring-boundaries") { accounts[index].display = sample.display }
             } }
             for account in accounts {
@@ -185,41 +186,53 @@ final class AccountStore: ObservableObject {
             if integratesWithSystem { publishWidgets() }
         } catch { }
     }
-    func refreshAll() async {
-        if isDemo { for account in accounts { await refresh(account.id) }; return }
+    @discardableResult
+    func refreshAll(minimumAge: TimeInterval = 0) async -> RefreshSummary {
+        var summary = RefreshSummary()
+        guard !Task.isCancelled else { summary.cancelled = true; return summary }
+        if isDemo {
+            for account in accounts { summary.include(await refresh(account.id)) }
+            return summary
+        }
         reloadAccountsIfNeeded()
+        guard loadedAccounts else { summary.metadataUnavailable = true; return summary }
         #if DEBUG
-        if SimulatorFixtures.enabled { return }
+        if SimulatorFixtures.enabled { return summary }
         #endif
         // Oldest readings go first so a short background grant does not always
         // refresh the same accounts. Bound concurrent provider requests to three.
         var pending = accounts.sorted { ($0.snapshot?.updatedAt ?? .distantPast) < ($1.snapshot?.updatedAt ?? .distantPast) }.map(\.id).makeIterator()
-        await withTaskGroup(of: Void.self) { group in
-            for _ in 0..<3 { if let id = pending.next() { group.addTask { await self.refresh(id) } } }
-            while await group.next() != nil {
-                if Task.isCancelled { group.cancelAll(); break }
-                if let id = pending.next() { group.addTask { await self.refresh(id) } }
+        await withTaskGroup(of: RefreshOutcome.self) { group in
+            for _ in 0..<3 { if let id = pending.next() { group.addTask { await self.refresh(id, minimumAge: minimumAge) } } }
+            while let outcome = await group.next() {
+                summary.include(outcome)
+                if Task.isCancelled { summary.cancelled = true; group.cancelAll(); continue }
+                if let id = pending.next() { group.addTask { await self.refresh(id, minimumAge: minimumAge) } }
             }
         }
+        return summary
     }
     private func renewCredential(_ credential: AccountCredential, account: AgentAccount) async throws -> AccountCredential {
         try await Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
             try await renewer(credential)
         }
     }
-    func refresh(_ id: UUID) async {
+    @discardableResult
+    func refresh(_ id: UUID, minimumAge: TimeInterval = 0) async -> RefreshOutcome {
+        guard !Task.isCancelled else { return .cancelled }
         if isDemo {
-            guard let index = accounts.firstIndex(where: { $0.id == id }), var snapshot = accounts[index].snapshot else { return }
-            snapshot.updatedAt = .now; accounts[index].snapshot = snapshot; recordHistory(snapshot, id: id); persist(); return
+            guard let index = accounts.firstIndex(where: { $0.id == id }), var snapshot = accounts[index].snapshot else { return .skipped }
+            snapshot.updatedAt = .now; accounts[index].snapshot = snapshot; recordHistory(snapshot, id: id); persist(); return .updated
         }
         #if DEBUG
-        if SimulatorFixtures.enabled { return }
+        if SimulatorFixtures.enabled { return .skipped }
         #endif
-        guard !refreshing.contains(id), let account = accounts.first(where: { $0.id == id }), !account.needsLogin else { return }
+        guard !refreshing.contains(id), let account = accounts.first(where: { $0.id == id }), !account.needsLogin else { return .skipped }
         #if DEBUG
-        if account.snapshot?.source == "UI Test Fixture" { return }
+        if account.snapshot?.source == "UI Test Fixture" { return .skipped }
         #endif
-        if let cooldown = cooldowns[id], cooldown > .now { return }
+        if let cooldown = cooldowns[id], cooldown > .now { return .skipped }
+        if minimumAge > 0, let snapshot = account.snapshot, Date.now.timeIntervalSince(snapshot.updatedAt) < minimumAge, !snapshot.windows.contains(where: { $0.resetDue() }) { return .skipped }
         let revision = revisions[id, default: 0]
         refreshing.insert(id); defer { refreshing.remove(id) }
         do {
@@ -228,9 +241,10 @@ final class AccountStore: ObservableObject {
             if credential.provider == .perplexity || credential.expiresAt < .now.addingTimeInterval(60) {
                 credential = try await renewCredential(credential, account: account)
                 renewed = true
-                guard revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return }
+                guard revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return .skipped }
                 // Save rotating tokens before the usage request, even if that later request fails.
                 try vault.save(credential, id: id)
+                try Task.checkCancellation()
             }
             let snapshot: UsageSnapshot
             do { snapshot = try await fetcher(account, credential) }
@@ -239,18 +253,23 @@ final class AccountStore: ObservableObject {
                 // token is also denied, retain the connection and report permission
                 // failure; only a terminal refresh error requests another sign-in.
                 credential = try await renewCredential(credential, account: account)
-                guard revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return }
+                guard revisions[id, default: 0] == revision, accounts.contains(where: { $0.id == id }) else { return .skipped }
                 try vault.save(credential, id: id)
+                try Task.checkCancellation()
                 snapshot = try await fetcher(account, credential)
             }
-            guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return }
+            try Task.checkCancellation()
+            guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return .skipped }
             migrateMetrics(at: index, matching: snapshot)
             recordHistory(snapshot, id: id)
             accounts[index].retainMetricNames()
             accounts[index].snapshot = observe(snapshot, previous: accounts[index].snapshot, id: id); accounts[index].issue = nil; accounts[index].needsLogin = false; accounts[index].needsReport = nil
             if integratesWithSystem { Diagnostics.record(.refreshSucceeded, provider: account.provider) }
+            persist()
+            return .updated
         } catch {
-            guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return }
+            if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled { return .cancelled }
+            guard revisions[id, default: 0] == revision, let index = accounts.firstIndex(where: { $0.id == id }) else { return .skipped }
             accounts[index].issue = error.localizedDescription
             if integratesWithSystem { Diagnostics.record(.refreshFailed, provider: account.provider, failure: .category(error)) }
             if case UsageError.invalidResponse = error {
@@ -263,6 +282,7 @@ final class AccountStore: ObservableObject {
             if case UsageError.throttled(let until) = error { cooldowns[id] = until }
         }
         persist()
+        return .failed
     }
     func enableNotifications(_ enabled: Bool) async {
         if isDemo { notificationsEnabled = enabled; return }
@@ -340,6 +360,9 @@ final class AccountStore: ObservableObject {
             else if integratesWithSystem {
                 publishWidgets()
                 Task { await scheduleNotifications() }
+                if accounts.contains(where: { !$0.needsLogin }) {
+                    Task { await BackgroundRefreshScheduler.shared.ensureScheduled(source: .foreground) }
+                }
             }
         } catch { self.error = "Your changes could not be saved. Please try again." }
     }

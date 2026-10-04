@@ -22,7 +22,7 @@ struct AccountDetailView: View {
                             }.padding(.vertical, account.readings().isEmpty ? 0 : 16)
                         }
                         Button("Configure display") { configuring = true }.font(.subheadline.weight(.medium)).accessibilityIdentifier("configure-display")
-                        if let snapshot = account.snapshot, !snapshot.windows.isEmpty || snapshot.remainingAllowances?.isEmpty == false || snapshot.creditBalance == nil {
+                        if let snapshot = account.snapshot, !snapshot.windows.isEmpty || snapshot.remainingAllowances?.isEmpty == false || snapshot.formattedCreditBalance == nil {
                             VStack(alignment: .leading, spacing: 18) {
                                 ForEach(snapshot.windows) { window in
                                     let reading = MetricReading(definition: RingDefinition(windowID: window.id), window: window, direction: account.displaySettings.direction, date: .now)
@@ -37,9 +37,9 @@ struct AccountDetailView: View {
                                 else if snapshot.windows.isEmpty { Text("No usage limit reported.").font(.subheadline).foregroundStyle(.secondary) }
                             }.panel()
                         }
-                        if account.snapshot?.details?.credits != nil || (account.snapshot?.creditBalance != nil && account.snapshot?.details?.spending.contains(where: { $0.balance != nil }) != true) {
+                        if account.snapshot?.details?.credits != nil || (account.snapshot?.formattedCreditBalance != nil && account.snapshot?.details?.spending.contains(where: { $0.balance != nil }) != true) {
                             VStack(alignment: .leading, spacing: 8) {
-                                if let credit = account.snapshot?.creditBalance { info("Credits", value: credit) }
+                                if let credit = account.snapshot?.formattedCreditBalance { info("Credits", value: credit) }
                                 else { Text("Credits").font(.subheadline.weight(.semibold)) }
                                 if let details = account.snapshot?.details?.credits { CreditDetailsView(details: details) }
                                 if !account.exhaustedWindows.isEmpty { Text(account.exhaustedWindows.map(\.shortTitle).joined(separator: ", ") + " allowance exhausted").font(.caption).foregroundStyle(.secondary) }

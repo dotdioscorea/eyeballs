@@ -176,8 +176,8 @@ struct AccountCard: View {
                 }
                 }
                 if let allowances = account.snapshot?.remainingAllowances, !allowances.isEmpty { RemainingAllowancesView(allowances: allowances, dense: compact) }
-                else if readings.isEmpty, account.snapshot?.creditBalance == nil { Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
-                if let credits = account.snapshot?.creditBalance {
+                else if readings.isEmpty, account.snapshot?.formattedCreditBalance == nil { Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
+                if let credits = account.snapshot?.formattedCreditBalance {
                     HStack { Text("Credits").foregroundStyle(.secondary); Spacer(); Text(credits).monospacedDigit().fontWeight(.medium) }.font(compact ? .caption : .subheadline)
                     if !account.exhaustedWindows.isEmpty { Text(account.exhaustedWindows.map(\.title).joined(separator: ", ") + " allowance exhausted").font(.caption2).foregroundStyle(.orange) }
                 }
@@ -210,40 +210,67 @@ struct AccountTile: View {
     let account: AgentAccount
     var body: some View {
         GeometryReader { geometry in
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            let readings = account.readings(at: context.date)
-            VStack(spacing: 3) {
-                HStack(spacing: 6) {
-                    ProviderLogo(provider: account.provider, color: account.color, size: 17)
-                    Text(account.title).font(.subheadline.weight(.semibold)).lineLimit(1)
-                    Spacer(minLength: 0)
-                }
-                if readings.isEmpty, let balance = account.snapshot?.creditBalance { VStack(spacing: 4) { Text(balance).font(.title2.monospacedDigit()); Text("Credits").font(.caption).foregroundStyle(.secondary) }.frame(height: min(92, geometry.size.width * 0.44)) }
-                else if readings.isEmpty, let allowance = account.primaryAllowance {
-                    VStack(spacing: 4) { Text(allowance.remaining.map { $0.formatted() } ?? allowance.value).font(.title.monospacedDigit()); Text(allowance.title + (allowance.remaining != nil ? " left" : "")).font(.caption).foregroundStyle(.secondary) }.frame(height: min(92, geometry.size.width * 0.44))
-                }
-                else if readings.isEmpty { Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary).frame(height: min(92, geometry.size.width * 0.44)) }
-                else { UsageRing(readings: readings, color: account.color, size: min(92, geometry.size.width * 0.44), lineWidth: readings.count > 2 ? 5 : 7) }
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 4), GridItem(.flexible(), spacing: 4)], alignment: .leading, spacing: 2) {
-                    ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
-                        HStack(spacing: 2) {
-                            Circle().fill(MetricColor.color(index, base: account.color)).frame(width: 3, height: 3)
-                            Text((reading.definition.kind == .time && reading.window?.shortTitle == "Weekly" ? "Wk" : reading.window?.shortTitle ?? "Usage") + (reading.definition.kind == .time ? " time" : "")).foregroundStyle(.secondary).lineLimit(1)
-                            Text(reading.value).fontWeight(.medium).fixedSize()
+            TimelineView(.periodic(from: .now, by: 60)) { context in
+                let readings = account.readings(at: context.date)
+                let balance = account.snapshot?.formattedCreditBalance
+                let ringSize = min(88, max(52, geometry.size.height - (balance == nil ? 102 : 120)))
+                VStack(spacing: 0) {
+                    HStack(spacing: 6) {
+                        ProviderLogo(provider: account.provider, color: account.color, size: 16)
+                        Text(account.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    Spacer(minLength: 6)
+                    if readings.isEmpty, let balance {
+                        VStack(spacing: 5) {
+                            Text(balance).font(.system(size: 26, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                            Text("Credits").font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else if readings.isEmpty, let allowance = account.primaryAllowance {
+                        VStack(spacing: 5) {
+                            Text(allowance.remaining.map { $0.formatted() } ?? allowance.value).font(.title.monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
+                            Text(allowance.title + (allowance.remaining != nil ? " left" : "")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                    } else if readings.isEmpty {
+                        Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        UsageRing(readings: readings, color: account.color, size: ringSize, lineWidth: readings.count > 2 ? 4 : 6, showsCaption: false)
+                    }
+                    Spacer(minLength: 6)
+                    VStack(spacing: 6) {
+                        if !readings.isEmpty {
+                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 4) {
+                                ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
+                                    HStack(spacing: 3) {
+                                        Circle().fill(MetricColor.color(index, base: account.color)).frame(width: 4, height: 4)
+                                        Text(tileTitle(reading)).foregroundStyle(.secondary).lineLimit(1)
+                                        Text(reading.value).fontWeight(.medium).fixedSize()
+                                        Spacer(minLength: 0)
+                                    }
+                                }
+                            }.font(.system(size: 10)).monospacedDigit()
+                            if let balance {
+                                HStack(spacing: 4) {
+                                    Text("Credits").foregroundStyle(.secondary)
+                                    Spacer(minLength: 2)
+                                    Text(balance).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
+                                }.font(.caption2)
+                            }
+                        }
+                        if account.needsLogin { Text("Reconnect").font(.system(size: 10)).foregroundStyle(.orange) }
+                        else if let updated = account.snapshot?.updatedAt {
+                            Text(UpdatedText.relative(updated, now: context.date)).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
                         }
                     }
-                }.font(.system(size: 9)).monospacedDigit()
-                if !readings.isEmpty, let credits = account.snapshot?.creditBalance { HStack { Text("Credits").foregroundStyle(.secondary); Text(credits).monospacedDigit() }.font(.system(size: 9)) }
-                if account.needsLogin { Text("Reconnect").font(.caption2).foregroundStyle(.orange) }
-                else if let window = account.displayedResetWindow(for: readings), let reset = window.resetsAt {
-                    Text(reset <= context.date ? "\(window.shortTitle) reset due" : "\(window.shortTitle) reset \(ResetText.relative(reset, now: context.date))").font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                }
-                if let updated = account.snapshot?.updatedAt { Text(UpdatedText.relative(updated, now: context.date)).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1) }
-            }.padding(10).frame(width: geometry.size.width, height: geometry.size.height)
-                .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
-                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Theme.border, lineWidth: 1))
-        }
+                }.padding(12).frame(width: geometry.size.width, height: geometry.size.height)
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Theme.border, lineWidth: 1))
+            }
         }.aspectRatio(1, contentMode: .fit)
+    }
+    private func tileTitle(_ reading: MetricReading) -> String {
+        let title = reading.window?.shortTitle ?? reading.definition.windowTitle ?? "Usage"
+        return (title == "Weekly" ? "Wk" : title) + (reading.definition.kind == .time ? " time" : "")
     }
 }
 

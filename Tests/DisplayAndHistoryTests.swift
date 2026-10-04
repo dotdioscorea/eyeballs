@@ -167,4 +167,17 @@ final class DisplayAndHistoryTests: XCTestCase {
         XCTAssertTrue(raw.contains("codex"))
         XCTAssertEqual(DiagnosticFailure.category(NSError(domain: "private@example.com token=secret", code: 1)), .other)
     }
+    @MainActor
+    func testDebugBundleKeepsBackgroundDeliveryAfterForegroundEventsRotate() throws {
+        Diagnostics.clear(); defer { Diagnostics.clear() }
+        let summary = RefreshSummary(updated: 2, failed: 1)
+        Diagnostics.record(.refreshCycle, refresh: .init(trigger: .backgroundProcessing, startedAt: .now.addingTimeInterval(-10), finishedAt: .now, summary: summary))
+        for _ in 0..<101 { Diagnostics.record(.http, status: 200, endpoint: .usage) }
+        let bundle = Diagnostics.bundle(accounts: [])
+        XCTAssertEqual(bundle.schemaVersion, 3)
+        XCTAssertFalse(bundle.events.contains(where: { $0.stage == .refreshCycle }))
+        XCTAssertEqual(bundle.refresh.lastBackgroundCycle?.trigger, .backgroundProcessing)
+        XCTAssertEqual(bundle.refresh.lastBackgroundCycle?.summary, summary)
+        XCTAssertTrue(try Diagnostics.encode(bundle).count > 0)
+    }
 }

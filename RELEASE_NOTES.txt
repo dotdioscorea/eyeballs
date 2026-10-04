@@ -1,2 +1,3 @@
-- Added Devin sign-in, daily/weekly quotas and model availability.
-- Added Amp sign-in and personal credit balances.
+- Roomier tiles and credit balances capped at two decimals.
+- Faster foreground refreshes and improved background scheduling.
+- Added update settings and refresh diagnostics.

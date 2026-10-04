@@ -2,7 +2,7 @@ import Foundation
 import CoreFoundation
 import UIKit
 
-enum DiagnosticStage: String, Codable { case signInStarted, identityVerified, usageVerified, signInFailed, refreshSucceeded, refreshFailed, http, usageParsed }
+enum DiagnosticStage: String, Codable { case signInStarted, identityVerified, usageVerified, signInFailed, refreshSucceeded, refreshFailed, refreshCycle, http, usageParsed }
 enum DiagnosticFailure: String, Codable {
     case cancelled, timeout, callback, identity, signedOut, permission, throttled, response, accountMismatch, network, other
     static func category(_ error: Error) -> Self {
@@ -44,6 +44,7 @@ struct DiagnosticEvent: Codable {
     var failure: DiagnosticFailure?
     var privateSession: Bool?
     var parsing: UsageParsingDiagnostic?
+    var refresh: RefreshCycleDiagnostic?
     // Local only; replaced with a bundle-local alias during export.
     var connection: String?
 }
@@ -159,13 +160,14 @@ struct UsageParsingDiagnostic: Codable {
     }
 }
 struct DebugBundle: Codable {
-    var schemaVersion = 2
+    var schemaVersion = 3
     var createdAt: Date
     var appVersion: String
     var systemVersion: String
     var device: String
     var widgetCacheAvailable: Bool
     var widgetAccountCount: Int
+    var refresh: RefreshStatus
     var accounts: [AccountStatus]
     var events: [DiagnosticEvent]
     struct AccountStatus: Codable {
@@ -178,6 +180,15 @@ struct DebugBundle: Codable {
         var missingUsageCount: Int
         var missingTimeCount: Int
     }
+    struct RefreshStatus: Codable {
+        var backgroundRefresh: String
+        var lowPowerMode: Bool
+        var foregroundIntervalMinutes: Int
+        var appScheduling: RefreshSchedulingStatus?
+        var widgetScheduling: RefreshSchedulingStatus?
+        var lastForegroundCycle: RefreshCycleDiagnostic?
+        var lastBackgroundCycle: RefreshCycleDiagnostic?
+    }
 }
 enum Diagnostics {
     struct Context: Sendable { var provider: Provider; var accountID: UUID }
@@ -187,15 +198,18 @@ enum Diagnostics {
     // Only typed fields are accepted. Never store URLs, HTTP bodies, error messages,
     // OAuth state, labels, email addresses or credentials. Local UUIDs are
     // retained for correlation and replaced with anonymous aliases in exports.
-    static func record(_ stage: DiagnosticStage, provider: Provider? = nil, status: Int? = nil, failure: DiagnosticFailure? = nil, privateSession: Bool? = nil, endpoint: DiagnosticEndpoint? = nil, parsing: UsageParsingDiagnostic? = nil) {
+    static func record(_ stage: DiagnosticStage, provider: Provider? = nil, status: Int? = nil, failure: DiagnosticFailure? = nil, privateSession: Bool? = nil, endpoint: DiagnosticEndpoint? = nil, parsing: UsageParsingDiagnostic? = nil, refresh: RefreshCycleDiagnostic? = nil) {
         lock.lock(); defer { lock.unlock() }
         var events = load().filter { $0.date > Date.now.addingTimeInterval(-7 * 86400) }
-        events.append(DiagnosticEvent(date: .now, provider: provider ?? context?.provider, stage: stage, status: status, endpoint: endpoint, failure: failure, privateSession: privateSession, parsing: parsing, connection: context?.accountID.uuidString))
+        events.append(DiagnosticEvent(date: .now, provider: provider ?? context?.provider, stage: stage, status: status, endpoint: endpoint, failure: failure, privateSession: privateSession, parsing: parsing, refresh: refresh, connection: context?.accountID.uuidString))
         events = Array(events.suffix(100))
         do {
             try FileManager.default.createDirectory(at: location.deletingLastPathComponent(), withIntermediateDirectories: true)
             try JSONEncoder().encode(events).write(to: location, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         } catch { }
+        if let refresh, let data = try? JSONEncoder().encode(refresh) {
+            UserDefaults.standard.set(data, forKey: refresh.trigger == .foreground ? "last-foreground-refresh-cycle" : "last-background-refresh-cycle")
+        }
     }
     private static func load() -> [DiagnosticEvent] {
         guard let size = try? location.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 100_000,
@@ -206,7 +220,16 @@ enum Diagnostics {
         lock.lock(); defer { lock.unlock() }
         return load().filter { $0.date > Date.now.addingTimeInterval(-7 * 86400) }
     }
-    static func clear() { lock.lock(); defer { lock.unlock() }; try? FileManager.default.removeItem(at: location) }
+    static func clear() {
+        lock.lock(); defer { lock.unlock() }; try? FileManager.default.removeItem(at: location)
+        for key in ["last-foreground-refresh-cycle", "last-background-refresh-cycle"] { UserDefaults.standard.removeObject(forKey: key) }
+        for key in ["refresh-scheduling-app", "refresh-scheduling-widget"] { UserDefaults(suiteName: WidgetCache.group)?.removeObject(forKey: key) }
+    }
+    private static func lastCycle(background: Bool) -> RefreshCycleDiagnostic? {
+        UserDefaults.standard.data(forKey: background ? "last-background-refresh-cycle" : "last-foreground-refresh-cycle")
+            .flatMap { try? JSONDecoder().decode(RefreshCycleDiagnostic.self, from: $0) }
+            .flatMap { $0.finishedAt > Date.now.addingTimeInterval(-7 * 86400) ? $0 : nil }
+    }
     @MainActor
     static func bundle(accounts: [AgentAccount], now: Date = .now) -> DebugBundle {
         var aliases = Dictionary(uniqueKeysWithValues: accounts.enumerated().map { ($0.element.id.uuidString, "account-\($0.offset + 1)") })
@@ -226,6 +249,10 @@ enum Diagnostics {
         return DebugBundle(createdAt: now, appVersion: version, systemVersion: UIDevice.current.systemVersion,
                     device: UIDevice.current.model, widgetCacheAvailable: WidgetCache.location != nil,
                     widgetAccountCount: WidgetCache.read().count,
+                    refresh: DebugBundle.RefreshStatus(backgroundRefresh: RefreshSettings.backgroundStatus, lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
+                                                       foregroundIntervalMinutes: RefreshSettings.foregroundMinutes,
+                                                       appScheduling: RefreshSchedulingDiagnostics.read(widget: false), widgetScheduling: RefreshSchedulingDiagnostics.read(widget: true),
+                                                       lastForegroundCycle: lastCycle(background: false), lastBackgroundCycle: lastCycle(background: true)),
                     accounts: accounts.map { account in
                         DebugBundle.AccountStatus(provider: account.provider, connection: aliases[account.id.uuidString]!, needsLogin: account.needsLogin,
                                                   readingAgeSeconds: account.snapshot.map { Int(max(0, min(315_360_000, now.timeIntervalSince($0.updatedAt)))) },

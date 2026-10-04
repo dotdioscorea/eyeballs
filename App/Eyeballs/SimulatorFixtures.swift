@@ -7,6 +7,9 @@ enum SimulatorFixtures {
     static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled }
     static func accounts(now: Date = .now) -> [AgentAccount] {
         (0..<8).map { index in
+            if ProcessInfo.processInfo.arguments.contains("--credit-tile-fixture"), index == 2 {
+                return AgentAccount(id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!, provider: .cline, label: "Research", snapshot: UsageSnapshot(creditBalance: "0.500012345678", updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture"), addedAt: now)
+            }
             if ProcessInfo.processInfo.arguments.contains("--native-provider-fixture"), index == 4 || index == 5 {
                 let provider: Provider = index == 4 ? .devin : .amp
                 let windows: [UsageWindow] = index == 4 ? [.init(id: "daily", title: "Daily", usedPercent: 35, resetsAt: now.addingTimeInterval(8 * 3600), duration: 86400), .init(id: "weekly", title: "Weekly", usedPercent: 62, resetsAt: now.addingTimeInterval(3 * 86400), duration: 604800)] : []
@@ -21,7 +24,8 @@ enum SimulatorFixtures {
             if boundary && index == 0 { windows[1].usedPercent = 0 }
             if boundary && index == 3 { windows[1].usedPercent = 100 }
             let display = boundary && index == 0 ? AccountDisplay(rings: [RingDefinition(windowID: "session"), RingDefinition(windowID: "week"), RingDefinition(windowID: "session", kind: .time), RingDefinition(windowID: "week", kind: .time)]) : nil
-            return AgentAccount(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index + 1))!, provider: provider, label: ["Personal", "Work", "Research", "Mac mini", "Travel", "Studio", "Weekend", "Archive"][index], snapshot: UsageSnapshot(windows: windows, plan: "Pro", creditBalance: boundary && index == 3 ? "15.00" : nil, updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture"), display: display, addedAt: now)
+            let credits = ProcessInfo.processInfo.arguments.contains("--credit-tile-fixture") && index == 0 ? "1234.567891234" : boundary && index == 3 ? "15.00" : nil
+            return AgentAccount(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index + 1))!, provider: provider, label: ["Personal", "Work", "Research", "Mac mini", "Travel", "Studio", "Weekend", "Archive"][index], snapshot: UsageSnapshot(windows: windows, plan: "Pro", creditBalance: credits, updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture"), display: display, addedAt: now)
         }
     }
 }

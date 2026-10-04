@@ -38,7 +38,7 @@ struct SpendingDetails: Codable, Equatable, Identifiable, Sendable {
     var resetsAt: Date?
     func amount(_ value: Double) -> String {
         if let currency { return value.formatted(.currency(code: currency)) }
-        return value.formatted(.number.precision(.fractionLength(0...4))) + (unit.map { " " + $0 } ?? "")
+        return CreditText.formatted(String(value)) + (unit.map { " " + $0 } ?? "")
     }
 }
 

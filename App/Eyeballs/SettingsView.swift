@@ -10,6 +10,7 @@ struct SettingsView: View {
                 if store.notificationsEnabled { NavigationLink("Notification settings") { NotificationSettingsView() } }
             }
             Section {
+                NavigationLink("Updates") { UpdateSettingsView() }
                 NavigationLink("Privacy & storage") { PrivacyView() }
                 Link("Source code", destination: URL(string: "https://github.com/dotdioscorea/eyeballs")!)
                 NavigationLink("Report a problem") { ProblemReportView() }
@@ -26,6 +27,30 @@ struct SettingsView: View {
             } footer: { Text(store.isDemo ? "Sample accounts use separate storage and make no provider requests." : "Explore with sample accounts.") }
             Section { LabeledContent("Version", value: Diagnostics.version) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings")
+    }
+}
+
+struct UpdateSettingsView: View {
+    @AppStorage("foreground-refresh-minutes") private var interval = 1
+    @Environment(\.scenePhase) private var phase
+    @Environment(\.openURL) private var openURL
+    @State private var status = RefreshSettings.backgroundStatus
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+    var body: some View {
+        List {
+            Section {
+                Picker("While app is open", selection: $interval) {
+                    ForEach(RefreshSettings.intervals, id: \.self) { Text("Every \($0) min").tag($0) }
+                }
+            }
+            Section {
+                LabeledContent("Background App Refresh", value: status)
+                if lowPower { LabeledContent("Low Power Mode", value: "On") }
+                if status != "Available", !lowPower { Button("Open iPhone settings") { openURL(URL(string: UIApplication.openSettingsURLString)!) } }
+            } footer: { Text("Background timing is set by iOS. Widgets can request updates but don’t keep the app running.") }
+        }.scrollContentBackground(.hidden).background(Theme.background)
+            .navigationTitle("Updates").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
+            .onChange(of: phase) { _, _ in status = RefreshSettings.backgroundStatus; lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled }
     }
 }
 struct PrivacyView: View {

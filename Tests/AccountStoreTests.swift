@@ -150,7 +150,7 @@ final class AccountStoreTests: XCTestCase {
         await fulfillment(of: [entered], timeout: 3)
         try store.remove(account.id)
         continuation?.resume(returning: UsageSnapshot(windows: [], identity: credential.registrationIdentity))
-        await refresh.value
+        _ = await refresh.value
         XCTAssertTrue(store.accounts.isEmpty)
         XCTAssertNil(vault.values[account.id])
         XCTAssertTrue(self.store(vault: vault).accounts.isEmpty)
@@ -265,6 +265,62 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(completed, 8); XCTAssertEqual(maximum, 3)
         XCTAssertTrue(store.accounts.allSatisfy { $0.snapshot?.windows[0].safePercent == 51 })
         XCTAssertTrue(store.histories.values.allSatisfy { $0.last?.windows[0].safePercent == 51 })
+    }
+
+    func testBackgroundExpirationDoesNotCreateErrorsHistoryOrStartMoreRequests() async throws {
+        let vault = MemoryVault(); var started = 0
+        let entered = expectation(description: "Three provider requests started"); entered.expectedFulfillmentCount = 3
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, _ in
+            started += 1; entered.fulfill()
+            try await Task.sleep(for: .seconds(30))
+            throw UsageError.invalidResponse
+        })
+        for index in 0..<8 { let credential = Fixture.credential("expire-\(index)"); try store.connect(Fixture.account(credential), credential: credential) }
+        let accounts = store.accounts, history = store.histories
+        let operation = Task { await store.refreshAll() }
+        await fulfillment(of: [entered], timeout: 3); operation.cancel()
+        let summary = await operation.value
+        XCTAssertEqual(started, 3); XCTAssertTrue(summary.cancelled); XCTAssertFalse(summary.succeeded)
+        XCTAssertEqual(summary.failed, 0); XCTAssertEqual(summary.updated, 0)
+        XCTAssertEqual(store.accounts, accounts); XCTAssertEqual(store.histories, history)
+        XCTAssertTrue(store.refreshing.isEmpty); XCTAssertNil(store.reportAccountID)
+    }
+
+    func testAutomaticRefreshSkipsRecentReadingsButManualRefreshAndDueResetDoNot() async throws {
+        let vault = MemoryVault(); var reads = 0
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { account, _ in
+            reads += 1; return account.snapshot!
+        })
+        let credential = Fixture.credential("fresh"), dueCredential = Fixture.credential("due")
+        var fresh = Fixture.account(credential); fresh.snapshot?.updatedAt = .now
+        var due = Fixture.account(dueCredential); due.snapshot?.updatedAt = .now; due.snapshot?.windows[0].resetsAt = .now.addingTimeInterval(-10)
+        try store.connect(fresh, credential: credential); try store.connect(due, credential: dueCredential)
+        let summary = await store.refreshAll(minimumAge: 300)
+        XCTAssertEqual(reads, 1); XCTAssertEqual(summary.updated, 1); XCTAssertEqual(summary.skipped, 1)
+        await store.refresh(fresh.id)
+        XCTAssertEqual(reads, 2)
+    }
+
+    func testCancelledNetworkRequestKeepsLastReadingAndRotatedCredential() async throws {
+        let vault = MemoryVault(); var credential = Fixture.credential("rotate-cancel")
+        credential.expiresAt = .now.addingTimeInterval(-1)
+        let account = Fixture.account(credential)
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, _ in throw URLError(.cancelled) }, renewer: { old in
+            var rotated = old; rotated.refreshToken = "rotated-before-cancellation"; return rotated
+        })
+        try store.connect(account, credential: credential)
+        let history = store.histories
+        let outcome = await store.refresh(account.id)
+        XCTAssertEqual(outcome, .cancelled); XCTAssertEqual(store.accounts, [account]); XCTAssertEqual(store.histories, history)
+        XCTAssertEqual(vault.values[account.id]?.refreshToken, "rotated-before-cancellation")
+    }
+
+    func testFailedRefreshCycleDoesNotReportSuccessToIOS() async throws {
+        let vault = MemoryVault()
+        let store = AccountStore(location: directory.appendingPathComponent("accounts.json"), vault: vault, integratesWithSystem: false, fetcher: { _, _ in throw URLError(.notConnectedToInternet) })
+        let credential = Fixture.credential("offline"); try store.connect(Fixture.account(credential), credential: credential)
+        let summary = await store.refreshAll()
+        XCTAssertEqual(summary.failed, 1); XCTAssertFalse(summary.succeeded); XCTAssertFalse(store.accounts[0].needsLogin)
     }
 
     func testCustomOrderSurvivesRestartAndFilteredReorderingKeepsHiddenAccounts() throws {

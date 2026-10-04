@@ -27,7 +27,10 @@ struct UsageEntry: TimelineEntry {
 struct AccountTimeline: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> UsageEntry { .placeholder }
     func snapshot(for configuration: AccountIntent, in context: Context) async -> UsageEntry { entry(configuration) }
-    func timeline(for configuration: AccountIntent, in context: Context) async -> Timeline<UsageEntry> { entry(configuration).timeline }
+    func timeline(for configuration: AccountIntent, in context: Context) async -> Timeline<UsageEntry> {
+        await BackgroundRefreshScheduler.requestFromWidget(accounts: WidgetCache.read())
+        return entry(configuration).timeline
+    }
     private func entry(_ configuration: AccountIntent) -> UsageEntry {
         let accounts = WidgetCache.read()
         let selected: [AgentAccount]
@@ -40,7 +43,10 @@ private extension String { var flatMapUUID: UUID? { UUID(uuidString: self) } }
 struct OverviewTimeline: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> UsageEntry { .placeholder }
     func snapshot(for configuration: OverviewIntent, in context: Context) async -> UsageEntry { entry(configuration) }
-    func timeline(for configuration: OverviewIntent, in context: Context) async -> Timeline<UsageEntry> { entry(configuration).timeline }
+    func timeline(for configuration: OverviewIntent, in context: Context) async -> Timeline<UsageEntry> {
+        await BackgroundRefreshScheduler.requestFromWidget(accounts: WidgetCache.read())
+        return entry(configuration).timeline
+    }
     private func entry(_ configuration: OverviewIntent) -> UsageEntry {
         let accounts = WidgetCache.read()
         let selected: [AgentAccount]
@@ -53,7 +59,10 @@ struct OverviewTimeline: AppIntentTimelineProvider {
 struct RowsTimeline: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> UsageEntry { .placeholder }
     func snapshot(for configuration: RowsIntent, in context: Context) async -> UsageEntry { entry(configuration) }
-    func timeline(for configuration: RowsIntent, in context: Context) async -> Timeline<UsageEntry> { entry(configuration).timeline }
+    func timeline(for configuration: RowsIntent, in context: Context) async -> Timeline<UsageEntry> {
+        await BackgroundRefreshScheduler.requestFromWidget(accounts: WidgetCache.read())
+        return entry(configuration).timeline
+    }
     private func entry(_ configuration: RowsIntent) -> UsageEntry {
         let accounts = WidgetCache.read()
         let selected = configuration.accounts.flatMap { $0.isEmpty ? nil : $0 }?.compactMap { choice in accounts.first { $0.id == UUID(uuidString: choice.id) } } ?? accounts.filter(\.favorite)
@@ -77,20 +86,20 @@ struct AccountWidgetView: View {
                             else { Image(systemName: allowance.available == true ? "checkmark" : allowance.available == false ? "minus" : "questionmark") }
                         }.accessibilityLabel(allowance.summary)
                     }
-                    else if let balance = account.snapshot?.creditBalance {
+                    else if let balance = account.snapshot?.formattedCreditBalance {
                         VStack(spacing: 2) { Text(balance).font(.caption.monospacedDigit()).lineLimit(1).minimumScaleFactor(0.5); Text("Credits").font(.system(size: 9)) }
                             .accessibilityLabel("Credits: " + balance)
                     }
                     else { Text("—").accessibilityLabel("Usage unavailable") }
                 } else if family == .accessoryRectangular {
-                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text(account.allowanceSummary ?? readings.primary.map { "\($0.title) · \($0.value) \($0.caption)" } ?? account.snapshot?.creditBalance.map { "Credits: " + $0 } ?? "Usage unavailable").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
+                    VStack(alignment: .leading, spacing: 3) { Text(account.title).font(.headline); Text(account.allowanceSummary ?? readings.primary.map { "\($0.title) · \($0.value) \($0.caption)" } ?? account.snapshot?.formattedCreditBalance.map { "Credits: " + $0 } ?? "Usage unavailable").font(.caption); Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.caption2) }
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack { ProviderLogo(provider: account.provider, color: account.color, size: 16); Text(account.title).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); if family == .systemMedium { Text(account.provider.name).font(.caption2).foregroundStyle(.secondary) } }
                         HStack(spacing: 16) {
                             if !readings.isEmpty { UsageRing(readings: readings, color: account.color, size: family == .systemSmall ? 75 : 92, lineWidth: readings.count > 2 ? 4 : 6) }
-                            else if let allowances = account.snapshot?.remainingAllowances { RemainingAllowancesView(allowances: Array(allowances.prefix(family == .systemSmall ? 2 : 4)), dense: true) }
-                            else { Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
+                            else if let allowances = account.snapshot?.remainingAllowances, !allowances.isEmpty { RemainingAllowancesView(allowances: Array(allowances.prefix(family == .systemSmall ? 2 : 4)), dense: true) }
+                            else { Text(account.snapshot?.formattedCreditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
                             if family == .systemMedium { MetricLegend(readings: readings, color: account.color) }
                         }.frame(maxWidth: .infinity)
                         Text(widgetStatus(account, at: entry.date, readings: entry.readings(account))).font(.system(size: 9)).foregroundStyle(.secondary).lineLimit(1)
@@ -128,8 +137,8 @@ struct OverviewWidgetView: View {
                         Link(destination: accountURL(account)) {
                             VStack(spacing: 6) {
                                 if !entry.readings(account).isEmpty { UsageRing(readings: entry.readings(account), color: account.color, size: family == .systemSmall ? 76 : 62, lineWidth: entry.readings(account).count > 2 ? 3 : 5) }
-                                else if let balance = account.snapshot?.creditBalance {
-                                    VStack(spacing: 3) { Text(balance).font(.caption.monospacedDigit()); Text("Credits").font(.system(size: 8)).foregroundStyle(.secondary) }
+                                else if let balance = account.snapshot?.formattedCreditBalance {
+                                    VStack(spacing: 3) { Text(balance).font(.title2.monospacedDigit()).lineLimit(1).minimumScaleFactor(0.5); Text("Credits").font(.system(size: 8)).foregroundStyle(.secondary) }
                                         .frame(height: family == .systemSmall ? 76 : 62)
                                 }
                                 else if let allowance = account.primaryAllowance { VStack(spacing: 3) { Text(allowance.remaining.map { $0.formatted() } ?? allowance.value).font(.title2.monospacedDigit()); Text(allowance.title + (allowance.remaining != nil ? " left" : "")).font(.system(size: 8)).foregroundStyle(.secondary) }.frame(height: family == .systemSmall ? 76 : 62) }
@@ -183,7 +192,7 @@ struct CompactWidgetRow: View {
                     Text(allowance.value).font(.system(size: 10, weight: .semibold)).monospacedDigit().lineLimit(1).fixedSize()
                 }
             } else if readings.isEmpty {
-                Text(account.snapshot?.creditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.system(size: 9))
+                Text(account.snapshot?.formattedCreditBalance.map { "Credits: \($0)" } ?? account.emptyMetricMessage).font(.system(size: 9))
                     .foregroundStyle(account.needsLogin || account.snapshot?.isStale(at: date) == true ? .orange : .secondary).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading).accessibilityHint(widgetStatus(account, at: date, readings: readings))
             }
@@ -220,7 +229,7 @@ private func accountURL(_ account: AgentAccount) -> URL { URL(string: "eyeballs:
 private func widgetStatus(_ account: AgentAccount, at date: Date, readings: [MetricReading]) -> String {
     if account.needsLogin { return "Reconnect in Requota" }
     if let snapshot = account.snapshot, snapshot.isStale(at: date) { return "Updated \(snapshot.updatedAt.formatted(date: .omitted, time: .shortened)) · stale" }
-    if let credit = account.snapshot?.creditBalance, !account.exhaustedWindows.isEmpty { return "Credits: \(credit) · allowance exhausted" }
+    if let credit = account.snapshot?.formattedCreditBalance, !account.exhaustedWindows.isEmpty { return "Credits: \(credit) · allowance exhausted" }
     if let window = account.displayedResetWindow(for: readings), let reset = window.resetsAt { return "\(window.shortTitle) reset in \(ResetText.relative(reset, now: date))" }
     return account.snapshot.map { "Updated \($0.updatedAt.formatted(date: .omitted, time: .shortened))" } ?? "No reading"
 }

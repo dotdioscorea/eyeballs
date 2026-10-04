@@ -31,13 +31,14 @@ struct UsageRing: View {
     var size: CGFloat = 100
     var lineWidth: CGFloat = 8
     var showsNumber: Bool = true
+    var showsCaption: Bool = true
     var body: some View {
         let count = min(4, readings.count)
         let gap: CGFloat = size < 110 ? 2 : 4
         let stroke = min(lineWidth, max(1.5, (size * 0.45 - 2 * gap * CGFloat(max(0, count - 1))) / CGFloat(max(1, 2 * count - 1))))
         let hole = max(1, size - CGFloat(max(0, count - 1)) * 2 * (stroke + gap) - stroke - 4)
         let value = readings.primary?.value ?? "—"
-        let caption = hole >= 40 ? readings.primary?.centerCaption ?? "" : ""
+        let caption = showsCaption && hole >= 40 ? readings.primary?.centerCaption ?? "" : ""
         let captionSize = max(6, min(size * 0.075, hole * 0.14))
         ZStack {
             ForEach(Array(readings.prefix(4).enumerated()), id: \.element.id) { index, reading in

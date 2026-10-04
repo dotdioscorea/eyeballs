@@ -160,7 +160,7 @@ struct SignInView: View {
                     } else if let snapshot = model.snapshot, let credential = model.credential {
                         HStack(spacing: 20) {
                             let readings = AgentAccount(provider: account.provider, snapshot: snapshot).readings()
-                            if readings.isEmpty, let balance = snapshot.creditBalance {
+                            if readings.isEmpty, let balance = snapshot.formattedCreditBalance {
                                 VStack(spacing: 5) {
                                     Text(balance).font(.title2.monospacedDigit())
                                     Text("Credits").font(.caption).foregroundStyle(.secondary)
