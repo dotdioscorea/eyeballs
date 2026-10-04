@@ -41,8 +41,8 @@ final class DemoTests: XCTestCase {
         let account = try XCTUnwrap(demo.accounts.last)
         XCTAssertEqual(account.provider, .cline)
         XCTAssertTrue(DemoData.contains(account.id))
-        XCTAssertEqual(account.label, "Demo · Credits")
-        XCTAssertEqual(account.snapshot?.creditBalance, "0.5000")
+        XCTAssertEqual(account.label, "Credits")
+        XCTAssertEqual(account.snapshot?.creditBalance, "8.43")
         XCTAssertEqual(account.snapshot?.windows, [])
         XCTAssertNil(account.snapshot?.billingEndsAt)
     }
@@ -60,6 +60,43 @@ final class DemoTests: XCTestCase {
         XCTAssertTrue(demo.events.contains { $0.kind == .bankedUsed && $0.detectedAt > Date.now.addingTimeInterval(-60) })
         let real = AccountStore(location: directory.appendingPathComponent("real/accounts.json"), integratesWithSystem: false)
         real.resetDemo(); XCTAssertTrue(real.accounts.isEmpty)
+    }
+
+    func testIllustrativeHistoryHasIdlePeriodsAndConsistentQuotaCycles() throws {
+        let now = Date(timeIntervalSince1970: 1791114000)
+        let accounts = DemoData.accounts(now: now)
+        var custom = accounts[0]; custom.id = UUID(uuidString: "DE000000-0000-0000-0000-000000000000")!
+        for account in Array(accounts.prefix(6)) + [custom] {
+            let history = DemoData.history(for: account, now: now)
+            XCTAssertEqual(history.first?.date, now.addingTimeInterval(-40 * 86400))
+            XCTAssertEqual(history.last?.windows, account.snapshot?.windows)
+            if account.provider == .copilot {
+                var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+                for reading in history {
+                    let reset = try XCTUnwrap(reading.windows.first?.resetsAt)
+                    XCTAssertEqual(calendar.component(.day, from: reset), 1)
+                    XCTAssertEqual(calendar.component(.hour, from: reset), 0)
+                }
+            }
+            var idle = 0; var active = 0; var resets = 0
+            for (before, after) in zip(history, history.dropFirst()) {
+                for (a, b) in zip(before.windows, after.windows) {
+                    let used = try XCTUnwrap(b.usedPercent)
+                    XCTAssertTrue((0...100).contains(used))
+                    if a.resetsAt == b.resetsAt {
+                        XCTAssertGreaterThanOrEqual(used + 0.000001, a.usedPercent ?? 0)
+                        if used == a.usedPercent { idle += 1 } else { active += 1 }
+                    } else {
+                        resets += 1
+                        XCTAssertLessThanOrEqual(try XCTUnwrap(a.resetsAt), after.date)
+                    }
+                }
+            }
+            XCTAssertGreaterThan(idle, 0); XCTAssertGreaterThan(active, 0); XCTAssertGreaterThan(resets, 0)
+        }
+        XCTAssertEqual(accounts.first(where: { $0.provider == .grok })?.snapshot?.windows.count, 1)
+        XCTAssertTrue(accounts.first(where: { $0.provider == .cline })!.snapshot!.windows.isEmpty)
+        XCTAssertFalse(accounts.contains { $0.label.contains("Demo") || $0.snapshot?.plan == "Sample plan" })
     }
 
     func testWidgetDeepLinksSelectTheRightModeAndAccount() throws {

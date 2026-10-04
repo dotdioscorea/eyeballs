@@ -15,6 +15,7 @@ struct HistoryPlotSeries: Identifiable {
 }
 
 struct HistoryPlot: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let series: [HistoryPlotSeries]
     let domain: ClosedRange<Date>
     let measure: HistoryMeasure
@@ -186,21 +187,23 @@ struct HistoryPlot: View {
                 Spacer()
                 if selectedDate != nil { Button { selectedDate = nil } label: { Image(systemName: "xmark").font(.system(size: 11)).frame(width: 44, height: 28).contentShape(Rectangle()) }.accessibilityLabel("Clear chart selection") }
             }
-            ForEach(series) { item in
-                let date = selectedDate ?? item.segments.flatMap { $0 }.last(where: { visibleDomain.contains($0.date) })?.date ?? inspectionDate
-                let source = ChartReadings.at(date, segments: item.segments, stepped: !rate && !smooth)
-                let curve = renderSeries.first(where: { $0.id == item.id })?.segments ?? item.segments
-                let drawn = ChartReadings.at(date, segments: smooth && !rate ? curve : item.segments, stepped: !rate && !smooth)
-                let reading = drawn.map { value in ChartReading(value: value.value, estimated: source?.estimated != false || abs((source?.value ?? value.value) - value.value) > 0.001) }
-                Button { focusedID = focusedID == item.id ? nil : item.id } label: {
-                    HStack(spacing: 8) {
-                        Path { path in path.move(to: .init(x: 0, y: 3)); path.addLine(to: .init(x: 24, y: 3)) }.stroke(item.color, style: StrokeStyle(lineWidth: 2, dash: item.dashPattern ?? (item.dashed ? [5, 3] : []))).frame(width: 24, height: 6)
-                        if let provider = item.provider { ProviderLogo(provider: provider, color: item.color, size: 13) }
-                        Text(item.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text(reading.map { ($0.estimated || rate ? "~" : "") + (rate ? HistoryRate.formatted($0.value, unit: measure == .amount ? unit : "pp") : measure.formatted($0.value, unit: unit)) } ?? "—").font(.caption.weight(.medium)).monospacedDigit().foregroundStyle(.primary)
-                    }.contentShape(Rectangle()).opacity(focus == nil || focus == item.id ? 1 : 0.4)
-                }.buttonStyle(.plain).accessibilityIdentifier("chart-reading-" + item.id).accessibilityValue(focus == item.id ? "Highlighted" : "Visible")
+            LazyVGrid(columns: sizeClass == .regular ? [GridItem(.adaptive(minimum: 240), spacing: 16)] : [GridItem(.flexible())], alignment: .leading, spacing: 10) {
+                ForEach(series) { item in
+                    let date = selectedDate ?? item.segments.flatMap { $0 }.last(where: { visibleDomain.contains($0.date) })?.date ?? inspectionDate
+                    let source = ChartReadings.at(date, segments: item.segments, stepped: !rate && !smooth)
+                    let curve = renderSeries.first(where: { $0.id == item.id })?.segments ?? item.segments
+                    let drawn = ChartReadings.at(date, segments: smooth && !rate ? curve : item.segments, stepped: !rate && !smooth)
+                    let reading = drawn.map { value in ChartReading(value: value.value, estimated: source?.estimated != false || abs((source?.value ?? value.value) - value.value) > 0.001) }
+                    Button { focusedID = focusedID == item.id ? nil : item.id } label: {
+                        HStack(spacing: 8) {
+                            Path { path in path.move(to: .init(x: 0, y: 3)); path.addLine(to: .init(x: 24, y: 3)) }.stroke(item.color, style: StrokeStyle(lineWidth: 2, dash: item.dashPattern ?? (item.dashed ? [5, 3] : []))).frame(width: 24, height: 6)
+                            if let provider = item.provider { ProviderLogo(provider: provider, color: item.color, size: 13) }
+                            Text(item.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            Spacer(minLength: 4)
+                            Text(reading.map { ($0.estimated || rate ? "~" : "") + (rate ? HistoryRate.formatted($0.value, unit: measure == .amount ? unit : "pp") : measure.formatted($0.value, unit: unit)) } ?? "—").font(.caption.weight(.medium)).monospacedDigit().foregroundStyle(.primary)
+                        }.padding(sizeClass == .regular ? 10 : 0).background(sizeClass == .regular ? Color.white.opacity(0.035) : .clear, in: RoundedRectangle(cornerRadius: 9)).contentShape(Rectangle()).opacity(focus == nil || focus == item.id ? 1 : 0.4)
+                    }.buttonStyle(.plain).accessibilityIdentifier("chart-reading-" + item.id).accessibilityValue(focus == item.id ? "Highlighted" : "Visible")
+                }
             }
         }.accessibilityElement(children: .contain).accessibilityIdentifier("chart-readout")
     }

@@ -14,7 +14,7 @@
       "limit": 170
     },
     "description": {
-      "length": 1882,
+      "length": 1890,
       "limit": 4000
     },
     "keywords": {
@@ -25,46 +25,103 @@
   "screenshots": [
     {
       "asset": "assets/01-overview.png",
-      "width": 1178,
-      "height": 2556,
-      "sha256": "fc949b48cb7d9a144a15b480e9a486fcce6856c2a1177ade6cf84512d8f55f1a",
-      "sourceBuild": 14
+      "width": 1320,
+      "height": 2868,
+      "sha256": "b315e73ffd3b3498447cab3de59004d2a78d1a4a4efd7dc00281a6c47e5f32b4",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/01-overview.png"
     },
     {
       "asset": "assets/02-widgets.png",
-      "width": 1178,
-      "height": 2556,
-      "sha256": "e468863ca931e96db3ee8d0f6b08ad9f9b8fecd3364b74fc2ab822a06c323a57",
-      "sourceBuild": 15
+      "width": 1320,
+      "height": 2868,
+      "sha256": "a9f4fe00aba5388e0b097a82cce518efb4e45b888ea1bcaffbaf9997af35592d",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/02-widgets.png"
     },
     {
       "asset": "assets/03-compact.png",
-      "width": 1178,
-      "height": 2556,
-      "sha256": "b1f05527fbd906fb8a6734f772c46fad6130b736d8072bb3a2a2ff7051531067",
-      "sourceBuild": 14
+      "width": 1320,
+      "height": 2868,
+      "sha256": "a7035fc956bf4493c997b2820528bd6502a45420c20ce90242f437023d96d111",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/03-compact.png"
     },
     {
       "asset": "assets/04-charts.png",
-      "width": 1178,
-      "height": 2556,
-      "sha256": "2fb0a01873dafa6cc62755178683b0f6fdcdd1cba30ba352015bea74fda5df31",
-      "sourceBuild": 16
+      "width": 1320,
+      "height": 2868,
+      "sha256": "a07f3a284123fc9b0e49b6ce8cc29962152f1c3bd8a351687c8a26d334868f6c",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/04-charts.png"
     },
     {
       "asset": "assets/05-activity.png",
-      "width": 1178,
-      "height": 2556,
-      "sha256": "78b8e99ccc32ab30b628b1e8b6da045be3127c350e128878c6bdc4ccfc4cfccd",
-      "sourceBuild": 16
+      "width": 1320,
+      "height": 2868,
+      "sha256": "ab7c2af5ebccdd305a4d7b26861771e5be2467ab14ea4c82fd42e5a0429b8ffe",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/05-activity.png"
     },
     {
       "asset": "assets/06-rings.png",
-      "width": 1178,
-      "height": 2556,
-      "sha256": "8333cece55b143d1425da158bc9dcd158fd25943b7bc7b10fd79700bfc475e48",
-      "sourceBuild": 14
+      "width": 1320,
+      "height": 2868,
+      "sha256": "cb9e6946582aab2af34bb621ad782b33d228bef1ad56e46c4aa19aa195f3ebf6",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/iphone/06-rings.png"
+    },
+    {
+      "asset": "assets/ipad/01-overview.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "0b544006baa2986e4a88082638b5b940a39d588dfafb325e243d0a7fc7d374d0",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/01-overview.png"
+    },
+    {
+      "asset": "assets/ipad/03-compact.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "12ec0dcc3dacefb95436b2c44d4b4a263eb987b0201eedcf8c90b9e94af607fd",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/03-compact.png"
+    },
+    {
+      "asset": "assets/ipad/04-charts.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "8c1209f74877bb6bc027ea6df1104c800c27b16d94d5f00c21c0bd001de4ce3b",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/04-charts.png"
+    },
+    {
+      "asset": "assets/ipad/05-activity.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "26f2fdd56e76fdde9536fac11a63c22223b46a04ac4ca6f92be1796e3b88c560",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/05-activity.png"
+    },
+    {
+      "asset": "assets/ipad/06-rings.png",
+      "width": 2064,
+      "height": 2752,
+      "sha256": "3b9724f5d3e11f8183ee5b08dae08f27c898e3a55b19cb6497f1b9fd65c61a99",
+      "sourceBuild": null,
+      "alpha": false,
+      "nativeCapture": "captures/ipad/06-rings.png"
     }
   ],
-  "scope": "Draft copy and screenshot direction only; no App Store Connect mutation or submission."
+  "scope": "Reviewable copy and native screenshot artwork; no App Store Connect mutation or submission."
 }

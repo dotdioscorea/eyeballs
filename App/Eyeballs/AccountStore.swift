@@ -34,6 +34,12 @@ final class AccountStore: ObservableObject {
         var selectedLocation = location ?? (isDemo ? DemoData.location : nil)
         #if DEBUG
         if !isDemo, location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("EyeballsUITest/accounts.json") }
+        if !isDemo, location == nil, SimulatorFixtures.storeCaptureEnabled {
+            selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RequotaStoreCapture/accounts.json")
+            UserDefaults.standard.set("manual", forKey: "dashboard-sort")
+            UserDefaults.standard.set(["cards", "bars"].contains(SimulatorFixtures.captureScreen) ? SimulatorFixtures.captureScreen : "tiles", forKey: "dashboard-layout")
+            UserDefaults.standard.set(true, forKey: "chart-smooth")
+        }
         #endif
         self.location = selectedLocation ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Eyeballs/accounts.json")
         self.eventFile = AccountEventFile(location: self.location.deletingLastPathComponent().appendingPathComponent("events.json"))
@@ -55,12 +61,12 @@ final class AccountStore: ObservableObject {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--clear-widget-fixture"), !accounts.isEmpty,
            accounts.allSatisfy({ $0.snapshot?.source == "UI Test Fixture" }) { accounts = []; persist() }
-        if !isDemo, SimulatorFixtures.enabled, accounts.isEmpty { accounts = SimulatorFixtures.accounts() }
+        if !isDemo, SimulatorFixtures.enabled, !SimulatorFixtures.storeCaptureEnabled, accounts.isEmpty { accounts = SimulatorFixtures.accounts() }
         if !isDemo, SimulatorFixtures.widgetEnabled { persist() }
         #endif
         for account in accounts { histories[account.id] = historyStore.read(account.id); if let snapshot = account.snapshot { recordHistory(snapshot, id: account.id) } }
         #if DEBUG
-        if !isDemo, SimulatorFixtures.enabled {
+        if !isDemo, SimulatorFixtures.enabled, !SimulatorFixtures.storeCaptureEnabled {
             let fresh = SimulatorFixtures.accounts()
             for index in accounts.indices { if let sample = fresh.first(where: { $0.id == accounts[index].id }) {
                 accounts[index].snapshot = sample.snapshot
@@ -75,6 +81,23 @@ final class AccountStore: ObservableObject {
                     return UsageHistorySample(date: Date.now.addingTimeInterval(Double(index - 72) * 3600), windows: windows, remainingAllowances: account.snapshot?.remainingAllowances)
                 }
             }
+        }
+        if !isDemo, SimulatorFixtures.storeCaptureEnabled {
+            let now = Date.now.addingTimeInterval(-120)
+            accounts = Array(DemoData.accounts(now: now).prefix(UIDevice.current.userInterfaceIdiom == .pad ? 13 : SimulatorFixtures.captureScreen == "tiles" ? 6 : 8)).enumerated().map { index, sample in
+                var copy = sample
+                copy.id = UUID(uuidString: String(format: "A9000000-0000-0000-0000-%012d", index + 1))!
+                copy.snapshot?.source = "Store screenshot fixture"
+                copy.favorite = index < 6
+                return copy
+            }
+            for account in accounts {
+                let samples = DemoData.history(for: account, now: now)
+                histories[account.id] = samples
+                try? historyStore.write(samples, id: account.id)
+            }
+            events = DemoData.events(accounts: accounts, now: now)
+            saveEvents(); persist()
         }
         #endif
         if publishesWidgetSummaries, loadedAccounts { publishWidgets() }
@@ -382,7 +405,7 @@ final class AccountStore: ObservableObject {
         guard isDemo, loadedAccounts, var account = DemoData.accounts().first(where: { $0.provider == provider }) else { return }
         let random = UUID().uuidString
         account.id = UUID(uuidString: "DE000000" + random.dropFirst(8))!
-        account.label = "Demo · " + (name.isEmpty ? provider.name : String(name.prefix(80)))
+        account.label = name.isEmpty ? provider.name : String(name.prefix(80))
         accounts.append(account)
         let samples = DemoData.history(for: account)
         do { try historyStore.write(samples, id: account.id); histories[account.id] = samples }

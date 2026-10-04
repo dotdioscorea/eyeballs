@@ -42,19 +42,23 @@ def main():
 
     (DIRECTORY / "assets").mkdir(exist_ok=True)
     assets = []
-    for shot in listing["screenshots"]:
+    for shot in listing["screenshots"] + listing.get("ipadScreenshots", []):
         source = ROOT / shot["source"]
         destination = DIRECTORY / shot["asset"]
         if args.check:
             data = destination.read_bytes()
         else:
-            shutil.copyfile(source, destination)
+            if source.resolve() != destination.resolve():
+                shutil.copyfile(source, destination)
             data = destination.read_bytes()
         if data[:8] != b"\x89PNG\r\n\x1a\n":
             raise ValueError(f"Not a PNG: {destination}")
         width, height = struct.unpack(">II", data[16:24])
+        expected = (2064, 2752) if "/ipad/" in shot["asset"] else (1320, 2868)
+        if (width, height) != expected or data[25] != 2:
+            raise ValueError(f"Expected opaque RGB PNG at {expected}: {destination}")
         assets.append({"asset": shot["asset"], "width": width, "height": height,
-                       "sha256": hashlib.sha256(data).hexdigest(), "sourceBuild": shot["sourceBuild"]})
+                       "sha256": hashlib.sha256(data).hexdigest(), "sourceBuild": shot["sourceBuild"], "alpha": False, "nativeCapture": shot["nativeCapture"]})
     icon = ROOT / "App/Eyeballs/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
     if not args.check:
         shutil.copyfile(icon, DIRECTORY / "assets/icon.png")
@@ -71,7 +75,7 @@ def main():
                    "PRICE", listing["recommendations"]["pricing"], "", "SCREENSHOT ORDER"]
     for number, shot in enumerate(listing["screenshots"], 1):
         text_lines += [f"{number}. {shot['headline']}", shot["caption"]]
-    text_lines += ["", "Screenshot direction is provisional; review.html shows existing sample captures.",
+    text_lines += ["", "Screenshots use native captures with illustrative account data; original captures are included.",
                    "The listing has not been entered into App Store Connect or submitted for review.", ""]
     text_output = "\n".join(text_lines)
 
@@ -84,13 +88,15 @@ def main():
         else:
             paragraphs.append("<p>" + escaped(paragraph) + "</p>")
     description = "\n".join(paragraphs)
-    screenshots = "\n".join(
-        f'<article class="shot"><div class="shot-copy"><span class="shot-number">{number:02}</span>'
-        f'<h3>{escaped(shot["headline"])}</h3><p>{escaped(shot["caption"])}</p></div>'
-        f'<a href="{escaped(shot["asset"])}" target="_blank" rel="noopener">'
-        f'<img src="{escaped(shot["asset"])}" alt="{escaped(shot["capture"])}" width="1179" height="2556"></a></article>'
-        for number, shot in enumerate(listing["screenshots"], 1)
-    )
+    def gallery(shots, ipad=False):
+        return "\n".join(
+            f'<article class="shot{ " ipad" if ipad else "" }"><a href="{escaped(shot["asset"])}" target="_blank" rel="noopener">'
+            f'<img src="{escaped(shot["asset"])}" alt="{escaped(shot["capture"])}" width="{2064 if ipad else 1320}" height="{2752 if ipad else 2868}"></a>'
+            f'<div class="native-link"><a href="{escaped(shot["nativeCapture"])}" target="_blank" rel="noopener">Original capture</a></div></article>'
+            for shot in shots
+        )
+    screenshots = gallery(listing["screenshots"])
+    ipad_screenshots = gallery(listing.get("ipadScreenshots", []), ipad=True)
     research = "\n".join(
         f'<li><a href="{escaped(item["url"])}" target="_blank" rel="noopener">{escaped(item["name"])}</a>'
         f'<p>{escaped(item["observations"])}</p></li>' for item in listing["research"]["comparisons"]
@@ -114,7 +120,7 @@ h1{{font-size:30px;line-height:1.16;letter-spacing:-.7px;margin:0 0 8px}}.subtit
 .section-title{{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}}h2{{font-size:21px;letter-spacing:-.3px;margin:0}}h3{{font-size:16px;margin:0 0 8px}}p{{line-height:1.6;margin:0 0 17px}}
 .gallery{{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:0 0 16px;scrollbar-color:#b8c6a9 #f1f4ed}}
 .shot{{flex:0 0 250px;scroll-snap-align:start;background:#121711;border-radius:16px;overflow:hidden;border:1px solid #20291e;color:#fff}}
-.shot-copy{{padding:19px 19px 15px;min-height:168px;background:linear-gradient(150deg,#23331e,#131912)}}.shot-number{{font-size:11px;letter-spacing:1px;color:#b9f577}}
+.shot.ipad{{flex-basis:330px}}.native-link{{padding:10px 16px;font-size:11px;text-align:center}}.native-link a{{color:#c5cebc}}.shot-copy{{padding:19px 19px 15px;min-height:168px;background:linear-gradient(150deg,#23331e,#131912)}}.shot-number{{font-size:11px;letter-spacing:1px;color:#b9f577}}
 .shot h3{{font-size:22px;line-height:1.16;letter-spacing:-.4px;margin:13px 0 8px}}.shot p{{font-size:13px;line-height:1.4;color:#d0dac8;margin:0}}.shot img{{display:block;width:100%;height:auto}}.shot a{{display:block}}
 .note{{font-size:12px;color:#788271;margin:9px 0 29px}}.columns{{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:36px;padding-top:27px;border-top:1px solid #eceee9}}
 .promo{{font-size:17px;margin-bottom:26px}}.description{{font-size:15px;line-height:1.6}}.description ul{{padding-left:20px;margin:0 0 20px}}.description li{{margin:0 0 11px;padding-left:2px}}.description h3{{margin-top:24px}}
@@ -129,8 +135,9 @@ h1{{font-size:30px;line-height:1.16;letter-spacing:-.7px;margin:0 0 8px}}.subtit
 <main class="page">
 <header class="identity"><img class="icon" src="assets/icon.png" width="112" height="112" alt="Requota app icon"><div><h1 id="name">{escaped(metadata['name'])}</h1><p class="subtitle" id="subtitle">{escaped(metadata['subtitle'])}</p><p class="publisher">Aaron Rucinski</p></div></header>
 <div class="positioning"><span>Recommended category: Utilities</span><span>iPhone &amp; iPad · iOS 17+</span><span>Price to be chosen</span></div>
-<section aria-label="Screenshot direction"><div class="section-title"><h2>Screenshot direction</h2><span class="count">6 compositions</span></div><div class="gallery">{screenshots}</div>
-<p class="note">Existing simulator captures with sample data. Final captures and upload sizes are still to be prepared.</p></section>
+<section aria-label="iPhone screenshots"><div class="section-title"><h2>iPhone screenshots</h2><span class="count">1320 × 2868</span></div><div class="gallery">{screenshots}</div>
+<p class="note">Native captures with illustrative account data. Click an image to inspect the full upload file.</p></section>
+<details class="details" style="margin:0 0 28px"><summary>iPad screenshots · 2064 × 2752</summary><div class="gallery">{ipad_screenshots}</div></details>
 <div class="columns"><section><div class="section-title"><h2>Promotional text</h2><button class="copy" data-field="promotionalText">Copy text</button></div><p class="promo" id="promotionalText">{escaped(metadata['promotionalText'])}</p>
 <div class="section-title"><h2>Description</h2><button class="copy" data-field="description">Copy description</button></div><div class="description">{description}</div></section>
 <aside aria-label="Listing fields"><div class="field"><div class="field-header"><h3>Name</h3><span class="count">{counts['name']['length']}/30</span></div><p>{escaped(metadata['name'])}</p><button class="copy" data-field="name">Copy name</button></div>
@@ -156,7 +163,7 @@ document.querySelectorAll('[data-field]').forEach(button=>button.addEventListene
 </script></body></html>
 '''
     validation = {"preparedOn": listing["preparedOn"], "metadata": counts, "screenshots": assets,
-                  "scope": "Draft copy and screenshot direction only; no App Store Connect mutation or submission."}
+                  "scope": "Reviewable copy and native screenshot artwork; no App Store Connect mutation or submission."}
     outputs = {"listing-en-GB.txt": text_output, "review.html": document,
                "validation.json": json.dumps(validation, indent=2) + "\n"}
     for name, value in outputs.items():

@@ -10,10 +10,10 @@ Limits, resets & widgets
 PROMOTIONAL TEXT (136/170)
 Check remaining AI usage and reset times across your accounts. Customise your dashboard and widgets, and compare usage trends over time.
 
-DESCRIPTION (1882/4000)
+DESCRIPTION (1890/4000)
 Keep track of your AI accounts in one place. Requota shows remaining usage, reset times and available credit balances, with widgets for a quick check throughout the day.
 
-Connect your accounts directly on your iPhone, including multiple accounts from the same provider. Give each a name, organise them by workstream and see which has allowance left.
+Connect your accounts directly on your iPhone or iPad, including multiple accounts from the same provider. Give each a name, organise them by workstream and see which has allowance left.
 
 • Choose your view: rings, square tiles or compact bars. Search, filter, sort or arrange accounts in your own order.
 • Customise each account: show usage remaining or used, choose which limits and reset countdowns appear, and set your colours.
@@ -25,7 +25,7 @@ Connect your accounts directly on your iPhone, including multiple accounts from 
 Supported providers
 Codex, Claude, Grok, Gemini CLI / Code Assist, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp. Available details can include credit balances, extra spending and model-specific allowances.
 
-Credentials are stored in your iPhone's Keychain. Usage history is stored locally. The source code is public, with a link in Settings.
+Credentials are stored in your device's Keychain. Usage history is stored locally. The source code is public, with a link in Settings.
 
 Requires an account with a supported provider. Available limits, balances and reset details depend on the provider and plan. History builds from readings collected by Requota. Background and widget refresh timing is controlled by iOS.
 
@@ -50,18 +50,18 @@ PRICE
 Owner to choose; the copy does not assume a price or a paid tier.
 
 SCREENSHOT ORDER
-1. Your AI usage at a glance
-Remaining allowance and reset times across your accounts.
-2. Multiple accounts in one widget
-Choose rings or compact rows for your Home Screen.
-3. More accounts, less scrolling
-Compact bars, saved order and provider filters.
-4. Compare usage across accounts
-Usage history, rate charts and interactive comparisons.
-5. See your usage patterns
-Activity heatmaps with a breakdown for each day.
-6. Choose what each ring shows
-Usage remaining and time to reset, in your colours.
+1. See what’s left.
+All your AI accounts in one view.
+2. Six accounts. One widget.
+Check remaining usage from your Home Screen.
+3. Keep it compact.
+Limits and reset times in less space.
+4. Compare your usage.
+History across accounts and providers.
+5. Find your patterns.
+See activity by day and account.
+6. Usage and resets.
+Track each allowance and its next reset.
 
-Screenshot direction is provisional; review.html shows existing sample captures.
+Screenshots use native captures with illustrative account data; original captures are included.
 The listing has not been entered into App Store Connect or submitted for review.

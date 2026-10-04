@@ -94,6 +94,13 @@ struct AgentAccount: Codable, Identifiable, Equatable, Sendable {
     var addedAt: Date = .now
     var title: String { label.isEmpty ? provider.name : label }
     var nextReset: Date? { snapshot?.nextReset }
+    var planTitle: String? {
+        guard let plan = snapshot?.plan, !plan.isEmpty else { return nil }
+        // Preserve provider spellings instead of lowercasing internal capitals.
+        if plan.lowercased() == "supergrok" { return "SuperGrok" }
+        if plan.lowercased().hasPrefix("max ") { return "Max " + plan.dropFirst(4).lowercased() }
+        return plan == plan.lowercased() || plan == plan.uppercased() ? plan.capitalized : plan
+    }
     var color: Color { colorHex.map { Color(hex: $0) } ?? provider.color }
     var emptyMetricMessage: String { snapshot?.windows.isEmpty == true ? "No quota reported" : "No metrics selected" }
     var usageURL: URL {

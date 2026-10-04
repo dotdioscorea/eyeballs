@@ -3,8 +3,20 @@ import Foundation
 
 // Internal simulator/UI-test fixtures, separate from the shipping Demo mode.
 enum SimulatorFixtures {
+    static var storeCaptureEnabled: Bool {
+        #if targetEnvironment(simulator)
+        ProcessInfo.processInfo.arguments.contains("--store-screenshots")
+        #else
+        false
+        #endif
+    }
+    static var captureScreen: String {
+        guard storeCaptureEnabled, let index = ProcessInfo.processInfo.arguments.firstIndex(of: "--store-screen"),
+              ProcessInfo.processInfo.arguments.indices.contains(index + 1) else { return "tiles" }
+        return ProcessInfo.processInfo.arguments[index + 1]
+    }
     static var widgetEnabled: Bool { ProcessInfo.processInfo.arguments.contains("--widget-fixture") }
-    static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled }
+    static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled || storeCaptureEnabled }
     static func accounts(now: Date = .now) -> [AgentAccount] {
         (0..<8).map { index in
             if ProcessInfo.processInfo.arguments.contains("--provider-stats-fixture"), [2, 4, 5].contains(index) {

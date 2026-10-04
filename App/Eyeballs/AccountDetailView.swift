@@ -17,7 +17,7 @@ struct AccountDetailView: View {
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             VStack(spacing: 22) {
                                 if !account.readings().isEmpty { UsageRing(readings: account.readings(at: context.date), color: account.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13) }
-                                Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary)
+                                Text([account.provider.name, account.planTitle].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary)
                                 if !account.readings().isEmpty { MetricLegend(readings: account.readings(at: context.date), color: account.color) }
                             }.padding(.vertical, account.readings().isEmpty ? 0 : 16)
                         }

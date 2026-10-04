@@ -9,6 +9,13 @@ struct RootView: View {
     @State private var tab = 0
     @State private var reporting = false
     @State private var failedProvider: Provider?
+    init() {
+        #if DEBUG
+        if SimulatorFixtures.storeCaptureEnabled {
+            _tab = State(initialValue: ["charts", "activity"].contains(SimulatorFixtures.captureScreen) ? 1 : SimulatorFixtures.captureScreen == "events" ? 3 : 0)
+        }
+        #endif
+    }
     var body: some View {
         TabView(selection: $tab) {
             NavigationStack(path: $path) {
@@ -34,6 +41,7 @@ struct RootView: View {
 }
 
 struct DashboardView: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject private var store: AccountStore
     @AppStorage("dashboard-compact") private var oldCompact = false
     @AppStorage("dashboard-layout") private var layoutValue = ""
@@ -41,6 +49,8 @@ struct DashboardView: View {
     @State private var reordering = false
     private var layout: DashboardLayout { DashboardLayout(rawValue: layoutValue) ?? (oldCompact ? .bars : .cards) }
     private var compact: Bool { layout != .cards }
+    private var tablet: Bool { sizeClass == .regular }
+    private var contentMargin: CGFloat { tablet ? 32 : (compact ? 12 : 16) }
     @AppStorage("dashboard-sort") private var sortValue = AccountSort.favorites.rawValue
     @State private var adding = false
     @State private var search = ""
@@ -63,8 +73,12 @@ struct DashboardView: View {
             } else {
                 Group {
                     if layout == .tiles {
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                        LazyVGrid(columns: tablet ? [GridItem(.adaptive(minimum: 210, maximum: 280), spacing: 16)] : Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: tablet ? 16 : 10) {
                             ForEach(displayed) { account in accountLink(account, tile: true) }
+                        }
+                    } else if tablet {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
+                            ForEach(displayed) { account in accountLink(account, tile: false) }
                         }
                     } else {
                         LazyVStack(spacing: compact ? 4 : 14) {
@@ -72,7 +86,7 @@ struct DashboardView: View {
                         }
                     }
                     if displayed.isEmpty { ContentUnavailableView.search(text: search) }
-                }.padding(.horizontal, compact ? 12 : 16).padding(.top, compact ? 4 : 10).padding(.bottom, 20).frame(maxWidth: 650).frame(maxWidth: .infinity)
+                }.padding(.horizontal, contentMargin).padding(.top, tablet ? 16 : (compact ? 4 : 10)).padding(.bottom, tablet ? 32 : 20).frame(maxWidth: tablet ? 1280 : 650).frame(maxWidth: .infinity)
             }
         }
         .background(Theme.background).navigationTitle("Requota").navigationBarTitleDisplayMode(.inline)
@@ -87,7 +101,8 @@ struct DashboardView: View {
     }
     private var controls: some View {
         VStack(spacing: compact ? 6 : 10) {
-            HStack {
+            HStack(spacing: 20) {
+                if tablet { Text("Requota").font(.title2.weight(.semibold)); Spacer(minLength: 16); searchField.frame(maxWidth: 360) }
                 HStack(spacing: 12) {
                     ForEach(DashboardLayout.allCases) { choice in
                         Button { layoutValue = choice.rawValue; oldCompact = choice == .bars } label: {
@@ -104,18 +119,21 @@ struct DashboardView: View {
                 } label: { Label(sort.title, systemImage: "arrow.up.arrow.down").font(.caption.weight(.medium)) }
                     .accessibilityLabel("Sort accounts").accessibilityIdentifier("sort-accounts")
             }
-            HStack {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search accounts", text: $search).font(.subheadline).accessibilityIdentifier("search-accounts")
-                if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Clear search") }
-            }.padding(compact ? 7 : 9).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
+            if !tablet { searchField }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     filterButton("All", selected: filter == nil) { filter = nil }
                     ForEach(connectedProviders) { provider in filterButton(provider.name, selected: filter == provider) { filter = provider } }
                 }
             }
-        }.padding(.horizontal, 16).padding(.vertical, compact ? 4 : 10).background(Theme.background)
+        }.padding(.horizontal, contentMargin).padding(.top, tablet ? 18 : (compact ? 4 : 10)).padding(.bottom, tablet ? 8 : (compact ? 4 : 10)).frame(maxWidth: tablet ? 1280 : 650).frame(maxWidth: .infinity).background(Theme.background)
+    }
+    private var searchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Search accounts", text: $search).font(.subheadline).accessibilityIdentifier("search-accounts")
+            if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Clear search") }
+        }.padding(compact && !tablet ? 7 : 9).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
     }
     private var connectedProviders: [Provider] { Provider.allCases.filter { provider in store.accounts.contains { $0.provider == provider } } }
     private func adoptCustomOrder() {
@@ -162,7 +180,7 @@ struct AccountCard: View {
                     ProviderLogo(provider: account.provider, color: account.color, size: compact ? 16 : 22)
                     Text(account.title).font(compact ? .subheadline.weight(.semibold) : .title3.weight(.semibold)).lineLimit(1).layoutPriority(1)
                     Spacer(minLength: 8)
-                    Text([account.provider.name, account.snapshot?.plan?.capitalized].compactMap { $0 }.joined(separator: " · "))
+                    Text([account.provider.name, account.planTitle].compactMap { $0 }.joined(separator: " · "))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
                 if !account.workstream.isEmpty { Text(account.workstream).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
@@ -215,7 +233,7 @@ struct AccountTile: View {
             TimelineView(.periodic(from: .now, by: 60)) { context in
                 let readings = account.readings(at: context.date)
                 let balance = account.snapshot?.formattedCreditBalance
-                let ringSize = min(88, max(52, geometry.size.height - (balance == nil ? 102 : 120)))
+                let ringSize = min(128, max(52, geometry.size.height - (balance == nil ? 102 : 120)))
                 VStack(spacing: 0) {
                     HStack(spacing: 6) {
                         ProviderLogo(provider: account.provider, color: account.color, size: 16)
@@ -241,7 +259,7 @@ struct AccountTile: View {
                     Spacer(minLength: 6)
                     VStack(spacing: 6) {
                         if !readings.isEmpty {
-                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 4) {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: readings.count == 1 ? 1 : 2), alignment: .leading, spacing: 4) {
                                 ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
                                     HStack(spacing: 3) {
                                         Circle().fill(MetricColor.color(index, base: account.color)).frame(width: 4, height: 4)

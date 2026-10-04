@@ -15,7 +15,10 @@ final class UsageAnalysisTests: XCTestCase {
         XCTAssertNil(HistorySelection.nearest(now, dates: [now.addingTimeInterval(86400)], domain: domain))
     }
     func testDenseChartRenderingKeepsSpikesResetDropsAndEndpoints() {
-        let points = (0..<12000).map { index in HistorySeries.Point(date: now.addingTimeInterval(Double(index)), usedPercent: index == 5555 ? 100 : index == 5556 ? 0 : 20) }
+        let points: [HistorySeries.Point] = (0..<12000).map { index in
+            let percent: Double = index == 5555 ? 100 : index == 5556 ? 0 : 20
+            return HistorySeries.Point(date: now.addingTimeInterval(Double(index)), usedPercent: percent)
+        }
         let rendered = HistorySeries.renderPoints(points)
         XCTAssertLessThanOrEqual(rendered.count, 600)
         XCTAssertEqual(rendered.first?.date, points.first?.date); XCTAssertEqual(rendered.last?.date, points.last?.date)

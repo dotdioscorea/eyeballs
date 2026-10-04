@@ -1,6 +1,6 @@
 # Requota
 
-An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
+An iPhone and iPad app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Copilot, Cursor, Cline, Kimi Code, Perplexity, Devin and Amp accounts. Each connection has its own credentials, usage, settings and history, including multiple accounts from the same provider.
 
 - Remaining usage by default, with optional used amounts.
 - Up to four configurable rings per account: usage or time, with individual amount choices. Weekly time is enabled by default.
@@ -17,7 +17,7 @@ An iPhone app for monitoring multiple Codex, Claude, Grok, Gemini CLI, GitHub Co
 
 TestFlight **1.0 (16)** is available for internal and external testing, built from commit `cd7ac8d` and tagged `testflight/1.0-16`. It refines chart inspection and smoothing, adds provider filters and an expandable account/metric selector, combines Activity into one heatmap with day breakdowns, and exposes more Copilot, Grok and Gemini details. Apple approved external testing, and both existing tester groups include build 16. All source is public on the feature branch; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) remains open and unmerged into `main`. See [testing notes](RELEASE_NOTES.txt) and [build 16 validation](docs/testflight-build-16.json).
 
-The [App Store listing preview](docs/app-store/review.html) includes draft copy, screenshot direction and comparisons with similar listings. [Plain-text fields](docs/app-store/listing-en-GB.txt) and [editable metadata](docs/app-store/listing-en-GB.json) are available for review. Run `python3 scripts/prepare-store-listing.py` to regenerate the preview, or add `--check` to validate it. Screenshot images are provisional sample captures; no store metadata has been submitted.
+The [App Store listing preview](docs/app-store/review.html) includes draft copy, iPhone and iPad screenshots, and comparisons with similar listings. [Plain-text fields](docs/app-store/listing-en-GB.txt) and [editable metadata](docs/app-store/listing-en-GB.json) are available for review. Run `python3 scripts/prepare-store-listing.py` to regenerate the preview, or add `--check` to validate it. The screenshot set contains native iPhone and iPad captures with illustrative data and opaque, upload-sized artwork. Original captures are included. No store metadata has been submitted.
 
 ## Provider connections
 

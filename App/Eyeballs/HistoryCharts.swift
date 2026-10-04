@@ -174,6 +174,7 @@ struct HeatmapGrid: View {
     }
 }
 struct HeatmapTiles: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     var cells: [HeatmapBucket]
     var period: HeatmapPeriod
     var date: Date
@@ -189,11 +190,11 @@ struct HeatmapTiles: View {
             HStack(alignment: .top, spacing: 6) {
                 VStack(alignment: .leading, spacing: 3) {
                     ForEach(0..<7) { day in
-                        if cells.count > day * 24 { Text(cells[day * 24].date.formatted(.dateTime.weekday(.abbreviated).day())).font(.system(size: 9)).frame(height: 17) }
+                        if cells.count > day * 24 { Text(cells[day * 24].date.formatted(.dateTime.weekday(.abbreviated).day())).font(.system(size: sizeClass == .regular ? 11 : 9)).frame(height: sizeClass == .regular ? 24 : 17) }
                     }
                 }
                 VStack(spacing: 4) {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 24), spacing: 3) { ForEach(cells) { cell in heatCell(cell, label: false).frame(height: 17) } }
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 24), spacing: 3) { ForEach(cells) { cell in heatCell(cell, label: false).frame(height: sizeClass == .regular ? 24 : 17) } }
                     hourTicks
                 }
             }
@@ -205,8 +206,8 @@ struct HeatmapTiles: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 7), spacing: 5) {
                     // One ID space for all grid slots, including leading blanks.
                     ForEach(0..<(offset + cells.count), id: \.self) { slot in
-                        if slot < offset { Color.clear.frame(height: 29) }
-                        else { heatCell(cells[slot - offset], label: true).frame(height: 29) }
+                        if slot < offset { Color.clear.frame(height: sizeClass == .regular ? 52 : 29) }
+                        else { heatCell(cells[slot - offset], label: true).frame(height: sizeClass == .regular ? 52 : 29) }
                     }
                 }
             }
@@ -219,13 +220,14 @@ struct HeatmapTiles: View {
         return Button { select(cell) } label: {
             RoundedRectangle(cornerRadius: 3).fill(fill)
                 .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(!future && cell.value == nil ? Color.white.opacity(0.12) : .clear, lineWidth: 1))
-                .overlay { if label { Text(cell.label).font(.system(size: 10)).foregroundStyle(!future && (cell.value ?? 0) / scale > 0.5 ? Color.black.opacity(0.85) : Color.white.opacity(future ? 0.2 : cell.value == nil ? 0.4 : 0.9)) } }
+                .overlay { if label { Text(cell.label).font(.system(size: sizeClass == .regular ? 13 : 10)).foregroundStyle(!future && (cell.value ?? 0) / scale > 0.5 ? Color.black.opacity(0.85) : Color.white.opacity(future ? 0.2 : cell.value == nil ? 0.4 : 0.9)) } }
                 .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(selectedID == cell.id ? .white : .clear, lineWidth: 1))
         }.buttonStyle(.plain).disabled(future).accessibilityIdentifier("heatmap-cell-\(period.rawValue)-\(cell.id)").accessibilityLabel("\(cell.date.formatted(date: .abbreviated, time: period == .monthly ? .omitted : .shortened)), \(cell.value.map { String(format: "%.1f", $0) } ?? "No observation")")
     }
 }
 
 struct ChartsView: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @EnvironmentObject private var store: AccountStore
     @State private var selected = Set<String>()
     @State private var choosing = false
@@ -282,34 +284,66 @@ struct ChartsView: View {
         }
         return ChartEvents.groups(events: relevant, windows: visible.map(\.window), domain: rangeEnd.addingTimeInterval(-UsageHistoryStore.retention)...rangeEnd)
     }
+    init() {
+        #if DEBUG
+        if SimulatorFixtures.storeCaptureEnabled {
+            _customSelection = State(initialValue: true)
+            _selected = State(initialValue: Set((1...3).map { String(format: "A9000000-0000-0000-0000-%012d:week", $0) }))
+            if SimulatorFixtures.captureScreen == "activity" {
+                _kind = State(initialValue: .activity)
+                _heatmapPeriod = State(initialValue: .monthly)
+                _heatmapDate = State(initialValue: Calendar.current.date(byAdding: .month, value: -1, to: .now)!)
+            }
+        }
+        #endif
+    }
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Picker("Chart type", selection: $kind) { ForEach(HistoryChartKind.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
-                providerFilters
-                DisclosureGroup(isExpanded: $choosing) { selectionControls } label: {
-                    Text("Accounts & metrics").font(.subheadline.weight(.medium)).foregroundStyle(.primary)
-                }.padding(12).background(Theme.card, in: RoundedRectangle(cornerRadius: 12)).accessibilityIdentifier("chart-accounts")
-                if visible.isEmpty { Text(measure == .amount && available.contains(where: { chosen($0) }) ? "No selected metrics report " + activeUnit + "." : "No metrics selected.").font(.subheadline).foregroundStyle(.secondary) }
-                else if heatmaps { activityCharts }
-                else {
-                    HistoryPeriodPicker(days: $days)
-                    HStack {
-                        HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate)
-                        Spacer()
-                        HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if sizeClass == .regular {
+                        HStack(spacing: 24) {
+                            Text("Charts").font(.title2.weight(.semibold))
+                            chartKindPicker.frame(width: 300)
+                            Spacer(minLength: 0)
+                        }
+                    } else { chartKindPicker }
+                    providerFilters
+                    DisclosureGroup(isExpanded: $choosing) { selectionControls } label: {
+                        Text("Accounts & metrics").font(.subheadline.weight(.medium)).foregroundStyle(.primary)
+                    }.padding(12).background(Theme.card, in: RoundedRectangle(cornerRadius: 12)).accessibilityIdentifier("chart-accounts")
+                    if visible.isEmpty { Text(measure == .amount && available.contains(where: { chosen($0) }) ? "No selected metrics report " + activeUnit + "." : "No metrics selected.").font(.subheadline).foregroundStyle(.secondary) }
+                    else if heatmaps { activityCharts(wide: sizeClass == .regular && geometry.size.width >= 800) }
+                    else {
+                        if sizeClass == .regular {
+                            HStack(spacing: 24) {
+                                HistoryPeriodPicker(days: $days).frame(maxWidth: 400)
+                                Spacer()
+                                plotOptions.frame(maxWidth: 280)
+                            }
+                        } else { HistoryPeriodPicker(days: $days); plotOptions }
+                        VStack(alignment: .leading, spacing: 14) {
+                            if plots.flatMap({ $0.segments.flatMap { $0 } }).isEmpty { Text("History starts with successful refreshes.").font(.caption).foregroundStyle(.secondary) }
+                            else { HistoryPlot(series: plots, domain: domain, measure: kind == .rate && measure == .remaining ? .used : measure, unit: activeUnit, events: events, accountNames: names, height: sizeClass == .regular ? min(650, max(380, geometry.size.height - 320)) : 280, smooth: smooth, rate: kind == .rate) }
+                        }.panel()
                     }
-                    VStack(alignment: .leading, spacing: 14) {
-                        if plots.flatMap({ $0.segments.flatMap { $0 } }).isEmpty { Text("History starts with successful refreshes.").font(.caption).foregroundStyle(.secondary) }
-                        else { HistoryPlot(series: plots, domain: domain, measure: kind == .rate && measure == .remaining ? .used : measure, unit: activeUnit, events: events, accountNames: names, height: 280, smooth: smooth, rate: kind == .rate) }
-                    }.panel()
-                }
-            }.padding(16).frame(maxWidth: 750).frame(maxWidth: .infinity)
+                }.padding(.horizontal, sizeClass == .regular ? 32 : 16).padding(.vertical, sizeClass == .regular ? 24 : 16).frame(maxWidth: sizeClass == .regular ? 1280 : 750).frame(maxWidth: .infinity)
+            }
         }.background(Theme.background).navigationTitle("Charts").navigationBarTitleDisplayMode(.inline).refreshable { await store.refreshAll(); rangeEnd = .now }
             .onAppear { rangeEnd = .now }
             .onChange(of: store.accounts.compactMap { $0.snapshot?.updatedAt }.max()) { _, _ in rangeEnd = .now }
             .onChange(of: connectedProviders) { _, providers in if let provider, !providers.contains(provider) { self.provider = nil } }
 
+    }
+    private var chartKindPicker: some View {
+        Picker("Chart type", selection: $kind) { ForEach(HistoryChartKind.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+    }
+    private var plotOptions: some View {
+        HStack {
+            HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate)
+            Spacer()
+            HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours)
+        }
     }
     private func pattern(for series: Series) -> [CGFloat] {
         let peers = store.accounts.filter { $0.provider == series.account.provider }.sorted { $0.id.uuidString < $1.id.uuidString }
@@ -322,14 +356,14 @@ struct ChartsView: View {
         let metric = windows.firstIndex { $0.id == series.id } ?? 0
         return ChartDashPattern.pattern(rank + metric * peers.count)
     }
-    private var activityCharts: some View {
+    private func activityCharts(wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 HeatmapModeMenu(mode: $heatmapMode)
                 Spacer()
                 HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: heatmapMode == .activity)
             }
-            CombinedActivityView(series: visible.map { item in ActivitySeries(id: item.id, account: item.account, window: item.window, samples: samples(item.account.id), events: store.events.filter { $0.accountID == item.account.id }) }, measure: heatmapMode == .activity && measure == .remaining ? .used : measure, unit: activeUnit, mode: heatmapMode, period: $heatmapPeriod, date: $heatmapDate)
+            CombinedActivityView(inlineBreakdown: wide, series: visible.map { item in ActivitySeries(id: item.id, account: item.account, window: item.window, samples: samples(item.account.id), events: store.events.filter { $0.accountID == item.account.id }) }, measure: heatmapMode == .activity && measure == .remaining ? .used : measure, unit: activeUnit, mode: heatmapMode, period: $heatmapPeriod, date: $heatmapDate)
         }.panel()
     }
     private var providerFilters: some View {
