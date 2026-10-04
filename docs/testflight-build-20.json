@@ -1,0 +1,57 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "20",
+  "source_commit": "6e5ef5c42b7ce50bcfb61aaec081ba6f91399e2e",
+  "source_tag": "testflight/1.0-20",
+  "ipa_sha256": "06d2625ccbc854dcd3e85786973c9560727e56b49aab34dc4c08d89d3f1a26fe",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true,
+    "debug_activation_fixture_excluded": true,
+    "sdk": "iphoneos26.5",
+    "privacy_manifests": 2,
+    "non_exempt_encryption": false
+  },
+  "build_id": "42b1680a-1cb2-409b-8979-6751aeba77b2",
+  "apple_status_checked_at_utc": "2026-10-04T21:19:09.184049+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 207,
+    "unit_tests_executed": 213,
+    "opt_in_live_tests_skipped": 6,
+    "native_live_checks_passed": 0,
+    "activation_unit_checks_passed": 22,
+    "native_ui_checks_passed": 2,
+    "native_ui_checks": [
+      "Independent per-account preferences persist and Claude permission is explicit",
+      "Side-by-side controls, explanation popover, manual activation, selected-account automatic activation and repeat prevention over relaunches"
+    ],
+    "screenshots_visually_checked": true,
+    "limits": [
+      "Provider request adapters and countdown verification are unchanged from build 19. No unused live weekly window was available; the live countdown check remains pending at the next unused week.",
+      "Existing provider opt-ins migrate to existing accounts only. New connections default to off.",
+      "Physical-device background refresh cadence was not measured. Automatic activation runs when app usage refreshes."
+    ]
+  },
+  "app_store_draft": {
+    "state": "PREPARE_FOR_SUBMISSION",
+    "selected_build": "20",
+    "release_type": "MANUAL",
+    "submitted_for_review": false,
+    "support_url": "https://github.com/dotdioscorea/requota/issues",
+    "privacy_policy_url": "https://dotdioscorea.github.io/requota/"
+  }
+}
