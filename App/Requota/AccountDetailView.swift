@@ -8,6 +8,7 @@ struct AccountDetailView: View {
     @State private var connecting = false
     @State private var removing = false
     @State private var reporting = false
+    @State private var authorisingActivation = false
     private var account: AgentAccount? { store.accounts.first { $0.id == id } }
     var body: some View {
         Group {
@@ -71,6 +72,23 @@ struct AccountDetailView: View {
                         } else if account.snapshot?.windows.isEmpty == false || (store.histories[id] ?? []).contains(where: { !$0.windows.isEmpty }) {
                             UsageHistoryView(samples: store.histories[id] ?? [], account: account, events: store.events.filter { $0.accountID == id })
                         }
+                        if AllowanceActivation.supported(account.provider), !store.isDemo {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Weekly activation").font(.subheadline.weight(.semibold))
+                                Toggle("Automatic for \(account.provider.name)", isOn: Binding(get: { store.activationProviders[account.provider.rawValue] == true }, set: { store.activationProviders[account.provider.rawValue] = $0; store.saveActivationSettings() })).font(.subheadline)
+                                if store.activationPermitted(id) {
+                                    Button(store.activating.contains(id) ? "Starting…" : "Start week") { Task { await store.startAllowance(id) } }
+                                        .disabled(store.activating.contains(id) || store.refreshing.contains(id) || account.needsLogin).accessibilityIdentifier("start-week")
+                                } else if account.provider == .claude {
+                                    Button("Allow activation") { authorisingActivation = true }.accessibilityIdentifier("allow-activation")
+                                } else {
+                                    Text("Activation is unavailable for this connection.").font(.caption).foregroundStyle(.secondary)
+                                }
+                                if let message = store.activationMessages[id] { Text(message).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("activation-message") }
+                                else if let record = account.activation { Text(record.status == .started ? "Weekly window active." : "\([.failed, .attempted].contains(record.status) ? "Attempted" : "Request sent") \(record.attemptedAt.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary) }
+                                Text("Uses a small amount of included allowance. Automatic activation applies to all \(account.provider.name) accounts and runs during refreshes.").font(.caption).foregroundStyle(.secondary)
+                            }.panel()
+                        }
                         if let issue = account.issue { VStack(alignment: .leading, spacing: 10) { Text(issue).font(.subheadline).foregroundStyle(.orange); if account.needsReport == true { Button("Report problem") { reporting = true } } }.frame(maxWidth: .infinity, alignment: .leading).panel() }
                         VStack(alignment: .leading, spacing: 16) {
                             if !account.workstream.isEmpty { info("Workstream", value: account.workstream) }
@@ -95,6 +113,7 @@ struct AccountDetailView: View {
                     .sheet(isPresented: $editing) { EditAccountView(account: account) }
                     .sheet(isPresented: $configuring) { DisplaySettingsView(account: account) }
                     .sheet(isPresented: $connecting) { SignInView(account: account) }
+                    .sheet(isPresented: $authorisingActivation) { SignInView(account: account, allowActivation: true) }
                     .confirmationDialog("Remove \(account.title)?", isPresented: $removing, titleVisibility: .visible) {
                         Button("Remove account", role: .destructive) { do { try store.remove(id) } catch { store.error = error.localizedDescription } }
                     } message: { Text("Deletes its credentials and saved data from this iPhone.") }

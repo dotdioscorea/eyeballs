@@ -11,6 +11,7 @@ struct SettingsView: View {
             }
             Section {
                 NavigationLink("Updates") { UpdateSettingsView() }
+                NavigationLink("Allowance activation") { ActivationSettingsView() }.accessibilityIdentifier("activation-settings")
                 NavigationLink("Privacy & storage") { PrivacyView() }
                 Link("Source code", destination: URL(string: "https://github.com/dotdioscorea/requota")!)
                 NavigationLink("Report a problem") { ProblemReportView() }
@@ -27,6 +28,24 @@ struct SettingsView: View {
             } footer: { Text(store.isDemo ? "Sample accounts use separate storage and make no provider requests." : "Explore with sample accounts.") }
             Section { LabeledContent("Version", value: Diagnostics.version) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings")
+    }
+}
+
+struct ActivationSettingsView: View {
+    @EnvironmentObject private var store: AccountStore
+    private var providers: [Provider] { Provider.allCases.filter { provider in store.accounts.contains { $0.provider == provider } && AllowanceActivation.supported(provider) } }
+    var body: some View {
+        Form {
+            Section {
+                ForEach(providers) { provider in
+                    Toggle(provider.name, isOn: Binding(get: { store.activationProviders[provider.rawValue] == true }, set: { store.activationProviders[provider.rawValue] = $0; store.saveActivationSettings() }))
+                }
+                if providers.isEmpty { Text("No accounts with activation support.").foregroundStyle(.secondary) }
+            } header: { Text("Start unused weeks automatically") } footer: {
+                Text("Sends a small request during refreshes. Uses included allowance. Claude accounts need activation permission, enabled on their account page.")
+            }
+            Section { Text("Calendar-based allowances reset automatically. Credit balances do not have a countdown to start.").font(.subheadline).foregroundStyle(.secondary) }
+        }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Allowance activation").navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
     }
 }
 
@@ -61,6 +80,7 @@ struct PrivacyView: View {
                 Text("Sign-in uses the iOS system browser or Perplexity’s email codes. Tokens are stored in this iPhone’s Keychain and don’t sync to iCloud. Requota doesn’t store passwords or email codes.")
                 Text("Usage history is kept for up to 90 days. Account names and notes are stored on this device. Widgets receive names and usage, without emails, identities, notes or tokens.")
                 Text("Requests go directly to provider APIs. Requota has no backend, ads or analytics.")
+                Text("Optional allowance activation sends a fixed short request to the provider. It does not send account notes or usage history.")
                 Text("Removing an account deletes its local tokens and saved data.")
             }
             Section {

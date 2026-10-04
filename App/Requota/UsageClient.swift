@@ -251,10 +251,13 @@ enum UsageParser {
         let limits = object["rate_limit"] as? [String: Any] ?? [:]
         var windows: [UsageWindow] = []
         for (key, fallback) in [("primary_window", "Current window"), ("secondary_window", "Weekly")] {
-            guard let value = limits[key] as? [String: Any] else { continue }
+            // Native usage can report an inactive secondary window as {}.
+            // A partially reported window remains unknown; an empty one is absent.
+            guard let value = limits[key] as? [String: Any], !value.isEmpty else { continue }
             let duration = percent(value["limit_window_seconds"]).flatMap { $0 > 0 ? $0 : nil }
             let title = duration.map { $0 <= 21600 ? "\(Int($0 / 3600))-hour window" : $0 >= 604800 ? "Weekly" : fallback } ?? fallback
             windows.append(UsageWindow(id: key, title: title, usedPercent: percent(value["used_percent"]), resetsAt: date(value["reset_at"]), duration: duration))
+            windows[windows.count - 1].clockReported = clockReported(value["reset_at"])
         }
         windows.append(contentsOf: codexAdditionalWindows(object))
         if let limit = object["code_review_rate_limit"] as? [String: Any], let window = limit["primary_window"] as? [String: Any] {
@@ -265,7 +268,7 @@ enum UsageParser {
         let creditBalance = decimal(balance).map { value in (balance as? String) ?? String(value) }
         let count = percent((object["rate_limit_reset_credits"] as? [String: Any])?["available_count"]).map { Int(min($0, 10000)) }
         let resets = count.map { $0 > 0 ? [BankedReset(id: "summary", title: "Usage reset", count: $0)] : [] }
-        return UsageSnapshot(windows: windows, plan: (object["plan_type"] as? String)?.capitalized, identity: object["account_id"] as? String, creditBalance: creditBalance, bankedResets: resets, details: codexDetails(object))
+        return UsageSnapshot(windows: windows, plan: (object["plan_type"] as? String)?.capitalized, identity: object["account_id"] as? String, creditBalance: creditBalance, bankedResets: resets, details: codexDetails(object), includedUsageAllowed: UsageParsingDiagnostic.type(limits["allowed"]) == .boolean ? limits["allowed"] as? Bool : nil)
     }
     static func codexResets(_ raw: Any, now: Date = .now) -> [BankedReset]? {
         guard let object = raw as? [String: Any], let credits = object["credits"] as? [[String: Any]] else { return nil }
@@ -278,12 +281,17 @@ enum UsageParser {
             return BankedReset(id: "banked-" + key, title: String((credit["title"] as? String ?? "Usage reset").prefix(100)), expiresAt: expiry)
         }.sorted { ($0.expiresAt ?? .distantFuture) < ($1.expiresAt ?? .distantFuture) }
     }
+    static func clockReported(_ raw: Any?) -> Bool {
+        guard let raw else { return false }
+        return raw is NSNull || date(raw) != nil || (percent(raw) == 0 && UsageParsingDiagnostic.type(raw) == .number)
+    }
     static func claude(_ raw: Any, now: Date = .now) throws -> UsageSnapshot {
         guard let object = raw as? [String: Any], object["five_hour"] != nil || object["seven_day"] != nil || object["limits"] != nil else { throw UsageError.invalidResponse }
         var windows: [UsageWindow] = []
         for (key, title, duration) in [("five_hour", "5-hour window", 18000.0), ("seven_day", "Weekly", 604800.0), ("seven_day_opus", "Opus weekly", 604800.0), ("seven_day_sonnet", "Sonnet weekly", 604800.0), ("seven_day_cowork", "Cowork weekly", 604800.0), ("seven_day_oauth_apps", "Connected apps weekly", 604800.0)] {
             guard let value = object[key] as? [String: Any] else { continue }
             windows.append(UsageWindow(id: key, title: title, usedPercent: percent(value["utilization"]), resetsAt: date(value["resets_at"]), duration: duration))
+            windows[windows.count - 1].clockReported = clockReported(value["resets_at"])
         }
         claudeScopedWindows(object, windows: &windows)
         let details = claudeDetails(object, windows: &windows)

@@ -1,4 +1,3 @@
-Claude banked reset counts and expiry dates.
-Detect reset use after usage resumes.
-More reset details in optional debug reports.
-Repository and source project renamed to Requota.
+Optional automatic and manual weekly activation for Codex and Claude.
+Activation requests and confirmed countdowns in Events.
+Activation and countdown details in optional debug reports.

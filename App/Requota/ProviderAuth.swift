@@ -1,7 +1,7 @@
 import Foundation
 
 // Native public-client protocols used by the installed CLIs. No password, cookie,
-// inference request or CLI credential import is involved in these connections.
+// CLI credential import is involved. Inference permission is optional.
 enum ProviderAuth {
     static let claudeClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
     static let grokClientID = "b1a00492-073a-47ea-816f-4c329264a828"
@@ -27,6 +27,10 @@ enum ProviderAuth {
         case .cursor, .cline, .perplexity, .devin, .amp: return ""
         }
     }
+    static func authorizationScopes(_ provider: Provider, allowActivation: Bool = false, previous: AccountCredential? = nil) -> String {
+        guard provider == .claude, allowActivation || previous?.scopes.contains("user:inference") == true else { return scopes(provider) }
+        return "user:profile user:inference"
+    }
     static func exchange(callback: URL, attempt: OAuthAttempt) async throws -> AccountCredential {
         guard attempt.provider != .copilot && attempt.provider != .cursor && attempt.provider != .cline && attempt.provider != .kimi && attempt.provider != .perplexity && attempt.provider != .amp else { throw AuthError.invalidCallback }
         if attempt.provider == .devin { return try await DevinAuth.exchange(callback: callback, attempt: attempt) }
@@ -38,7 +42,7 @@ enum ProviderAuth {
                       "code_verifier": attempt.verifier, "redirect_uri": attempt.redirectURI.absoluteString]
         if attempt.provider == .claude { fields["state"] = attempt.state }
         let raw = try await tokenRequest(provider: attempt.provider, fields: fields)
-        return try await credential(raw, provider: attempt.provider, previous: attempt.previous, hostID: attempt.hostID, nonce: attempt.nonce)
+        return try await credential(raw, provider: attempt.provider, previous: attempt.previous, hostID: attempt.hostID, nonce: attempt.nonce, requestedScopes: authorizationScopes(attempt.provider, allowActivation: attempt.allowActivation, previous: attempt.previous))
     }
     static func refresh(_ previous: AccountCredential) async throws -> AccountCredential {
         if previous.provider == .amp { return try await AmpAuth.refresh(previous) }
@@ -53,7 +57,7 @@ enum ProviderAuth {
         guard previous.issuer == issuer(previous.provider), previous.clientID == clientID(previous.provider),
               let refresh = previous.refreshToken, !refresh.isEmpty else { throw UsageError.signedOut }
         var fields = ["grant_type": "refresh_token", "client_id": previous.clientID, "refresh_token": refresh]
-        if previous.provider == .claude { fields["scope"] = scopes(.claude) }
+        if previous.provider == .claude { fields["scope"] = authorizationScopes(.claude, previous: previous) }
         if previous.provider == .grok, let principal = previous.accountID?.split(separator: ":", maxSplits: 1), principal.count == 2 {
             fields["principal_type"] = String(principal[0]); fields["principal_id"] = String(principal[1])
         }
@@ -82,7 +86,7 @@ enum ProviderAuth {
         }
         return raw
     }
-    private static func credential(_ raw: [String: Any], provider: Provider, previous: AccountCredential?, hostID: String, nonce: String?) async throws -> AccountCredential {
+    private static func credential(_ raw: [String: Any], provider: Provider, previous: AccountCredential?, hostID: String, nonce: String?, requestedScopes: String? = nil) async throws -> AccountCredential {
         guard let access = raw["access_token"] as? String, !access.isEmpty,
               (raw["token_type"] as? String ?? "bearer").lowercased() == "bearer" else { throw AuthError.invalidIdentity }
         let subject: String
@@ -117,7 +121,7 @@ enum ProviderAuth {
         return AccountCredential(provider: provider, issuer: issuer(provider), clientID: clientID(provider), subject: subject, accountID: accountID,
                                  hostID: hostID, accessToken: access, refreshToken: raw["refresh_token"] as? String ?? previous?.refreshToken,
                                  idToken: raw["id_token"] as? String ?? previous?.idToken,
-                                 scopes: (raw["scope"] as? String ?? scopes(provider)).split(separator: " ").map(String.init),
+                                 scopes: (raw["scope"] as? String ?? requestedScopes ?? authorizationScopes(provider, previous: previous)).split(separator: " ").map(String.init),
                                  expiresAt: min(expiry, .now.addingTimeInterval(30 * 86400)), email: email)
     }
     static func claudeIdentity(_ raw: Any) throws -> (subject: String, accountID: String, email: String?) {

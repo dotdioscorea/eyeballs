@@ -29,7 +29,7 @@ final class SignInModel: ObservableObject {
          emailVerify: ((PerplexityAuth.Attempt, String, AccountCredential?) async throws -> AccountCredential)? = nil) {
         self.signer = signer; self.fetcher = fetcher; self.emailBegin = emailBegin; self.emailVerify = emailVerify
     }
-    func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false, kimiRegion: KimiAuth.Region = .global) {
+    func start(account: AgentAccount, previous: AccountCredential?, usePrivateSession: Bool = false, kimiRegion: KimiAuth.Region = .global, allowActivation: Bool = false) {
         guard !working else { return }
         working = true; reportSuggested = false; message = nil; credential = nil; snapshot = nil; verificationCode = nil
         Diagnostics.$context.withValue(.init(provider: account.provider, accountID: account.id)) {
@@ -57,7 +57,7 @@ final class SignInModel: ObservableObject {
                 else if account.provider == .copilot {
                     connection = try await copilotBrowser.signIn(previous: previous, privateSession: usePrivateSession) { [weak self] code in self?.verificationCode = code }
                 }
-                else { connection = try await browser.signIn(provider: account.provider, previous: previous, usePrivateSession: usePrivateSession) }
+                else { connection = try await browser.signIn(provider: account.provider, previous: previous, usePrivateSession: usePrivateSession, allowActivation: allowActivation) }
                 try Task.checkCancellation()
                 credential = connection
                 Diagnostics.record(.identityVerified, provider: account.provider)
@@ -140,6 +140,7 @@ final class SignInModel: ObservableObject {
 
 struct SignInView: View {
     let account: AgentAccount
+    var allowActivation = false
     @EnvironmentObject private var store: AccountStore
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = SignInModel()
@@ -236,17 +237,19 @@ struct SignInView: View {
                                     .buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("open-github-verification")
                             }.panel()
                         }
-                        if account.snapshot != nil {
+                        if allowActivation {
+                            Text("Allow a small request to start an unused weekly window.").font(.subheadline).foregroundStyle(.secondary)
+                        } else if account.snapshot != nil {
                             Text("Reconnect only this account. Choose Add account to connect a different one.").font(.subheadline).foregroundStyle(.secondary).panel()
                         }
                         Button {
-                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), kimiRegion: kimiRegion) }
+                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), kimiRegion: kimiRegion, allowActivation: allowActivation) }
                             catch { model.message = error.localizedDescription }
                         } label: {
                             HStack { if model.working { ProgressView() }; Text(model.working ? "Connecting…" : "Continue with \(account.provider == .codex ? "ChatGPT" : account.provider.name)") }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(model.working)
                         Button(account.snapshot == nil ? "Use another account" : "Choose a different sign-in") {
-                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true, kimiRegion: kimiRegion) }
+                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true, kimiRegion: kimiRegion, allowActivation: allowActivation) }
                             catch { model.message = error.localizedDescription }
                         }.font(.subheadline.weight(.medium)).tint(Theme.accent)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)

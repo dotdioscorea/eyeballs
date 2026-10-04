@@ -10,5 +10,7 @@ Reviewer access:
 
 We request acceptance of this demonstration path because sharing third-party credentials would expose unrelated private accounts. We can respond to requests for additional testing access.
 
+Optional allowance activation is off by default. For compatible live Codex and Claude connections, it sends fixed short text directly to the provider to start an unused weekly window. Claude asks for an additional inference permission when this option is enabled. Demo cannot send requests.
+
 Privacy: https://dotdioscorea.github.io/requota/
 Source and support: https://github.com/dotdioscorea/requota

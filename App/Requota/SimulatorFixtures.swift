@@ -17,8 +17,15 @@ enum SimulatorFixtures {
     }
     static var widgetEnabled: Bool { ProcessInfo.processInfo.arguments.contains("--widget-fixture") }
     static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled || storeCaptureEnabled }
+    static var activationEnabled: Bool {
+        #if targetEnvironment(simulator)
+        enabled && ProcessInfo.processInfo.arguments.contains("--activation-fixture")
+        #else
+        false
+        #endif
+    }
     static func accounts(now: Date = .now) -> [AgentAccount] {
-        (0..<8).map { index in
+        var accounts = (0..<8).map { index in
             if index == 1, ProcessInfo.processInfo.arguments.contains("--claude-reset-fixture") {
                 let spent = ProcessInfo.processInfo.arguments.contains("--claude-spent-reset-fixture")
                 var snapshot = try! UsageParser.claude([
@@ -62,6 +69,14 @@ enum SimulatorFixtures {
             let credits = ProcessInfo.processInfo.arguments.contains("--credit-tile-fixture") && index == 0 ? "1234.567891234" : boundary && index == 3 ? "15.00" : nil
             return AgentAccount(id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", index + 1))!, provider: provider, label: ["Personal", "Work", "Research", "Mac mini", "Travel", "Studio", "Weekend", "Archive"][index], snapshot: UsageSnapshot(windows: windows, plan: "Pro", creditBalance: credits, updatedAt: now.addingTimeInterval(-120), source: "UI Test Fixture"), display: display, addedAt: now)
         }
+        if activationEnabled {
+            for index in accounts.indices where AllowanceActivation.supported(accounts[index].provider) {
+                let windowID = accounts[index].provider == .claude ? "seven_day" : "primary_window"
+                accounts[index].snapshot?.windows = [UsageWindow(id: windowID, title: "Weekly", usedPercent: 0, duration: 604800, clockReported: true)]
+                accounts[index].snapshot?.includedUsageAllowed = true
+            }
+        }
+        return accounts
     }
 }
 #endif
