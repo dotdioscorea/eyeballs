@@ -1,0 +1,57 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "18",
+  "source_commit": "afc88f322825184cbeb347bb9725c0fc3ce66109",
+  "source_tag": "testflight/1.0-18",
+  "build_id": "23841b68-b301-45de-9be0-e940b89ddaeb",
+  "ipa_sha256": "a4f0db94b448cfe454ee4423e3a6a4e036e15a9fa1cb5175e19a31d5348fd893",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true,
+    "sdk": "iphoneos26.5",
+    "privacy_manifests": 2,
+    "non_exempt_encryption": false
+  },
+  "apple_status_checked_at_utc": "2026-10-04T17:11:16.144576+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 186,
+    "unit_tests_executed": 189,
+    "opt_in_live_tests_skipped": 3,
+    "native_live_checks_passed": 1,
+    "native_ui_checks_passed": 3,
+    "native_ui_checks": [
+      "Claude available and spent banked-reset panels",
+      "Demo layouts and restoration",
+      "Six-account widget persistence and account links"
+    ],
+    "limits": [
+      "The observed live Claude grant was already spent; no reset was redeemed during testing.",
+      "Spent grant use is covered with response fixtures and persistent account-store tests; exact past redemption times are not fabricated.",
+      "Physical-device background refresh cadence was not measured.",
+      "Completed login was not repeated for all provider tiers."
+    ]
+  },
+  "app_store_draft": {
+    "state": "PREPARE_FOR_SUBMISSION",
+    "selected_build": "18",
+    "release_type": "MANUAL",
+    "submitted_for_review": false,
+    "content_rights_declaration": "USES_THIRD_PARTY_CONTENT",
+    "support_url": "https://github.com/dotdioscorea/requota/issues",
+    "privacy_policy_url": "https://dotdioscorea.github.io/requota/"
+  }
+}

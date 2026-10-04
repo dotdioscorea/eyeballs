@@ -13,3 +13,5 @@ Debug bundle schema 5 includes the reset-response category, before/after allowan
 Regression coverage includes the observed grant shape, known-zero versus unavailable inventory, malformed counts/dates, waiting grants, expiry, pauses, resumed use, high burn after use, duplicate suppression, tier changes, multiple Claude accounts and persistence after relaunch. The optional live test calls the app’s actual native usage client and checks its profile identity, plan, weekly quota and reset inventory.
 
 Provider features need provider-specific response coverage; generic event tests alone do not establish live support. The live Claude check establishes this account and response shape, rather than every subscription tier.
+
+The final native run passed 186 unit tests, including the live Claude check; three other opt-in live tests were skipped. Three native UI checks passed for available/spent Claude resets, Demo restoration and six-account widget persistence/account links. Build 18 is valid and available to both TestFlight groups.
