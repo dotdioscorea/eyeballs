@@ -1,5 +1,5 @@
 import XCTest
-@testable import Eyeballs
+@testable import Requota
 
 final class ProviderDetailsTests: XCTestCase {
     func testStructuredClaudeLimitsFillMissingLegacyReadingsWithoutDuplicateRings() throws {

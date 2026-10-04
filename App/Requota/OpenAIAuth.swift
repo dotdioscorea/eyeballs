@@ -269,7 +269,7 @@ final class OAuthBrowser: NSObject, ASWebAuthenticationPresentationContextProvid
     private var pending: CheckedContinuation<URL, Error>?
     private var attempt: OAuthAttempt?
     private var timeout: Task<Void, Never>?
-    private let queue = DispatchQueue(label: "Eyeballs.loopback-auth")
+    private let queue = DispatchQueue(label: "Requota.loopback-auth")
 
     func signIn(provider: Provider = .codex, previous: AccountCredential?, usePrivateSession: Bool = false) async throws -> AccountCredential {
         guard provider != .copilot && provider != .cursor && provider != .cline else { throw AuthError.invalidCallback }

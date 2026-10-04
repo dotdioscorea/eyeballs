@@ -16,7 +16,7 @@ Build 12 adds a Perplexity sample with remaining search counts and count history
 
 Sample refreshes do not contact a provider. Add account in Demo adds an illustrative account; it does not pretend to authenticate. Exit Demo to exercise real system-browser sign-in or Perplexity email-code sign-in with an account the reviewer is authorized to use. Provider sign-in, live parsing and future background delivery remain live-data-dependent features; sample data does not verify them.
 
-The app has no Requota account, developer backend, purchase flow or shared provider credentials. Privacy information is in Settings → Privacy & storage, including a link to the [published policy](https://dotdioscorea.github.io/eyeballs/). Reports are optional and submitted manually to public GitHub issues.
+The app has no Requota account, developer backend, purchase flow or shared provider credentials. Privacy information is in Settings → Privacy & storage, including a link to the [published policy](https://dotdioscorea.github.io/requota/). Reports are optional and submitted manually to public GitHub issues.
 
 Apple’s [review guidelines](https://developer.apple.com/app-store/review/guidelines/#app-completeness) ask for full reviewer access. Section 2.1(a) says a built-in demo in place of an account for legal or security reasons requires prior Apple approval. Providing a Demo button is not evidence of that approval. Explain the third-party credential constraints and request acceptance of this testing path in the review notes; respond to any request for additional access.
 

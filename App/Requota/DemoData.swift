@@ -168,7 +168,7 @@ final class AccountSession: ObservableObject {
         }
     }
     func open(_ url: URL) {
-        guard url.scheme == "eyeballs", let id = UUID(uuidString: url.lastPathComponent) else { return }
+        guard ["requota", "eyeballs"].contains(url.scheme ?? ""), let id = UUID(uuidString: url.lastPathComponent) else { return }
         if DemoData.contains(id) { startDemo() }
         else if live.accounts.contains(where: { $0.id == id }) { if isDemo { endDemo() } }
         guard current.accounts.contains(where: { $0.id == id }) else { return }

@@ -15,7 +15,7 @@ An iPhone and iPad app for monitoring multiple Codex, Claude, Grok, Gemini CLI, 
 - Pull-to-refresh, timestamps, low-allowance/reset/expiry/unused-allowance notifications with provider overrides, and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
 
-TestFlight **1.0 (17)** is available for internal and external testing, built from merge commit `82ee4dd` and tagged `testflight/1.0-17`. It adds adaptive iPad layouts and improves the illustrative Demo accounts and history. Apple approved external testing, and both existing tester groups include build 17. [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) is merged into `main`. See [testing notes](RELEASE_NOTES.txt) and [build 17 validation](docs/testflight-build-17.json).
+TestFlight **1.0 (17)** is available for internal and external testing, built from merge commit `82ee4dd` and tagged `testflight/1.0-17`. It adds adaptive iPad layouts and improves the illustrative Demo accounts and history. Apple approved external testing, and both existing tester groups include build 17. [PR #1](https://github.com/dotdioscorea/requota/pull/1) is merged into `main`. See [testing notes](RELEASE_NOTES.txt) and [build 17 validation](docs/testflight-build-17.json).
 
 The [App Store listing preview](docs/app-store/review.html) includes draft copy, iPhone and iPad screenshots, and comparisons with similar listings. [Plain-text fields](docs/app-store/listing-en-GB.txt) and [editable metadata](docs/app-store/listing-en-GB.json) are available for review. Run `python3 scripts/prepare-store-listing.py` to regenerate the preview, or add `--check` to validate it. The eleven screenshots and listing are saved in App Store Connect, with free worldwide distribution, published privacy responses, reviewer instructions and build 17 selected. The version has not been submitted for App Store review. See the [release handoff](docs/app-store/release-preparation-2026-10-04.md).
 
@@ -73,7 +73,7 @@ The app is now named Requota. Existing bundle IDs, Keychain services, App Groups
 
 ## Storage and updates
 
-The [privacy policy](https://dotdioscorea.github.io/eyeballs/) covers provider requests, local storage, widgets, optional reports and deletion. Its canonical source is [docs/privacy.html](docs/privacy.html).
+The [privacy policy](https://dotdioscorea.github.io/requota/) covers provider requests, local storage, widgets, optional reports and deletion. Its canonical source is [docs/privacy.html](docs/privacy.html).
 
 UUID-keyed provider tokens, including Perplexity session tokens, use Keychain `AfterFirstUnlockThisDeviceOnly`, with iCloud synchronization disabled. Account metadata and history use protected files in Application Support. Removing a connection removes its credentials, metadata, history, events and widget summary.
 

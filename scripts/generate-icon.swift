@@ -24,7 +24,7 @@ context.setLineWidth(58)
 context.move(to: CGPoint(x: 580, y: 444))
 context.addLine(to: CGPoint(x: 798, y: 226))
 context.strokePath()
-let output = URL(fileURLWithPath: "App/Eyeballs/Assets.xcassets/AppIcon.appiconset")
+let output = URL(fileURLWithPath: "App/Requota/Assets.xcassets/AppIcon.appiconset")
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 let destination = CGImageDestinationCreateWithURL(output.appendingPathComponent("AppIcon.png") as CFURL, UTType.png.identifier as CFString, 1, nil)!
 CGImageDestinationAddImage(destination, context.makeImage()!, nil)

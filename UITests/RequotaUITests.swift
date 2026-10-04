@@ -1,6 +1,23 @@
 import XCTest
 
-final class EyeballsUITests: XCTestCase {
+final class RequotaUITests: XCTestCase {
+    func testClaudeBankedResetPanelAndKnownZero() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture", "--claude-reset-fixture", "--exit-demo-test"]
+        app.launch()
+        XCTAssertTrue(app.buttons["layout-tiles"].waitForExistence(timeout: 10)); app.buttons["layout-tiles"].tap()
+        XCTAssertTrue(app.buttons["account-Work"].waitForExistence(timeout: 10))
+        app.buttons["account-Work"].tap()
+        for _ in 0..<4 { if app.staticTexts["Banked resets"].isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["1 × Usage reset"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Not usable yet"].exists)
+        app.terminate()
+        app.launchArguments.append("--claude-spent-reset-fixture")
+        app.launch(); app.buttons["account-Work"].tap()
+        for _ in 0..<4 { if app.staticTexts["Banked resets"].isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["None available"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["1 × Usage reset"].exists)
+    }
     override func setUp() { continueAfterFailure = false }
     override func tearDown() {
         if (testRun?.failureCount ?? 0) > 0 {

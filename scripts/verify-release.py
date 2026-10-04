@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory() as directory:
         archive.extractall(directory)
     root = pathlib.Path(directory)
     app = next((root / "Payload").glob("*.app"))
-    bundles = [app, app / "PlugIns" / "EyeballsWidgets.appex"]
+    bundles = [app, app / "PlugIns" / "RequotaWidgets.appex"]
     versions = []
     for bundle in bundles:
         signed = plistlib.loads(subprocess.check_output(

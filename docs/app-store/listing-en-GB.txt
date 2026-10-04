@@ -35,10 +35,10 @@ KEYWORDS (92/100)
 quota,allowance,credits,balance,agents,coding,monitor,notifications,history,charts,burn,rate
 
 SUPPORT URL
-https://github.com/dotdioscorea/eyeballs/issues
+https://github.com/dotdioscorea/requota/issues
 
 PRIVACY POLICY URL
-https://dotdioscorea.github.io/eyeballs/
+https://dotdioscorea.github.io/requota/
 
 COPYRIGHT
 2026 Aaron Rucinski

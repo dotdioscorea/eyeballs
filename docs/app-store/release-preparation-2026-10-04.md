@@ -1,6 +1,6 @@
 # Requota 1.0 release preparation
 
-Build **1.0 (17)** is available to the existing internal and external TestFlight groups. Apple approved its external beta review. The source is merge commit `82ee4dda6763c3fd53771ce9d46fb39136f91410`, tagged `testflight/1.0-17`; [PR #1](https://github.com/dotdioscorea/eyeballs/pull/1) is merged into `main`.
+Build **1.0 (17)** is available to the existing internal and external TestFlight groups. Apple approved its external beta review. The source is merge commit `82ee4dda6763c3fd53771ce9d46fb39136f91410`, tagged `testflight/1.0-17`; [PR #1](https://github.com/dotdioscorea/requota/pull/1) is merged into `main`.
 
 ## App Store Connect
 

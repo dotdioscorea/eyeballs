@@ -1,5 +1,5 @@
 import XCTest
-@testable import Eyeballs
+@testable import Requota
 
 final class UsageAnalysisTests: XCTestCase {
     let now = Date(timeIntervalSince1970: 1_790_971_200)

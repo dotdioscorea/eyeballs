@@ -1,6 +1,6 @@
 import XCTest
 import BackgroundTasks
-@testable import Eyeballs
+@testable import Requota
 
 final class RefreshSchedulingTests: XCTestCase {
     let now = Date(timeIntervalSince1970: 1_791_100_000)

@@ -1,4 +1,4 @@
-name: Eyeballs
+name: Requota
 options:
   bundleIdPrefix: com.dotdioscorea
   deploymentTarget:
@@ -12,16 +12,16 @@ settings:
     MARKETING_VERSION: "1.0"
     CURRENT_PROJECT_VERSION: 1
 targets:
-  Eyeballs:
+  Requota:
     type: application
     platform: iOS
-    sources: [App/Eyeballs, Shared]
+    sources: [App/Requota, Shared]
     entitlements:
-      path: App/Eyeballs/Eyeballs.entitlements
+      path: App/Requota/Requota.entitlements
       properties:
         com.apple.security.application-groups: [group.com.dotdioscorea.eyeballs]
     info:
-      path: App/Eyeballs/Info.plist
+      path: App/Requota/Info.plist
       properties:
         CFBundleDisplayName: Requota
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -43,7 +43,7 @@ targets:
         UIBackgroundModes: [fetch, processing]
         BGTaskSchedulerPermittedIdentifiers: [com.dotdioscorea.eyeballs.refresh, com.dotdioscorea.eyeballs.processing]
         CFBundleURLTypes:
-          - CFBundleURLSchemes: [eyeballs]
+          - CFBundleURLSchemes: [requota, eyeballs]
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
     settings:
@@ -52,18 +52,18 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
-      - target: EyeballsWidgets
+      - target: RequotaWidgets
         embed: true
-  EyeballsWidgets:
+  RequotaWidgets:
     type: app-extension
     platform: iOS
-    sources: [App/EyeballsWidgets, Shared]
+    sources: [App/RequotaWidgets, Shared]
     entitlements:
-      path: App/EyeballsWidgets/EyeballsWidgets.entitlements
+      path: App/RequotaWidgets/RequotaWidgets.entitlements
       properties:
         com.apple.security.application-groups: [group.com.dotdioscorea.eyeballs]
     info:
-      path: App/EyeballsWidgets/Info.plist
+      path: App/RequotaWidgets/Info.plist
       properties:
         CFBundleDisplayName: Requota
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -77,30 +77,30 @@ targets:
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
         TARGETED_DEVICE_FAMILY: "1,2"
-  EyeballsTests:
+  RequotaTests:
     type: bundle.unit-test
     platform: iOS
     sources: [Tests]
-    dependencies: [{target: Eyeballs}]
+    dependencies: [{target: Requota}]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.dotdioscorea.eyeballs.tests
-  EyeballsUITests:
+  RequotaUITests:
     type: bundle.ui-testing
     platform: iOS
     sources: [UITests]
-    dependencies: [{target: Eyeballs}]
+    dependencies: [{target: Requota}]
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.dotdioscorea.eyeballs.uitests
 schemes:
-  Eyeballs:
+  Requota:
     build:
       targets:
-        Eyeballs: all
+        Requota: all
     test:
-      targets: [EyeballsTests, EyeballsUITests]
+      targets: [RequotaTests, RequotaUITests]
     archive:
       config: Release

@@ -19,6 +19,17 @@ enum SimulatorFixtures {
     static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("--ui-fixture") || widgetEnabled || storeCaptureEnabled }
     static func accounts(now: Date = .now) -> [AgentAccount] {
         (0..<8).map { index in
+            if index == 1, ProcessInfo.processInfo.arguments.contains("--claude-reset-fixture") {
+                let spent = ProcessInfo.processInfo.arguments.contains("--claude-spent-reset-fixture")
+                var snapshot = try! UsageParser.claude([
+                    "five_hour": ["utilization": 12, "resets_at": now.addingTimeInterval(3600).timeIntervalSince1970],
+                    "seven_day": ["utilization": 30, "resets_at": now.addingTimeInterval(86400).timeIntervalSince1970],
+                    "cedar_ember": ["eligible": true, "grants": [["id": "fixture-grant", "resets_total": 1, "resets_left": spent ? 0 : 1,
+                        "paused": false, "usable_now": false, "ends_at": now.addingTimeInterval(7 * 86400).timeIntervalSince1970, "clears": ["five_hour", "seven_day"]]]]
+                ], now: now)
+                snapshot.source = "UI Test Fixture"
+                return AgentAccount(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!, provider: .claude, label: "Work", snapshot: snapshot, addedAt: now)
+            }
             if ProcessInfo.processInfo.arguments.contains("--provider-stats-fixture"), [2, 4, 5].contains(index) {
                 let provider: Provider = index == 2 ? .grok : index == 4 ? .copilot : .gemini
                 let snapshot: UsageSnapshot

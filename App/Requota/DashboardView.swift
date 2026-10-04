@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-extension UTType { static let eyeballsAccount = UTType(exportedAs: "com.dotdioscorea.eyeballs.account-order") }
+extension UTType { static let requotaAccount = UTType(exportedAs: "com.dotdioscorea.eyeballs.account-order") }
 
 struct RootView: View {
     @EnvironmentObject private var store: AccountStore
@@ -146,10 +146,10 @@ struct DashboardView: View {
             .onDrag {
                 adoptCustomOrder(); dragging = account.id
                 let item = NSItemProvider()
-                item.registerDataRepresentation(forTypeIdentifier: UTType.eyeballsAccount.identifier, visibility: .ownProcess) { handler in handler(Data(account.id.uuidString.utf8), nil); return nil }
+                item.registerDataRepresentation(forTypeIdentifier: UTType.requotaAccount.identifier, visibility: .ownProcess) { handler in handler(Data(account.id.uuidString.utf8), nil); return nil }
                 return item
             }
-            .onDrop(of: [UTType.eyeballsAccount], delegate: AccountDropDelegate(target: account.id, dragging: $dragging, store: store))
+            .onDrop(of: [UTType.requotaAccount], delegate: AccountDropDelegate(target: account.id, dragging: $dragging, store: store))
     }
     private var reorderSheet: some View {
         NavigationStack {

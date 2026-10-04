@@ -2,12 +2,12 @@ For build 1.0 (9) only. Build 8 has no Demo mode.
 
 Reviewer access: Settings → Demo. Eight labelled sample accounts provide dashboard layouts, ring settings, account edits, 30 days of charts and heatmaps, comparisons, reset events and banked reset examples. Settings in Demo includes Reset sample data, Simulate early reset and Test notification. The latter explicitly requests iOS notification permission and sends a labelled sample reminder.
 
-Widgets: add an Eyeballs widget through the iOS gallery while Demo is active. Choose labelled Demo accounts in Edit Widget. Single-account rings and multiple compact rows are available; tapping a row opens that account. Exit demo restores real accounts and widget summaries.
+Widgets: add an Requota widget through the iOS gallery while Demo is active. Choose labelled Demo accounts in Edit Widget. Single-account rings and multiple compact rows are available; tapping a row opens that account. Exit demo restores real accounts and widget summaries.
 
 Demo uses separate local files, preferences and widget summaries, with no provider tokens or requests. Real sign-in remains available after Exit demo through providers’ system-browser flows. Live usage, authentication, parsing and future background delivery depend on a provider account and observed readings; the demo does not simulate successful authentication.
 
-Eyeballs has no developer-operated account service, shared provider credentials or purchase flow. Provider accounts are personal to their owners and some terms prohibit sharing credentials. Please confirm acceptance of this built-in demo testing path under guideline 2.1(a), or advise what additional reviewer access is required. This request does not assert prior approval or third-party integration permission.
+Requota has no developer-operated account service, shared provider credentials or purchase flow. Provider accounts are personal to their owners and some terms prohibit sharing credentials. Please confirm acceptance of this built-in demo testing path under guideline 2.1(a), or advise what additional reviewer access is required. This request does not assert prior approval or third-party integration permission.
 
-Privacy policy: https://dotdioscorea.github.io/eyeballs/ and Settings → Privacy & storage → Privacy policy.
-Public source: https://github.com/dotdioscorea/eyeballs
+Privacy policy: https://dotdioscorea.github.io/requota/ and Settings → Privacy & storage → Privacy policy.
+Public source: https://github.com/dotdioscorea/requota
 Integration permission findings: docs/provider-integration-permissions-2026-10-02.md in the source repository.

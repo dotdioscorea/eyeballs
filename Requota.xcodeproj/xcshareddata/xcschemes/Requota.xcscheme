@@ -15,10 +15,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C2695C24B8A4BEDF107DA7E0"
-               BuildableName = "Eyeballs.app"
-               BlueprintName = "Eyeballs"
-               ReferencedContainer = "container:Eyeballs.xcodeproj">
+               BlueprintIdentifier = "1DFB8C00713AFD9448152D04"
+               BuildableName = "Requota.app"
+               BlueprintName = "Requota"
+               ReferencedContainer = "container:Requota.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -32,10 +32,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C2695C24B8A4BEDF107DA7E0"
-            BuildableName = "Eyeballs.app"
-            BlueprintName = "Eyeballs"
-            ReferencedContainer = "container:Eyeballs.xcodeproj">
+            BlueprintIdentifier = "1DFB8C00713AFD9448152D04"
+            BuildableName = "Requota.app"
+            BlueprintName = "Requota"
+            ReferencedContainer = "container:Requota.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -44,10 +44,10 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E1822CB970D70E64C230E079"
-               BuildableName = "EyeballsTests.xctest"
-               BlueprintName = "EyeballsTests"
-               ReferencedContainer = "container:Eyeballs.xcodeproj">
+               BlueprintIdentifier = "D47E93F39BCCD302C70735AC"
+               BuildableName = "RequotaTests.xctest"
+               BlueprintName = "RequotaTests"
+               ReferencedContainer = "container:Requota.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -55,10 +55,10 @@
             parallelizable = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "564EF184EA9862C5A8DD8C89"
-               BuildableName = "EyeballsUITests.xctest"
-               BlueprintName = "EyeballsUITests"
-               ReferencedContainer = "container:Eyeballs.xcodeproj">
+               BlueprintIdentifier = "DCB34D1DC1BEBB207FA92F8E"
+               BuildableName = "RequotaUITests.xctest"
+               BlueprintName = "RequotaUITests"
+               ReferencedContainer = "container:Requota.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -79,10 +79,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C2695C24B8A4BEDF107DA7E0"
-            BuildableName = "Eyeballs.app"
-            BlueprintName = "Eyeballs"
-            ReferencedContainer = "container:Eyeballs.xcodeproj">
+            BlueprintIdentifier = "1DFB8C00713AFD9448152D04"
+            BuildableName = "Requota.app"
+            BlueprintName = "Requota"
+            ReferencedContainer = "container:Requota.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -96,10 +96,10 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "C2695C24B8A4BEDF107DA7E0"
-            BuildableName = "Eyeballs.app"
-            BlueprintName = "Eyeballs"
-            ReferencedContainer = "container:Eyeballs.xcodeproj">
+            BlueprintIdentifier = "1DFB8C00713AFD9448152D04"
+            BuildableName = "Requota.app"
+            BlueprintName = "Requota"
+            ReferencedContainer = "container:Requota.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

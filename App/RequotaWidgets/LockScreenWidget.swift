@@ -27,7 +27,7 @@ struct LockScreenWidgetView: View {
     @Environment(\.widgetFamily) private var family
     var body: some View {
         LockScreenAccessoryContent(entry: entry, family: family)
-            .widgetURL(entry.account.map { URL(string: "eyeballs://account/\($0.id.uuidString)")! } ?? URL(string: "eyeballs://accounts")!)
+            .widgetURL(entry.account.map { URL(string: "requota://account/\($0.id.uuidString)")! } ?? URL(string: "requota://accounts")!)
             .containerBackground(.clear, for: .widget)
     }
 }

@@ -62,7 +62,7 @@ def main():
             raise ValueError(f"Expected opaque RGB PNG at {expected}: {destination}")
         assets.append({"asset": shot["asset"], "width": width, "height": height,
                        "sha256": hashlib.sha256(data).hexdigest(), "sourceBuild": shot["sourceBuild"], "alpha": False, "nativeCapture": shot["nativeCapture"]})
-    icon = ROOT / "App/Eyeballs/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+    icon = ROOT / "App/Requota/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
     if not args.check:
         shutil.copyfile(icon, DIRECTORY / "assets/icon.png")
 

@@ -1,6 +1,6 @@
 # TestFlight review handoff
 
-This records a side conversation with Aaron about Eyeballs’ first external TestFlight review. The side conversation inspected the current setup but did not change source, Apple metadata, tester assignments or the submission. Aaron requested this Markdown handoff for the implementing agent.
+This records a side conversation with Aaron about Requota’s first external TestFlight review. The side conversation inspected the current setup but did not change source, Apple metadata, tester assignments or the submission. Aaron requested this Markdown handoff for the implementing agent.
 
 ## Recommendation
 
@@ -15,7 +15,7 @@ Checked through read-only App Store Connect API requests during this conversatio
 - Build **1.0 (8)** has internal state `IN_BETA_TESTING` and external state `WAITING_FOR_BETA_REVIEW`.
 - `autoNotifyEnabled` is `true`.
 - The English beta localization has a feedback email, but `privacyPolicyUrl` is blank. `marketingUrl` is also blank; we did not establish that a marketing URL is required.
-- Review information has `demoAccountRequired: false` and notes explaining that there is no separate Eyeballs account or backend. The notes suggest connecting a free GitHub Copilot account or an existing supported provider account.
+- Review information has `demoAccountRequired: false` and notes explaining that there is no separate Requota account or backend. The notes suggest connecting a free GitHub Copilot account or an existing supported provider account.
 - No reviewer demo credentials or release demo mode are provided by that setup. The README explicitly says there is no public preview mode.
 - The app already has an accessible **Privacy & storage** screen with factual information about system-browser login, Keychain storage, local history, widgets, diagnostics and deletion.
 

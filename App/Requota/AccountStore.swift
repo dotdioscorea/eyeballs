@@ -33,7 +33,7 @@ final class AccountStore: ObservableObject {
         self.isDemo = isDemo
         var selectedLocation = location ?? (isDemo ? DemoData.location : nil)
         #if DEBUG
-        if !isDemo, location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("EyeballsUITest/accounts.json") }
+        if !isDemo, location == nil, SimulatorFixtures.enabled, !SimulatorFixtures.widgetEnabled { selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RequotaUITest/accounts.json") }
         if !isDemo, location == nil, SimulatorFixtures.storeCaptureEnabled {
             selectedLocation = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("RequotaStoreCapture/accounts.json")
             UserDefaults.standard.set("manual", forKey: "dashboard-sort")
@@ -333,6 +333,11 @@ final class AccountStore: ObservableObject {
     }
     private func observe(_ snapshot: UsageSnapshot, previous: UsageSnapshot?, id: UUID) -> UsageSnapshot {
         let result = EventDetection.compare(accountID: id, previous: previous, current: snapshot)
+        if let provider = accounts.first(where: { $0.id == id })?.provider {
+            Diagnostics.$context.withValue(.init(provider: provider, accountID: id)) {
+                Diagnostics.record(.resetCompared, resets: .make(previous: previous, current: snapshot, events: result.events))
+            }
+        }
         appendEvents(result.events)
         return result.snapshot
     }

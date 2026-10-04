@@ -46,18 +46,23 @@ struct AccountDetailView: View {
                             }.panel()
                         }
                         if let details = account.snapshot?.details { ProviderDetailsView(details: details, breakdownColor: account.usageColor(for: account.window(for: .weekly)?.id ?? "")) }
-                        if let resets = account.snapshot?.bankedResets, !resets.isEmpty {
+                        if let resets = account.snapshot?.bankedResets, !resets.isEmpty || account.snapshot?.resetInventory != nil {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Banked resets").font(.subheadline.weight(.semibold))
+                                if resets.isEmpty { Text("None available").font(.caption).foregroundStyle(.secondary) }
                                 ForEach(resets) { reset in
                                     HStack(alignment: .top) {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("\(reset.count) × \(reset.title)")
                                             if let first = reset.firstDetectedAt { Text("Detected \(first.formatted(date: .abbreviated, time: .shortened))").foregroundStyle(.secondary) }
+                                            if reset.usableNow == false { Text("Not usable yet").foregroundStyle(.secondary) }
                                         }
                                         Spacer()
                                         Text(reset.expiresAt.map { "Expires \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "No expiry reported").foregroundStyle(.secondary).multilineTextAlignment(.trailing)
                                     }.font(.caption)
+                                }
+                                if let checked = account.snapshot?.resetInventory?.checkedAt, let updated = account.snapshot?.updatedAt, updated.timeIntervalSince(checked) > 60 {
+                                    Text("Last checked \(checked.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
                                 }
                             }.frame(maxWidth: .infinity, alignment: .leading).panel()
                         }
