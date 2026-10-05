@@ -16,7 +16,7 @@ struct RemainingAllowancesView: View {
     var body: some View {
         VStack(spacing: dense ? 4 : 12) {
             ForEach(allowances) { allowance in
-                HStack { Text(allowance.title).foregroundStyle(.secondary); Spacer(minLength: 12); Text(allowance.value).monospacedDigit() }
+                AccessibleValueRow(title: allowance.title, value: allowance.value)
             }
         }.font(dense ? .caption : .subheadline)
     }

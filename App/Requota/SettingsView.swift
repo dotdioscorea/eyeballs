@@ -7,7 +7,7 @@ struct SettingsView: View {
     var body: some View {
         List {
             Section {
-                NavigationLink { NotificationSettingsView() } label: { LabeledContent("Notifications", value: store.notificationsEnabled ? "On" : "Off") }.accessibilityIdentifier("notification-settings")
+                NavigationLink { NotificationSettingsView() } label: { AccessibleLabeledContent("Notifications", value: store.notificationsEnabled ? "On" : "Off") }.accessibilityIdentifier("notification-settings")
             }
             Section {
                 NavigationLink("Updates") { UpdateSettingsView() }
@@ -26,7 +26,7 @@ struct SettingsView: View {
                     Button("Demo") { session.startDemo() }.accessibilityIdentifier("start-demo")
                 }
             } footer: { Text(store.isDemo ? "Sample accounts use separate storage and make no provider requests." : "Explore with sample accounts.") }
-            Section { LabeledContent("Version", value: Diagnostics.version) }
+            Section { AccessibleLabeledContent("Version", value: Diagnostics.version) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle("Settings")
     }
 }
@@ -55,13 +55,11 @@ struct UpdateSettingsView: View {
     var body: some View {
         List {
             Section {
-                Picker("While app is open", selection: $interval) {
-                    ForEach(RefreshSettings.intervals, id: \.self) { Text("Every \($0) min").tag($0) }
-                }
+                AccessibleFormPicker("While app is open", selection: $interval, options: RefreshSettings.intervals.map { ("Every \($0) min", $0) })
             }
             Section {
-                LabeledContent("Background App Refresh", value: status)
-                if lowPower { LabeledContent("Low Power Mode", value: "On") }
+                AccessibleLabeledContent("Background App Refresh", value: status)
+                if lowPower { AccessibleLabeledContent("Low Power Mode", value: "On") }
                 if status != "Available", !lowPower { Button("Open iPhone settings") { openURL(URL(string: UIApplication.openSettingsURLString)!) } }
             } footer: { Text("Background timing is set by iOS. Widgets can request updates but don’t keep the app running.") }
         }.scrollContentBackground(.hidden).background(Theme.background)
@@ -110,7 +108,7 @@ struct ProblemReportView: View {
                 TextField("What happened?", text: $details, axis: .vertical).lineLimit(5...12)
             }
             Section {
-                Toggle("Include debug bundle", isOn: $includeDebug).accessibilityIdentifier("include-debug-bundle")
+                AccessibleToggle("Include debug bundle", isOn: $includeDebug).accessibilityIdentifier("include-debug-bundle")
                 if includeDebug {
                     if let debugFile { ShareLink("Save or share debug bundle", item: debugFile) }
                     DisclosureGroup("View debug bundle") { Text(debugText).font(.system(.caption, design: .monospaced)).textSelection(.enabled) }
@@ -149,10 +147,10 @@ struct NotificationSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Enable notifications", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value); await reload() } })).accessibilityIdentifier("notifications-enabled")
-                LabeledContent("iOS permission", value: status.authorization)
-                LabeledContent("Alerts", value: status.alerts)
-                LabeledContent("Scheduled reminders", value: String(status.scheduled))
+                AccessibleToggle("Enable notifications", isOn: Binding(get: { store.notificationsEnabled }, set: { value in Task { await store.enableNotifications(value); await reload() } })).accessibilityIdentifier("notifications-enabled")
+                AccessibleLabeledContent("iOS permission", value: status.authorization)
+                AccessibleLabeledContent("Alerts", value: status.alerts)
+                AccessibleLabeledContent("Scheduled reminders", value: String(status.scheduled))
                 Button("Open iPhone settings") { openURL(URL(string: UIApplication.openSettingsURLString)!) }
                 Button("Test notification") { Task {
                     do { try await NotificationDelivery.shared.test(); testMessage = "Test scheduled for 3 seconds from now." }
@@ -166,7 +164,7 @@ struct NotificationSettingsView: View {
                 Section("Providers") {
                     ForEach(providers) { provider in
                         NavigationLink { ProviderNotificationSettings(provider: provider) } label: {
-                            LabeledContent(provider.name, value: store.notificationProviderRules[provider.rawValue].map { $0.enabled ? "Custom" : "Off" } ?? "Default")
+                            AccessibleLabeledContent(provider.name, value: store.notificationProviderRules[provider.rawValue].map { $0.enabled ? "Custom" : "Off" } ?? "Default")
                         }
                     }
                 }
@@ -189,11 +187,11 @@ struct ProviderNotificationSettings: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Use default settings", isOn: Binding(get: { !custom }, set: { defaults in
+                AccessibleToggle("Use default settings", isOn: Binding(get: { !custom }, set: { defaults in
                     if defaults { store.notificationProviderRules.removeValue(forKey: provider.rawValue) }
                     else { store.notificationProviderRules[provider.rawValue] = store.notificationRules }
                 }))
-                if custom { Toggle("Notify for this provider", isOn: rules.enabled) }
+                if custom { AccessibleToggle("Notify for this provider", isOn: rules.enabled) }
             }
             if custom, rules.wrappedValue.enabled { NotificationRuleControls(rules: rules) }
         }.scrollContentBackground(.hidden).background(Theme.background).navigationTitle(provider.name).navigationBarTitleDisplayMode(.inline).toolbar(.hidden, for: .tabBar)
@@ -204,31 +202,31 @@ struct NotificationRuleControls: View {
     @Binding var rules: ResetNotificationRules
     var body: some View {
         Section("Low allowance") {
-            Toggle("Low remaining allowance", isOn: $rules.lowAllowance)
+            AccessibleToggle("Low remaining allowance", isOn: $rules.lowAllowance)
             if rules.lowAllowance {
-                Picker("Remaining threshold", selection: $rules.lowThreshold) { ForEach([0, 5, 10, 15, 20, 25, 50], id: \.self) { Text("\($0)%").tag($0) } }
+                AccessibleFormPicker("Remaining threshold", selection: $rules.lowThreshold, options: [0, 5, 10, 15, 20, 25, 50].map { ("\($0)%", $0) })
             }
         }
         Section("Resets") {
-            Toggle("Weekly reset", isOn: $rules.weeklyReset)
-            Toggle("Other window resets", isOn: $rules.sessionReset)
-            Toggle("Detected early reset", isOn: $rules.earlyReset)
-            Toggle("Banked reset changes", isOn: $rules.bankedChanges)
-            Toggle("Banked reset expiry", isOn: $rules.bankedExpiry)
+            AccessibleToggle("Weekly reset", isOn: $rules.weeklyReset)
+            AccessibleToggle("Other window resets", isOn: $rules.sessionReset)
+            AccessibleToggle("Detected early reset", isOn: $rules.earlyReset)
+            AccessibleToggle("Banked reset changes", isOn: $rules.bankedChanges)
+            AccessibleToggle("Banked reset expiry", isOn: $rules.bankedExpiry)
             if rules.bankedExpiry {
-                Picker("Expiry warning", selection: $rules.bankedExpiryHours) { ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) } }
+                AccessibleFormPicker("Expiry warning", selection: $rules.bankedExpiryHours, options: [1, 6, 12, 24, 48, 72].map { ("\($0)h before", $0) })
             }
         }
         Section("Before weekly reset") {
-            Toggle("Unused allowance reminder", isOn: $rules.allowanceReminder)
+            AccessibleToggle("Unused allowance reminder", isOn: $rules.allowanceReminder)
             if rules.allowanceReminder {
-                Picker("Notify", selection: $rules.allowanceHours) { ForEach([1, 6, 12, 24, 48, 72], id: \.self) { Text("\($0)h before").tag($0) } }
-                Stepper("At least \(rules.minimumRemaining)% remaining", value: $rules.minimumRemaining, in: 0...100, step: 5)
+                AccessibleFormPicker("Notify", selection: $rules.allowanceHours, options: [1, 6, 12, 24, 48, 72].map { ("\($0)h before", $0) })
+                AccessibleStepper("At least \(rules.minimumRemaining)% remaining", value: $rules.minimumRemaining, in: 0...100, step: 5)
             }
         }
         Section("Account changes") {
-            Toggle("Plan or allowance changes", isOn: $rules.allowanceChanges)
-            Toggle("Usage parsing failures", isOn: $rules.parsingFailures)
+            AccessibleToggle("Plan or allowance changes", isOn: $rules.allowanceChanges)
+            AccessibleToggle("Usage parsing failures", isOn: $rules.parsingFailures)
         }
     }
 }

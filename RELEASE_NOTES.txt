@@ -1,3 +1,3 @@
-Automatic weekly activation per account.
-Start week beside the toggle; explanation in an info popover.
-Existing activation preferences retained on upgrade.
+Improved layouts for large accessibility text.
+Perplexity sign-in supports iOS keyboard text replacement.
+Clear feedback when reconnecting an account already saved.

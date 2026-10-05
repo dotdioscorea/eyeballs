@@ -29,8 +29,8 @@ struct RemainingAllowanceHistoryView: View {
     var body: some View {
         if let selected {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Remaining").font(.headline); Spacer()
+                AccessibleStack {
+                    Text("Remaining").font(.headline)
                     Picker("Remaining allowance", selection: Binding(get: { selected.id }, set: { metric = $0 })) {
                         ForEach(choices) { Text($0.title).tag($0.id) }
                     }.tint(.primary)

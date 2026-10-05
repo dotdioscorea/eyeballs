@@ -101,7 +101,8 @@ final class AccountStoreTests: XCTestCase {
         try store.connect(original, credential: credential); try store.connect(other, credential: otherCredential)
         credential.accessToken = "fixture-new-token"
         var reconnected = Fixture.account(credential); reconnected.snapshot?.windows[0].usedPercent = 88
-        try store.connect(reconnected, credential: credential)
+        XCTAssertEqual(store.existingConnection(for: credential)?.id, original.id)
+        XCTAssertEqual(try store.connect(reconnected, credential: credential), original.id)
         XCTAssertEqual(store.accounts.count, 2)
         XCTAssertEqual(store.accounts[0].id, original.id)
         XCTAssertEqual(store.accounts[0].label, "Personal")
@@ -110,6 +111,23 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(vault.values[original.id]?.accessToken, "fixture-new-token")
         XCTAssertNil(vault.values[reconnected.id])
         XCTAssertEqual(vault.values[other.id], otherCredential)
+    }
+    func testDuplicateLookupUsesVerifiedProviderIdentityNotEmail() throws {
+        let vault = MemoryVault(); let store = store(vault: vault)
+        var first = Fixture.credential("claude"); first.provider = .claude
+        var second = first; second.accountID = "other-organization"
+        var otherProvider = first; otherProvider.provider = .codex
+        var a = Fixture.account(first, label: "Personal"); a.provider = .claude
+        var b = Fixture.account(second, label: "Work"); b.provider = .claude
+        XCTAssertEqual(try store.connect(a, credential: first), a.id)
+        XCTAssertNil(store.existingConnection(for: second))
+        XCTAssertNil(store.existingConnection(for: otherProvider))
+        XCTAssertEqual(try store.connect(b, credential: second), b.id)
+        XCTAssertEqual(store.existingConnection(for: first)?.title, "Personal")
+        XCTAssertEqual(store.existingConnection(for: second)?.title, "Work")
+        XCTAssertEqual(store.accounts.count, 2)
+        var renewed = first; renewed.accessToken = "fixture-renewed"; renewed.hostID = "other-phone"
+        XCTAssertEqual(store.existingConnection(for: renewed)?.id, a.id)
     }
     func testReconnectCannotReplaceSelectedAccountWithAnotherIdentity() throws {
         let vault = MemoryVault(); let store = store(vault: vault)

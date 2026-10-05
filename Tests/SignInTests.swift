@@ -3,6 +3,22 @@ import XCTest
 
 @MainActor
 final class SignInTests: XCTestCase {
+    func testChoosingAnotherEmailAfterVerificationDiscardsThePreviousIdentity() async {
+        var connection = Fixture.credential("perplexity"); connection.provider = .perplexity
+        let account = AgentAccount(provider: .perplexity)
+        let model = SignInModel(fetcher: { _, _ in UsageSnapshot(windows: []) },
+            emailBegin: { .init(email: $0, csrfCookie: "csrf=value", startedAt: .now) },
+            emailVerify: { _, _, _ in connection })
+        model.inputEmail = "person@example.test"; model.requestEmailCode(account: account, previous: nil)
+        await fulfillment(of: [XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !model.working }, object: nil)], timeout: 3)
+        model.inputCode = "123456"; model.verifyEmailCode(account: account, previous: nil)
+        await fulfillment(of: [XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !model.working }, object: nil)], timeout: 3)
+        XCTAssertNotNil(model.credential); XCTAssertNotNil(model.snapshot)
+        model.clearEmailIdentity()
+        XCTAssertNil(model.credential); XCTAssertNil(model.snapshot)
+        XCTAssertTrue(model.inputEmail.isEmpty); XCTAssertTrue(model.inputCode.isEmpty)
+        XCTAssertFalse(model.awaitingEmailCode)
+    }
     func testEmailCodeLoginRetriesUsageWithoutReusingTheConsumedCode() async throws {
         var connection = Fixture.credential("perplexity"); connection.provider = .perplexity
         let account = AgentAccount(provider: .perplexity)
