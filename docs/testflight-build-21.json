@@ -1,0 +1,74 @@
+{
+  "product": "Requota",
+  "version": "1.0",
+  "build": "21",
+  "source_commit": "fc427a7d29e43c32351e384aa166b32b22038954",
+  "source_tag": "testflight/1.0-21",
+  "ipa_sha256": "0c859b30fa6852274651db04ab7dbf8fd90323b8894f70ba79a0d70336cf9d6c",
+  "packaging": {
+    "archive_succeeded": true,
+    "upload_succeeded": true,
+    "signed_app_and_widget_app_groups_verified": true,
+    "matching_app_and_widget_build_numbers_verified": true,
+    "background_modes_and_task_identifiers_in_exact_ipa_verified": true,
+    "debug_activation_fixture_excluded": true,
+    "debug_sign_in_fixture_excluded": true,
+    "debug_keyboard_control_excluded": true,
+    "sdk": "iphoneos26.5",
+    "privacy_manifests": 2,
+    "non_exempt_encryption": false
+  },
+  "build_id": "d133fcb7-3ff8-4c16-a336-a93093bb402c",
+  "apple_status_checked_at_utc": "2026-10-05T09:55:22.370767+00:00",
+  "processing_state": "VALID",
+  "internal_testing_state": "IN_BETA_TESTING",
+  "internal_group_contains_build": true,
+  "external_testing_state": "IN_BETA_TESTING",
+  "external_group_contains_build": true,
+  "external_review": {
+    "state": "APPROVED",
+    "demo_review_instructions_applied": true,
+    "existing_external_tester_invitation_unchanged": true
+  },
+  "validation": {
+    "unit_tests_passed": 209,
+    "unit_tests_executed": 215,
+    "opt_in_live_tests_skipped": 6,
+    "native_ui_checks_passed": 9,
+    "additional_ios26_ui_checks_passed": 3,
+    "native_ui_checks": [
+      "Largest accessibility text: accounts, rings, display controls, activation help, chart readouts and notifications",
+      "Existing Claude identity is named, reconnect preserves the account and opens its detail page",
+      "Choosing another Claude identity returns to new-account setup",
+      "Perplexity email expands a real iOS text replacement through onscreen keyboard taps",
+      "Compact display configuration and removal of redundant copy",
+      "Continuous chart readout and account selection",
+      "Four rings fit full percentages and formatted credit balances",
+      "Per-account activation preferences persist and Claude permission remains explicit",
+      "Manual and automatic activation prevent repeated requests after relaunch"
+    ],
+    "ios_versions_checked": [
+      "18.3.1",
+      "26.5"
+    ],
+    "screenshots_visually_checked": true,
+    "previous_perplexity_keyboard_traits_reproduced_failure": true,
+    "debug_sign_in_fixture_used_for_duplicate_ui_checks": true,
+    "keyboard_control_is_diagnostic": true,
+    "limits": [
+      "The plain keyboard control is diagnostic; the regression assertion verifies expansion in the app email field.",
+      "Claude uses a provider-owned system authentication browser; keyboard text replacement in its email field was not independently reproduced.",
+      "Provider request adapters are unchanged. No unused live weekly window was available; the activation countdown check remains pending at the next unused week.",
+      "Accessibility verification used simulator navigation, control actions and screenshot inspection; no claim is made that every provider-owned sign-in screen was audited.",
+      "Physical-device background refresh cadence was not measured."
+    ]
+  },
+  "app_store_draft": {
+    "state": "PREPARE_FOR_SUBMISSION",
+    "selected_build": "21",
+    "release_type": "MANUAL",
+    "submitted_for_review": false,
+    "support_url": "https://github.com/dotdioscorea/requota/issues",
+    "privacy_policy_url": "https://dotdioscorea.github.io/requota/"
+  }
+}
