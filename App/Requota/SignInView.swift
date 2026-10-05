@@ -155,6 +155,9 @@ struct SignInView: View {
     @State private var reporting = false
     @State private var emailLocked = false
     @State private var kimiRegion: KimiAuth.Region = .global
+    #if DEBUG && targetEnvironment(simulator)
+    @State private var keyboardControl = ""
+    #endif
     init(account: AgentAccount, allowActivation: Bool = false, onConnected: ((UUID) -> Void)? = nil) {
         self.account = account; self.allowActivation = allowActivation; self.onConnected = onConnected
         #if DEBUG && targetEnvironment(simulator)
@@ -244,6 +247,13 @@ struct SignInView: View {
                             Button("Send a new code") { requestPerplexityCode() }.disabled(model.working).font(.subheadline)
                             if !emailLocked { Button("Change email") { model.changeEmail() }.disabled(model.working).font(.subheadline) }
                         } else {
+                            #if DEBUG && targetEnvironment(simulator)
+                            if ProcessInfo.processInfo.arguments.contains("--keyboard-traits-fixture") {
+                                TextField("Keyboard control", text: $keyboardControl)
+                                    .textInputAutocapitalization(.never).autocorrectionDisabled(false)
+                                    .accessibilityIdentifier("keyboard-control").panel()
+                            }
+                            #endif
                             TextField("Email address", text: $model.inputEmail).textContentType(.emailAddress)
                                 .textInputAutocapitalization(.never).autocorrectionDisabled(false).accessibilityIdentifier("perplexity-email")
                                 .disabled(model.working || emailLocked).panel()

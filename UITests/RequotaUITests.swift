@@ -5,7 +5,19 @@ final class RequotaUITests: XCTestCase {
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
     }
     private func reveal(_ element: XCUIElement, in app: XCUIApplication, attempts: Int = 15) {
-        for _ in 0..<attempts { if element.isHittable { return }; app.swipeUp() }
+        let top = app.navigationBars.allElementsBoundByIndex.filter { $0.isHittable && $0.frame.height > 0 }.map { $0.frame.maxY + 8 }.max() ?? app.frame.minY + 60
+        let bottom = app.tabBars.allElementsBoundByIndex.filter { $0.isHittable && $0.frame.height > 0 }.map { $0.frame.minY - 8 }.min() ?? app.frame.maxY - 40
+        for _ in 0..<attempts {
+            if element.exists {
+                let middle = element.frame.midY
+                if element.isHittable, middle >= top, middle <= bottom { return }
+                if middle < top {
+                    app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.65)))
+                    continue
+                }
+            }
+            app.swipeUp()
+        }
         XCTAssertTrue(element.isHittable)
     }
     private let largestText = ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
@@ -25,10 +37,11 @@ final class RequotaUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Display"].waitForExistence(timeout: 5))
         attachScreen(app, "Largest text — display settings")
         app.swipeUp()
-        let used = app.buttons["Used / elapsed"].firstMatch
+        let used = app.buttons["amount-direction-choice-1"]
         reveal(used, in: app); used.tap(); XCTAssertEqual(used.value as? String, "Selected")
-        app.buttons["Remaining"].firstMatch.tap()
-        XCTAssertEqual(app.buttons["Remaining"].firstMatch.value as? String, "Selected")
+        let remaining = app.buttons["amount-direction-choice-0"]
+        reveal(remaining, in: app); remaining.tap()
+        XCTAssertEqual(remaining.value as? String, "Selected")
         attachScreen(app, "Largest text — amount choices")
         app.buttons["Cancel"].tap()
         reveal(app.buttons["activation-help-00000000-0000-0000-0000-000000000001"], in: app)
@@ -93,28 +106,40 @@ final class RequotaUITests: XCTestCase {
         reveal(settings.staticTexts["General"], in: settings); settings.staticTexts["General"].tap()
         reveal(settings.staticTexts["Keyboard"], in: settings); settings.staticTexts["Keyboard"].tap()
         settings.staticTexts["Text Replacement"].tap()
-        settings.navigationBars.buttons["Add"].tap()
-        let phrase = settings.textFields["Phrase"]
-        XCTAssertTrue(phrase.waitForExistence(timeout: 5)); phrase.tap(); phrase.typeText("shortcut@example.test")
-        let shortcut = settings.textFields["Shortcut"]; shortcut.tap(); shortcut.typeText("reqtestemail")
-        settings.navigationBars.buttons["Save"].tap()
+        let prior = settings.cells.containing(.staticText, identifier: "rqe").firstMatch
+        if !prior.exists {
+            settings.navigationBars.buttons["Add"].tap()
+            let phrase = settings.textFields["Phrase"]
+            XCTAssertTrue(phrase.waitForExistence(timeout: 5)); phrase.tap(); phrase.typeText("shortcut@example.test")
+            let shortcut = settings.textFields["Shortcut"]; shortcut.tap(); shortcut.typeText("rqe")
+            settings.navigationBars.buttons["Save"].tap()
+        }
+        XCTAssertTrue(settings.staticTexts["rqe"].waitForExistence(timeout: 5))
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-fixture", "--exit-demo-test"] + largestText
+        app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--keyboard-traits-fixture"] + largestText
         app.launch(); app.buttons["add-account"].tap()
         reveal(app.buttons["connect-perplexity"], in: app); app.buttons["connect-perplexity"].tap()
+        // A plain native field distinguishes system dictionary failures from email input traits.
+        let control = app.textFields["keyboard-control"]; control.tap()
+        for letter in "rqe" { app.keyboards.keys[String(letter)].tap() }
+        app.keyboards.keys["space"].tap()
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (control.value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "shortcut@example.test"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "Plain keyboard field contains \(control.value as? String ?? "<no value>")")
         let email = app.textFields["perplexity-email"]
         XCTAssertTrue(email.waitForExistence(timeout: 5)); email.tap()
-        for letter in "reqtestemail" { app.keyboards.keys[String(letter)].tap() }
+        for letter in "rqe" { app.keyboards.keys[String(letter)].tap() }
         app.keyboards.keys["space"].tap()
         let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             (email.value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) == "shortcut@example.test"
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 5), .completed)
+        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 5), .completed, "Email field contains \(email.value as? String ?? "<no value>")")
         attachScreen(app, "Largest text — native email and system text replacement")
         XCTAssertTrue(app.buttons["send-perplexity-code"].isEnabled)
         app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
         settings.activate()
-        let entry = settings.cells.containing(.staticText, identifier: "reqtestemail").firstMatch
+        let entry = settings.cells.containing(.staticText, identifier: "rqe").firstMatch
         entry.swipeLeft(); settings.buttons["Delete"].tap()
         settings.terminate()
     }

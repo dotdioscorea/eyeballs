@@ -4,9 +4,10 @@ struct AccessibleFormPicker<Selection: Hashable>: View {
     let title: String
     @Binding var selection: Selection
     let options: [(String, Selection)]
+    let identifier: String?
     @Environment(\.dynamicTypeSize) private var textSize
-    init(_ title: String, selection: Binding<Selection>, options: [(String, Selection)]) {
-        self.title = title; _selection = selection; self.options = options
+    init(_ title: String, selection: Binding<Selection>, options: [(String, Selection)], identifier: String? = nil) {
+        self.title = title; _selection = selection; self.options = options; self.identifier = identifier
     }
     var body: some View {
         if textSize.isAccessibilitySize {
@@ -22,9 +23,10 @@ struct AccessibleFormPicker<Selection: Hashable>: View {
                         }.foregroundStyle(.primary).padding(.vertical, 6).frame(minHeight: 44).contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityLabel(choice.0).accessibilityValue(selection == choice.1 ? "Selected" : "Not selected")
                         .accessibilityAddTraits(selection == choice.1 ? .isSelected : [])
+                        .accessibilityIdentifier("\(identifier ?? title)-choice-\(index)")
                 }
-            }.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
-        } else { Picker(title, selection: $selection) { ForEach(options.indices, id: \.self) { index in Text(options[index].0).tag(options[index].1) } } }
+            }.fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading).accessibilityElement(children: .contain)
+        } else { Picker(title, selection: $selection) { ForEach(options.indices, id: \.self) { index in Text(options[index].0).tag(options[index].1) } }.accessibilityIdentifier(identifier ?? title) }
     }
 }
 

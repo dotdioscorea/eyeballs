@@ -168,7 +168,7 @@ struct DisplaySettingsView: View {
                 if !settings.rings.isEmpty || account.snapshot?.windows.isEmpty == false {
                 Section {
                     HStack { Spacer(); AccessibleUsageRing(readings: account.readings(settings: settings), color: colorHex.map { Color(hex: $0) } ?? account.provider.color, size: 140, lineWidth: settings.rings.count > 2 ? 8 : 11); Spacer() }.padding(.vertical, 12)
-                    AccessibleFormPicker("Default amounts", selection: $settings.direction, options: AmountDirection.allCases.map { ($0.title, $0) }).accessibilityIdentifier("amount-direction")
+                    AccessibleFormPicker("Default amounts", selection: $settings.direction, options: AmountDirection.allCases.map { ($0.title, $0) }, identifier: "amount-direction")
                 }
                 Section {
                     ForEach(Array(settings.rings.enumerated()), id: \.element.id) { index, ring in
