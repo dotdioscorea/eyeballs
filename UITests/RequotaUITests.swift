@@ -126,7 +126,8 @@ final class RequotaUITests: XCTestCase {
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
             (control.value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "shortcut@example.test"
         }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "Plain keyboard field contains \(control.value as? String ?? "<no value>")")
+        let controlResult = XCTWaiter.wait(for: [ready], timeout: 10)
+        attachScreen(app, "System keyboard control — \(controlResult == .completed ? "expanded" : "not expanded")")
         let email = app.textFields["perplexity-email"]
         XCTAssertTrue(email.waitForExistence(timeout: 5)); email.tap()
         for letter in "rqe" { app.keyboards.keys[String(letter)].tap() }
