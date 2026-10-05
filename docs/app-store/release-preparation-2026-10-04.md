@@ -1,10 +1,10 @@
 # Requota 1.0 release preparation
 
-Build **1.0 (20)** is available to the existing internal and external TestFlight groups. Apple approved external beta review. Its binary source is `6e5ef5c42b7ce50bcfb61aaec081ba6f91399e2e`, tagged `testflight/1.0-20`. [PR #5](https://github.com/dotdioscorea/requota/pull/5) makes weekly activation per account and compacts the controls. [PR #3](https://github.com/dotdioscorea/requota/pull/3), build 19, introduced activation; [PR #2](https://github.com/dotdioscorea/requota/pull/2), build 18, contains the Claude reset fix and source rename.
+Build **1.0 (21)** is available to the existing internal and external TestFlight groups. Apple approved external beta review. Its binary source is `fc427a7d29e43c32351e384aa166b32b22038954`, tagged `testflight/1.0-21`. [PR #7](https://github.com/dotdioscorea/requota/pull/7) improves accessibility text, Perplexity keyboard shortcuts and saved-account sign-in feedback. [Build 21 validation](../testflight-build-21.json) records the package, tests and distribution state. [PR #5](https://github.com/dotdioscorea/requota/pull/5), build 20, made activation per account; its live unused-week countdown check remains pending.
 
 ## App Store Connect
 
-The [version draft](https://appstoreconnect.apple.com/apps/6818509879/distribution/ios/version/inflight) has build 20 selected and remains **Prepare for Submission**. No App Store review submission or public release was made. Release is set to **manual**.
+The [version draft](https://appstoreconnect.apple.com/apps/6818509879/distribution/ios/version/inflight) has build 21 selected and remains **Prepare for Submission**. No App Store review submission or public release was made. Release is set to **manual**.
 
 - English UK title, subtitle, description, promotional text, keywords, support URL and copyright are saved.
 - Six iPhone and five iPad screenshots finished processing, in the agreed order.
