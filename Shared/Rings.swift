@@ -78,6 +78,7 @@ struct UsageRing: View {
     }
 }
 struct MetricBars: View {
+    @Environment(\.dynamicTypeSize) private var textSize
     var readings: [MetricReading]
     var color: Color
     var dense = false
@@ -85,11 +86,8 @@ struct MetricBars: View {
         VStack(alignment: .leading, spacing: dense ? 4 : 13) {
             ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
                 VStack(spacing: dense ? 2 : 6) {
-                    HStack {
-                        Text(reading.title).lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text("\(reading.value) \(reading.caption)").monospacedDigit().fixedSize().foregroundStyle(.primary).fontWeight(.medium)
-                    }.font(dense ? .system(size: 10) : .caption).foregroundStyle(.secondary)
+                    AccessibleValueRow(title: reading.title, value: "\(reading.value) \(reading.caption)")
+                        .font(dense && !textSize.isAccessibilitySize ? .system(size: 10) : .caption)
                     GeometryReader { geometry in
                         ZStack(alignment: .leading) {
                             Capsule().fill(MetricColor.color(index, base: color).opacity(0.13))
@@ -111,9 +109,7 @@ struct MetricLegend: View {
             ForEach(Array(readings.enumerated()), id: \.element.id) { index, reading in
                 HStack(spacing: 6) {
                     Circle().fill(MetricColor.color(index, base: color)).frame(width: 5, height: 5)
-                    Text(reading.title).foregroundStyle(.secondary).lineLimit(1)
-                    Spacer(minLength: 2)
-                    Text("\(reading.value) \(reading.caption)").monospacedDigit().fixedSize()
+                    AccessibleValueRow(title: reading.title, value: "\(reading.value) \(reading.caption)")
                 }.font(.caption)
             }
         }

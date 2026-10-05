@@ -14,6 +14,8 @@ An iPhone and iPad app for monitoring multiple Codex, Claude, Grok, Gemini CLI, 
 - Display choices survive tier changes; known plan/allowance changes are recorded and start new analysis baselines.
 - Pull-to-refresh, timestamps, low-allowance/reset/expiry/unused-allowance notifications with provider overrides, and an observed events log.
 - GitHub problem reports with an optional, reviewable debug bundle.
+- Accessibility text sizes reflow accounts, charts and settings; usage values stay readable outside fixed-size rings.
+- Duplicate sign-in identifies the saved account and offers reconnect or another sign-in.
 
 TestFlight **1.0 (20)** is available to the existing internal and external tester groups. Apple approved external testing. Automatic weekly activation is now per account, with Start week beside its toggle and the explanation in an info popover. Existing opt-ins carry over on upgrade; new connections default to off. The binary is built from `6e5ef5c`, tagged `testflight/1.0-20`. See [testing notes](RELEASE_NOTES.txt), [activation validation](docs/allowance-activation-2026-10-04.md) and [build 20 validation](docs/testflight-build-20.json). A live unused-week countdown check remains pending until one becomes available.
 

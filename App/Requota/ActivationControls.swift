@@ -4,6 +4,7 @@ struct ActivationControls: View {
     let account: AgentAccount
     var showsAccount = false
     @EnvironmentObject private var store: AccountStore
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var showingHelp = false
     @State private var authorising = false
 
@@ -22,17 +23,21 @@ struct ActivationControls: View {
                 .buttonStyle(.plain).accessibilityLabel("About weekly activation")
                 .accessibilityIdentifier("activation-help-" + account.id.uuidString)
                 .popover(isPresented: $showingHelp) {
-                    Text("Sends a small request using included allowance to start an unused weekly window. Automatic activation applies only to this account and runs during usage refreshes. Claude requires activation permission.")
-                        .font(.subheadline).padding(16).frame(width: 280)
-                        .accessibilityIdentifier("activation-explanation")
-                        .presentationCompactAdaptation(.popover)
+                    if textSize.isAccessibilitySize {
+                        NavigationStack {
+                            ScrollView { explanation.padding(20) }
+                                .navigationTitle("Weekly activation").navigationBarTitleDisplayMode(.inline)
+                                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showingHelp = false } } }
+                        }.presentationCompactAdaptation(.sheet)
+                    } else { explanation.padding(16).frame(width: 280).presentationCompactAdaptation(.popover) }
                 }
             }
-            ViewThatFits(in: .horizontal) {
+            if textSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 16) { automaticToggle; manualAction }
+            } else { ViewThatFits(in: .horizontal) {
                 HStack(spacing: 16) { manualAction; Spacer(minLength: 8); automaticToggle }
                 VStack(alignment: .leading, spacing: 10) { automaticToggle; manualAction }
-            }
-            .font(.subheadline)
+            }.font(.subheadline) }
             if let message = store.activationMessages[account.id] {
                 Text(message).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("activation-message")
             } else if let record = account.activation {
@@ -42,12 +47,16 @@ struct ActivationControls: View {
         }
         .sheet(isPresented: $authorising) { SignInView(account: account, allowActivation: true) }
     }
+    private var explanation: some View {
+        Text("Sends a small request using included allowance to start an unused weekly window. Automatic activation applies only to this account and runs during usage refreshes. Claude requires activation permission.")
+            .font(.subheadline).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("activation-explanation")
+    }
 
     private var automaticToggle: some View {
-        Toggle("Automatic", isOn: Binding(get: {
+        AccessibleToggle("Automatic", isOn: Binding(get: {
             store.accounts.first { $0.id == account.id }?.automaticActivation == true
         }, set: { store.setAutomaticActivation($0, for: account.id) }))
-            .fixedSize().disabled(store.isDemo)
+            .fixedSize(horizontal: !textSize.isAccessibilitySize, vertical: true).disabled(store.isDemo)
             .accessibilityIdentifier("automatic-activation-" + account.id.uuidString)
     }
     @ViewBuilder private var manualAction: some View {

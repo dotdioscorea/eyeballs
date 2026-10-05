@@ -6,7 +6,7 @@ struct ProviderDetailsView: View {
     var body: some View {
         ForEach(details.usage ?? []) { item in
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text(item.title).font(.subheadline.weight(.semibold)); Spacer(); if let enabled = item.enabled { Text(enabled ? "Enabled" : "Disabled").font(.caption).foregroundStyle(.secondary) } }
+                AccessibleStack { Text(item.title).font(.subheadline.weight(.semibold)); if let enabled = item.enabled { Text(enabled ? "Enabled" : "Disabled").font(.caption).foregroundStyle(.secondary) } }
                 if let used = item.used { row("Used", item.amount(used)) }
                 if item.unlimited == true { row("Allowance", "Unlimited") }
                 else {
@@ -17,9 +17,8 @@ struct ProviderDetailsView: View {
         }
         ForEach(details.spending) { spend in
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
+                AccessibleStack {
                     Text(spend.title).font(.subheadline.weight(.semibold))
-                    Spacer()
                     if let enabled = spend.enabled { Text(enabled ? "Enabled" : "Disabled").font(.caption).foregroundStyle(.secondary) }
                 }
                 if let used = spend.used { row("Amount spent", spend.amount(used)) }
@@ -45,9 +44,7 @@ struct ProviderDetailsView: View {
                 ForEach(Array(breakdown.rows.enumerated()), id: \.element.id) { index, item in
                     HStack(spacing: 8) {
                         Circle().fill(breakdownColor.opacity(max(0.3, 1 - Double(index) * 0.2))).frame(width: 6, height: 6).accessibilityHidden(true)
-                        Text(item.title).foregroundStyle(.secondary)
-                        Spacer()
-                        Text(item.percent.formatted(.number.precision(.fractionLength(0...1))) + "%").monospacedDigit()
+                        AccessibleValueRow(title: item.title, value: item.percent.formatted(.number.precision(.fractionLength(0...1))) + "%")
                     }
                     .font(.subheadline)
                 }
@@ -68,11 +65,7 @@ struct ProviderDetailsView: View {
         }
     }
     private func row(_ title: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title).foregroundStyle(.secondary)
-            Spacer(minLength: 12)
-            Text(value).monospacedDigit().multilineTextAlignment(.trailing).fixedSize(horizontal: false, vertical: true)
-        }.font(.subheadline)
+        AccessibleValueRow(title: title, value: value).font(.subheadline)
     }
 }
 
@@ -85,11 +78,11 @@ struct CreditDetailsView: View {
         if details.overageLimitReached == true { Text("Credit overage limit reached").font(.caption).foregroundStyle(.orange) }
         if details.spendLimitReached == true { Text("Spending limit reached").font(.caption).foregroundStyle(.orange) }
         if let estimate = details.localMessages {
-            HStack { Text("Estimated local messages").foregroundStyle(.secondary); Spacer(); Text(estimate.text).monospacedDigit() }.font(.subheadline)
+            AccessibleValueRow(title: "Estimated local messages", value: estimate.text).font(.subheadline)
         }
         if let estimate = details.cloudMessages {
-            HStack { Text("Estimated cloud messages").foregroundStyle(.secondary); Spacer(); Text(estimate.text).monospacedDigit() }.font(.subheadline)
+            AccessibleValueRow(title: "Estimated cloud messages", value: estimate.text).font(.subheadline)
         }
     }
-    private func status(_ value: String) -> some View { HStack { Text("Credit status").foregroundStyle(.secondary); Spacer(); Text(value) }.font(.subheadline) }
+    private func status(_ value: String) -> some View { AccessibleValueRow(title: "Credit status", value: value).font(.subheadline) }
 }

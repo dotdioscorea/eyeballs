@@ -16,6 +16,7 @@ struct HistoryPlotSeries: Identifiable {
 
 struct HistoryPlot: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var textSize
     let series: [HistoryPlotSeries]
     let domain: ClosedRange<Date>
     let measure: HistoryMeasure
@@ -97,6 +98,8 @@ struct HistoryPlot: View {
     private var points: [Point] { render.points }
     private var maximum: Double { render.maximum }
     private var visibleEvents: [ChartEventGroup] { render.events }
+    private var plotHeight: CGFloat { textSize.isAccessibilitySize ? max(340, height) : height }
+    private var eventHeight: CGFloat { textSize.isAccessibilitySize ? 44 : 28 }
 
     private var uncachedEvents: [ChartEventGroup] {
         let items = events.flatMap(\.events).filter { visibleDomain.contains($0.date) }.sorted { $0.date < $1.date }
@@ -110,9 +113,9 @@ struct HistoryPlot: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(spacing: 0) {
-                if !events.isEmpty { eventLane.frame(height: 28) }
-                chart.frame(height: height - (events.isEmpty ? 0 : 28))
-            }.frame(height: height)
+                if !events.isEmpty { eventLane.frame(height: eventHeight) }
+                chart.frame(height: plotHeight - (events.isEmpty ? 0 : eventHeight))
+            }.frame(height: plotHeight)
                 .overlay(alignment: .topTrailing) {
                     if viewport != nil { Button("Reset view") { viewport = nil; selectedDate = nil }.font(.caption2).padding(5).background(Theme.card, in: Capsule()).offset(y: -24).accessibilityIdentifier("reset-chart-view") }
                 }
@@ -169,14 +172,14 @@ struct HistoryPlot: View {
             ForEach(visibleEvents) { group in
                 let fraction = CGFloat(group.date.timeIntervalSince(visibleDomain.lowerBound) / visibleDomain.upperBound.timeIntervalSince(visibleDomain.lowerBound))
                 let x: CGFloat = min(plotBounds.minX + width - 14, max(plotBounds.minX + 14, plotBounds.minX + fraction * width))
-                eventButton(group).position(x: x, y: 14)
+                eventButton(group).position(x: x, y: eventHeight / 2)
             }
         }
     }
     private func eventButton(_ group: ChartEventGroup) -> some View {
         Button { selectedDate = nil; selectedEvent = group } label: {
             HStack(spacing: 2) { Image(systemName: group.events[0].kind.symbol); if group.events.count > 1 { Text("\(group.events.count)") } }
-                .font(.system(size: 11, weight: .medium)).padding(5).background(Theme.card, in: RoundedRectangle(cornerRadius: 4)).frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
+                .font(textSize.isAccessibilitySize ? .caption2 : .system(size: 11, weight: .medium)).padding(5).background(Theme.card, in: RoundedRectangle(cornerRadius: 4)).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityLabel(group.events.map { $0.kind.title }.joined(separator: ", ")).accessibilityIdentifier("chart-event-\(group.events[0].kind.rawValue)")
     }
     private var inspectionDate: Date { selectedDate ?? observedDates.filter { visibleDomain.contains($0) }.max() ?? visibleDomain.upperBound }
@@ -185,9 +188,9 @@ struct HistoryPlot: View {
             HStack {
                 Text(selectedDate == nil ? (viewport == nil ? "Latest readings" : "Readings in view") : inspectionDate.formatted(.dateTime.month(.abbreviated).day().hour().minute())).font(.caption).foregroundStyle(.secondary).monospacedDigit().accessibilityIdentifier("chart-selected-date")
                 Spacer()
-                if selectedDate != nil { Button { selectedDate = nil } label: { Image(systemName: "xmark").font(.system(size: 11)).frame(width: 44, height: 28).contentShape(Rectangle()) }.accessibilityLabel("Clear chart selection") }
+                if selectedDate != nil { Button { selectedDate = nil } label: { Image(systemName: "xmark").font(.caption).frame(width: 44, height: 44).contentShape(Rectangle()) }.accessibilityLabel("Clear chart selection") }
             }
-            LazyVGrid(columns: sizeClass == .regular ? [GridItem(.adaptive(minimum: 240), spacing: 16)] : [GridItem(.flexible())], alignment: .leading, spacing: 10) {
+            LazyVGrid(columns: sizeClass == .regular && !textSize.isAccessibilitySize ? [GridItem(.adaptive(minimum: 240), spacing: 16)] : [GridItem(.flexible())], alignment: .leading, spacing: 10) {
                 ForEach(series) { item in
                     let date = selectedDate ?? item.segments.flatMap { $0 }.last(where: { visibleDomain.contains($0.date) })?.date ?? inspectionDate
                     let source = ChartReadings.at(date, segments: item.segments, stepped: !rate && !smooth)
@@ -195,11 +198,13 @@ struct HistoryPlot: View {
                     let drawn = ChartReadings.at(date, segments: smooth && !rate ? curve : item.segments, stepped: !rate && !smooth)
                     let reading = drawn.map { value in ChartReading(value: value.value, estimated: source?.estimated != false || abs((source?.value ?? value.value) - value.value) > 0.001) }
                     Button { focusedID = focusedID == item.id ? nil : item.id } label: {
-                        HStack(spacing: 8) {
+                        AccessibleStack(spacing: 8) {
+                            HStack(spacing: 8) {
                             Path { path in path.move(to: .init(x: 0, y: 3)); path.addLine(to: .init(x: 24, y: 3)) }.stroke(item.color, style: StrokeStyle(lineWidth: 2, dash: item.dashPattern ?? (item.dashed ? [5, 3] : []))).frame(width: 24, height: 6)
                             if let provider = item.provider { ProviderLogo(provider: provider, color: item.color, size: 13) }
-                            Text(item.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                            Spacer(minLength: 4)
+                            Text(item.title).font(.caption).foregroundStyle(.secondary).lineLimit(textSize.isAccessibilitySize ? nil : 1)
+                            }
+                            if !textSize.isAccessibilitySize { Spacer(minLength: 4) }
                             Text(reading.map { ($0.estimated || rate ? "~" : "") + (rate ? HistoryRate.formatted($0.value, unit: measure == .amount ? unit : "pp") : measure.formatted($0.value, unit: unit)) } ?? "—").font(.caption.weight(.medium)).monospacedDigit().foregroundStyle(.primary)
                         }.padding(sizeClass == .regular ? 10 : 0).background(sizeClass == .regular ? Color.white.opacity(0.035) : .clear, in: RoundedRectangle(cornerRadius: 9)).contentShape(Rectangle()).opacity(focus == nil || focus == item.id ? 1 : 0.4)
                     }.buttonStyle(.plain).accessibilityIdentifier("chart-reading-" + item.id).accessibilityValue(focus == item.id ? "Highlighted" : "Visible")
@@ -224,6 +229,7 @@ struct HistoryPlot: View {
 }
 
 private struct HistoryTrace: View, Equatable {
+    @Environment(\.dynamicTypeSize) private var textSize
     var points: [HistoryPlot.Point]
     var events: [ChartEventGroup]
     var domain: ClosedRange<Date>
@@ -244,11 +250,18 @@ private struct HistoryTrace: View, Equatable {
             }
             ForEach(events) { group in RuleMark(x: .value("Event", group.date)).foregroundStyle(.secondary.opacity(0.25)).lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 3])) }
         }.chartLegend(.hidden).chartXScale(domain: domain).chartPlotStyle { $0.clipped() }.chartYScale(domain: 0...maximum)
-            .chartXAxis { AxisMarks(values: .automatic(desiredCount: 3)) { tick in
+            .chartXAxis {
+                if textSize.isAccessibilitySize {
+                    AxisMarks(values: [domain.lowerBound.addingTimeInterval(domain.upperBound.timeIntervalSince(domain.lowerBound) / 2)]) { tick in
+                        AxisGridLine()
+                        AxisValueLabel { if let date = tick.as(Date.self) { Text(date.formatted(domain.upperBound.timeIntervalSince(domain.lowerBound) <= 86400 ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day())).fixedSize() } }
+                    }
+                } else { AxisMarks(values: .automatic(desiredCount: 3)) { tick in
                 AxisGridLine()
-                AxisValueLabel { if let date = tick.as(Date.self) { Text(date.formatted(domain.upperBound.timeIntervalSince(domain.lowerBound) <= 86400 ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day())).frame(height: 36) } }
-            } }
-            .chartYAxis { AxisMarks(values: .automatic(desiredCount: 4)) { value in
+                AxisValueLabel { if let date = tick.as(Date.self) { Text(date.formatted(domain.upperBound.timeIntervalSince(domain.lowerBound) <= 86400 ? .dateTime.hour().minute() : .dateTime.month(.abbreviated).day())).fixedSize(horizontal: false, vertical: true).frame(minHeight: 36) } }
+                } }
+            }
+            .chartYAxis { AxisMarks(values: .automatic(desiredCount: textSize.isAccessibilitySize ? 3 : 4)) { value in
                 AxisGridLine()
                 AxisValueLabel { if let number = value.as(Double.self) { Text(rate ? number.formatted(.number.precision(.fractionLength(0...1))) + (amount ? "/h" : " pp/h") : amount ? number.formatted(.number.precision(.fractionLength(0...1))) : "\(Int(number))%") } }
             } }
@@ -256,6 +269,7 @@ private struct HistoryTrace: View, Equatable {
 }
 
 struct BurnRateView: View {
+    @Environment(\.dynamicTypeSize) private var textSize
     let samples: [UsageHistorySample]
     let windows: [UsageWindow]
     var events: [AccountEvent] = []
@@ -266,17 +280,17 @@ struct BurnRateView: View {
     var body: some View {
         if let window = active {
             VStack(alignment: .leading, spacing: 12) {
-                HStack {
+                AccessibleStack {
                     Text("Burn rate").font(.headline)
-                    Spacer()
+                    if !textSize.isAccessibilitySize { Spacer() }
                     Picker("Burn rate metric", selection: Binding(get: { window.id }, set: { windowID = $0 })) { ForEach(available) { Text($0.shortTitle).tag($0.id) } }.tint(.primary)
                 }
-                Picker("Burn rate period", selection: $hours) { Text("1h").tag(1); Text("6h").tag(6); Text("12h").tag(12) }.pickerStyle(.segmented)
+                Picker("Burn rate period", selection: $hours) { Text("1h").tag(1); Text("6h").tag(6); Text("12h").tag(12) }.modifier(AccessiblePickerStyle())
                 if let estimate = BurnRate.estimate(samples: samples, windowID: window.id, hours: hours, events: events) {
-                    HStack(alignment: .top) {
+                    AccessibleStack {
                         VStack(alignment: .leading, spacing: 4) { Text("Recent rate").font(.caption).foregroundStyle(.secondary); Text(HistoryRate.formatted(estimate.perHour, unit: "pp")).font(.title3.monospacedDigit()) }
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 4) { Text("Time to zero").font(.caption).foregroundStyle(.secondary); Text(limitTitle(estimate.limit)).font(.title3.monospacedDigit()) }
+                        if !textSize.isAccessibilitySize { Spacer() }
+                        VStack(alignment: textSize.isAccessibilitySize ? .leading : .trailing, spacing: 4) { Text("Time to zero").font(.caption).foregroundStyle(.secondary); Text(limitTitle(estimate.limit)).font(.title3.monospacedDigit()) }
                     }
                 } else { Text("Not enough recent history.").font(.caption).foregroundStyle(.secondary) }
             }.accessibilityIdentifier("burn-rate")

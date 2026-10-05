@@ -119,19 +119,18 @@ struct CombinedActivityView: View {
         let day = Calendar.current.component(.day, from: date) - 1
         let daily = dayBuckets(item, date: date)
         let number = daily.indices.contains(day) ? daily[day].value : nil
-        return HStack(spacing: 10) {
+        return AccessibleStack(spacing: 10) {
             ProviderLogo(provider: item.account.provider, color: item.account.color, size: 20)
             VStack(alignment: .leading, spacing: 3) { Text(item.account.title); Text(item.account.provider.name + " · " + item.window.shortTitle).font(.caption).foregroundStyle(.secondary) }
-            Spacer()
             Text(value(number)).monospacedDigit()
         }.font(.subheadline).padding(.vertical, 4)
     }
     private func breakdown(_ cell: HeatmapBucket) -> some View {
         NavigationStack {
             List {
-                Section(period == .monthly ? "Selected day" : cell.date.formatted(.dateTime.hour())) { LabeledContent(title, value: value(cell.value)) }
+                Section(period == .monthly ? "Selected day" : cell.date.formatted(.dateTime.hour())) { AccessibleLabeledContent(title, value: value(cell.value)) }
                 Section(mode == .activity ? "Day consumption" : "Day average") {
-                    LabeledContent("Coverage", value: "\(included.filter { item in let day = Calendar.current.component(.day, from: cell.date) - 1; let data = dayBuckets(item, date: cell.date); return data.indices.contains(day) && data[day].value != nil }.count) of \(included.count) accounts")
+                    AccessibleLabeledContent("Coverage", value: "\(included.filter { item in let day = Calendar.current.component(.day, from: cell.date) - 1; let data = dayBuckets(item, date: cell.date); return data.indices.contains(day) && data[day].value != nil }.count) of \(included.count) accounts")
                     ForEach(included) { item in
                         accountBreakdown(item, date: cell.date)
                     }

@@ -3,6 +3,7 @@ import SwiftUI
 struct AccountDetailView: View {
     let id: UUID
     @EnvironmentObject private var store: AccountStore
+    @Environment(\.dynamicTypeSize) private var textSize
     @State private var editing = false
     @State private var configuring = false
     @State private var connecting = false
@@ -14,9 +15,10 @@ struct AccountDetailView: View {
             if let account {
                 ScrollView {
                     VStack(spacing: 20) {
+                        if textSize.isAccessibilitySize { Text(account.title).font(.title2.weight(.semibold)).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading) }
                         TimelineView(.periodic(from: .now, by: 60)) { context in
                             VStack(spacing: 22) {
-                                if !account.readings().isEmpty { UsageRing(readings: account.readings(at: context.date), color: account.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13) }
+                                if !account.readings().isEmpty { AccessibleUsageRing(readings: account.readings(at: context.date), color: account.color, size: 190, lineWidth: account.readings().count > 2 ? 10 : 13) }
                                 Text([account.provider.name, account.planTitle].compactMap { $0 }.joined(separator: " · ")).font(.subheadline).foregroundStyle(.secondary)
                                 if !account.readings().isEmpty { MetricLegend(readings: account.readings(at: context.date), color: account.color) }
                             }.padding(.vertical, account.readings().isEmpty ? 0 : 16)
@@ -51,14 +53,13 @@ struct AccountDetailView: View {
                                 Text("Banked resets").font(.subheadline.weight(.semibold))
                                 if resets.isEmpty { Text("None available").font(.caption).foregroundStyle(.secondary) }
                                 ForEach(resets) { reset in
-                                    HStack(alignment: .top) {
+                                    AccessibleStack {
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text("\(reset.count) × \(reset.title)")
                                             if let first = reset.firstDetectedAt { Text("Detected \(first.formatted(date: .abbreviated, time: .shortened))").foregroundStyle(.secondary) }
                                             if reset.usableNow == false { Text("Not usable yet").foregroundStyle(.secondary) }
                                         }
-                                        Spacer()
-                                        Text(reset.expiresAt.map { "Expires \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "No expiry reported").foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                                        Text(reset.expiresAt.map { "Expires \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "No expiry reported").foregroundStyle(.secondary)
                                     }.font(.caption)
                                 }
                                 if let checked = account.snapshot?.resetInventory?.checkedAt, let updated = account.snapshot?.updatedAt, updated.timeIntervalSince(checked) > 60 {
@@ -105,12 +106,13 @@ struct AccountDetailView: View {
         }
     }
     private func info(_ title: String, value: String) -> some View {
-        HStack(alignment: .top) { Text(title).foregroundStyle(.secondary); Spacer(); Text(value).multilineTextAlignment(.trailing).textSelection(.enabled) }.font(.subheadline)
+        AccessibleValueRow(title: title, value: value).font(.subheadline).textSelection(.enabled)
     }
 }
 struct EditAccountView: View {
     @EnvironmentObject private var store: AccountStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var textSize
     @State var account: AgentAccount
     @State private var reminderEnabled: Bool
     @State private var reminderDate: Date
@@ -125,11 +127,18 @@ struct EditAccountView: View {
                 Section {
                     TextField("Account name", text: $account.label).accessibilityIdentifier("account-name")
                     TextField("Workstream or machine", text: $account.workstream)
-                    Toggle("Favorite", isOn: $account.favorite)
+                    AccessibleToggle("Favorite", isOn: $account.favorite)
                 }
                 Section("Billing") {
-                    Toggle("Renewal reminder", isOn: $reminderEnabled)
-                    if reminderEnabled { DatePicker("Renewal date", selection: $reminderDate, displayedComponents: .date) }
+                    AccessibleToggle("Renewal reminder", isOn: $reminderEnabled)
+                    if reminderEnabled {
+                        if textSize.isAccessibilitySize {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Renewal date")
+                                DatePicker("Renewal date", selection: $reminderDate, displayedComponents: .date).labelsHidden().accessibilityLabel("Renewal date")
+                            }
+                        } else { DatePicker("Renewal date", selection: $reminderDate, displayedComponents: .date) }
+                    }
                 }
                 Section("Notes") { TextField("Notes", text: $account.notes, axis: .vertical).lineLimit(4...8) }
             }.scrollContentBackground(.hidden).background(Theme.background)
@@ -149,6 +158,7 @@ struct EditAccountView: View {
 struct DisplaySettingsView: View {
     @EnvironmentObject private var store: AccountStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var textSize
     let account: AgentAccount
     @State private var settings: AccountDisplay
     init(account: AgentAccount) { self.account = account; _settings = State(initialValue: account.displaySettings); _colorHex = State(initialValue: account.colorHex) }
@@ -157,8 +167,8 @@ struct DisplaySettingsView: View {
             Form {
                 if !settings.rings.isEmpty || account.snapshot?.windows.isEmpty == false {
                 Section {
-                    HStack { Spacer(); UsageRing(readings: account.readings(settings: settings), color: colorHex.map { Color(hex: $0) } ?? account.provider.color, size: 140, lineWidth: settings.rings.count > 2 ? 8 : 11); Spacer() }.padding(.vertical, 12)
-                    Picker("Default amounts", selection: $settings.direction) { ForEach(AmountDirection.allCases) { Text($0.title).tag($0) } }.accessibilityIdentifier("amount-direction")
+                    HStack { Spacer(); AccessibleUsageRing(readings: account.readings(settings: settings), color: colorHex.map { Color(hex: $0) } ?? account.provider.color, size: 140, lineWidth: settings.rings.count > 2 ? 8 : 11); Spacer() }.padding(.vertical, 12)
+                    AccessibleFormPicker("Default amounts", selection: $settings.direction, options: AmountDirection.allCases.map { ($0.title, $0) }).accessibilityIdentifier("amount-direction")
                 }
                 Section {
                     ForEach(Array(settings.rings.enumerated()), id: \.element.id) { index, ring in
@@ -167,10 +177,7 @@ struct DisplaySettingsView: View {
                                 Circle().fill(MetricColor.color(index, base: account.color)).frame(width: 6, height: 6)
                                 Text(account.readings(settings: settings)[index].title).font(.subheadline)
                             }
-                            Picker("Amounts", selection: direction(for: ring)) {
-                                Text("Default").tag(Optional<AmountDirection>.none)
-                                ForEach(AmountDirection.allCases) { Text($0.title).tag(Optional($0)) }
-                            }.font(.caption)
+                            AccessibleFormPicker("Amounts", selection: direction(for: ring), options: [("Default", Optional<AmountDirection>.none)] + AmountDirection.allCases.map { ($0.title, Optional($0)) }).font(.caption)
                         }
                     }.onDelete { settings.rings.remove(atOffsets: $0) }.onMove { settings.rings.move(fromOffsets: $0, toOffset: $1) }
                 } header: { HStack { Text("Rings"); Spacer(); EditButton() } } footer: { Text("Up to four rings, outside to inside. Compact bars use the same metrics.") }
@@ -179,7 +186,12 @@ struct DisplaySettingsView: View {
                 }
                 }
                 Section("Colour") {
-                    ColorPicker("Account colour", selection: colorBinding, supportsOpacity: false)
+                    if textSize.isAccessibilitySize {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Account colour")
+                            ColorPicker("Account colour", selection: colorBinding, supportsOpacity: false).labelsHidden().accessibilityLabel("Account colour")
+                        }
+                    } else { ColorPicker("Account colour", selection: colorBinding, supportsOpacity: false) }
                     Button("Use provider colour") { colorHex = nil }
                 }
                 Section { Button("Reset display settings") { settings = account.defaultDisplay; colorHex = nil } }

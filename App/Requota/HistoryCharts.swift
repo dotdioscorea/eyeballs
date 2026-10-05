@@ -30,13 +30,13 @@ struct HistoryMeasureMenu: View {
                 Picker("Units", selection: Binding(get: { units.contains(unit) ? unit : units.first ?? "" }, set: { unit = $0 })) { ForEach(units, id: \.self) { Text($0).tag($0) } }
             }
         } label: {
-            HStack(spacing: 4) { Text(measure == .amount ? (units.contains(unit) ? unit : units.first ?? "Amount") : activity ? "Allowance used" : measure.title); Image(systemName: "chevron.down").font(.system(size: 8)) }.font(.caption).foregroundStyle(Theme.accent)
+            HStack(spacing: 4) { Text(measure == .amount ? (units.contains(unit) ? unit : units.first ?? "Amount") : activity ? "Allowance used" : measure.title); Image(systemName: "chevron.down").imageScale(.small) }.font(.caption).foregroundStyle(Theme.accent)
         }
     }
 }
 struct HistoryPeriodPicker: View {
     @Binding var days: Int
-    var body: some View { Picker("History period", selection: $days) { Text("24h").tag(1); Text("7d").tag(7); Text("30d").tag(30); Text("90d").tag(90) }.pickerStyle(.segmented) }
+    var body: some View { Picker("History period", selection: $days) { Text("24h").tag(1); Text("7d").tag(7); Text("30d").tag(30); Text("90d").tag(90) }.modifier(AccessiblePickerStyle()) }
 }
 enum HeatmapPeriod: String, CaseIterable, Identifiable {
     case daily, weekly, monthly
@@ -112,17 +112,18 @@ struct HeatmapControls: View {
     }
     var body: some View {
         VStack(spacing: 10) {
-            Picker("Activity period", selection: $period) { ForEach(HeatmapPeriod.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+            Picker("Activity period", selection: $period) { ForEach(HeatmapPeriod.allCases) { Text($0.title).tag($0) } }.modifier(AccessiblePickerStyle())
             HStack {
-                Button { move(-1) } label: { Image(systemName: "chevron.left").padding(4) }.accessibilityLabel("Previous period")
+                Button { move(-1) } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }.accessibilityLabel("Previous period")
                 Spacer(); Text(title).font(.caption); Spacer()
-                Button { move(1) } label: { Image(systemName: "chevron.right").padding(4) }.accessibilityLabel("Next period").disabled(interval.map { $0.end > .now } ?? true)
+                Button { move(1) } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }.accessibilityLabel("Next period").disabled(interval.map { $0.end > .now } ?? true)
             }
         }
     }
     private func move(_ delta: Int) { date = Calendar.current.date(byAdding: period.component, value: delta, to: date) ?? date }
 }
 struct UsageHeatmap: View {
+    @Environment(\.dynamicTypeSize) private var textSize
     let samples: [UsageHistorySample]
     let window: UsageWindow
     let color: Color
@@ -134,9 +135,9 @@ struct UsageHeatmap: View {
     @State private var unit = ""
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            AccessibleStack {
                 HeatmapModeMenu(mode: $mode)
-                Spacer()
+                if !textSize.isAccessibilitySize { Spacer() }
                 HistoryMeasureMenu(measure: $measure, unit: $unit, units: window.usedAmount != nil ? [window.amountUnit ?? "Amount"] : [], activity: mode == .activity)
             }
             HeatmapControls(period: $period, date: $date)
@@ -175,6 +176,8 @@ struct HeatmapGrid: View {
 }
 struct HeatmapTiles: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var textSize
+    @ScaledMetric(relativeTo: .caption2) private var cellHeight: CGFloat = 29
     var cells: [HeatmapBucket]
     var period: HeatmapPeriod
     var date: Date
@@ -182,19 +185,25 @@ struct HeatmapTiles: View {
     var scale: Double
     var selectedID: Int?
     var select: (HeatmapBucket) -> Void
-    var body: some View { grid }
+    var body: some View {
+        if textSize.isAccessibilitySize {
+            ScrollView(.horizontal) {
+                grid.frame(width: period == .monthly ? 490 : period == .weekly ? 1260 : 1100)
+            }
+        } else { grid }
+    }
     @ViewBuilder private var grid: some View {
         if period == .daily {
-            VStack(spacing: 4) { HStack(spacing: 3) { ForEach(cells) { cell in heatCell(cell, label: false).frame(height: 30) } }; hourTicks }
+            VStack(spacing: 4) { HStack(spacing: 3) { ForEach(cells) { cell in heatCell(cell, label: false).frame(height: textSize.isAccessibilitySize ? max(44, cellHeight) : 30) } }; hourTicks }
         } else if period == .weekly {
             HStack(alignment: .top, spacing: 6) {
                 VStack(alignment: .leading, spacing: 3) {
                     ForEach(0..<7) { day in
-                        if cells.count > day * 24 { Text(cells[day * 24].date.formatted(.dateTime.weekday(.abbreviated).day())).font(.system(size: sizeClass == .regular ? 11 : 9)).frame(height: sizeClass == .regular ? 24 : 17) }
+                        if cells.count > day * 24 { Text(cells[day * 24].date.formatted(.dateTime.weekday(.abbreviated).day())).font(textSize.isAccessibilitySize ? .caption2 : .system(size: sizeClass == .regular ? 11 : 9)).frame(height: weeklyHeight) }
                     }
                 }
                 VStack(spacing: 4) {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 24), spacing: 3) { ForEach(cells) { cell in heatCell(cell, label: false).frame(height: sizeClass == .regular ? 24 : 17) } }
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 24), spacing: 3) { ForEach(cells) { cell in heatCell(cell, label: false).frame(height: weeklyHeight) } }
                     hourTicks
                 }
             }
@@ -206,21 +215,23 @@ struct HeatmapTiles: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 7), spacing: 5) {
                     // One ID space for all grid slots, including leading blanks.
                     ForEach(0..<(offset + cells.count), id: \.self) { slot in
-                        if slot < offset { Color.clear.frame(height: sizeClass == .regular ? 52 : 29) }
-                        else { heatCell(cells[slot - offset], label: true).frame(height: sizeClass == .regular ? 52 : 29) }
+                        if slot < offset { Color.clear.frame(height: monthlyHeight) }
+                        else { heatCell(cells[slot - offset], label: true).frame(height: monthlyHeight) }
                     }
                 }
             }
         }
     }
-    private var hourTicks: some View { HStack { Text("00"); Spacer(); Text("06"); Spacer(); Text("12"); Spacer(); Text("18"); Spacer(); Text("23") }.font(.system(size: 9)).foregroundStyle(.secondary) }
+    private var weeklyHeight: CGFloat { textSize.isAccessibilitySize ? max(44, cellHeight) : sizeClass == .regular ? 24 : 17 }
+    private var monthlyHeight: CGFloat { textSize.isAccessibilitySize ? max(44, cellHeight) : sizeClass == .regular ? 52 : 29 }
+    private var hourTicks: some View { HStack { Text("00"); Spacer(); Text("06"); Spacer(); Text("12"); Spacer(); Text("18"); Spacer(); Text("23") }.font(textSize.isAccessibilitySize ? .caption2 : .system(size: 9)).foregroundStyle(.secondary) }
     private func heatCell(_ cell: HeatmapBucket, label: Bool) -> some View {
         let future = cell.date > Date.now
         let fill: Color = future ? .clear : cell.value.map { $0 == 0 ? .white.opacity(0.06) : color.opacity(0.12 + min(1, $0 / scale) * 0.88) } ?? .clear
         return Button { select(cell) } label: {
             RoundedRectangle(cornerRadius: 3).fill(fill)
                 .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(!future && cell.value == nil ? Color.white.opacity(0.12) : .clear, lineWidth: 1))
-                .overlay { if label { Text(cell.label).font(.system(size: sizeClass == .regular ? 13 : 10)).foregroundStyle(!future && (cell.value ?? 0) / scale > 0.5 ? Color.black.opacity(0.85) : Color.white.opacity(future ? 0.2 : cell.value == nil ? 0.4 : 0.9)) } }
+                .overlay { if label { Text(cell.label).font(textSize.isAccessibilitySize ? .caption2 : .system(size: sizeClass == .regular ? 13 : 10)).foregroundStyle(!future && (cell.value ?? 0) / scale > 0.5 ? Color.black.opacity(0.85) : Color.white.opacity(future ? 0.2 : cell.value == nil ? 0.4 : 0.9)) } }
                 .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(selectedID == cell.id ? .white : .clear, lineWidth: 1))
         }.buttonStyle(.plain).disabled(future).accessibilityIdentifier("heatmap-cell-\(period.rawValue)-\(cell.id)").accessibilityLabel("\(cell.date.formatted(date: .abbreviated, time: period == .monthly ? .omitted : .shortened)), \(cell.value.map { String(format: "%.1f", $0) } ?? "No observation")")
     }
@@ -228,6 +239,7 @@ struct HeatmapTiles: View {
 
 struct ChartsView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var textSize
     @EnvironmentObject private var store: AccountStore
     @State private var selected = Set<String>()
     @State private var choosing = false
@@ -301,7 +313,7 @@ struct ChartsView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    if sizeClass == .regular {
+                    if sizeClass == .regular && !textSize.isAccessibilitySize {
                         HStack(spacing: 24) {
                             Text("Charts").font(.title2.weight(.semibold))
                             chartKindPicker.frame(width: 300)
@@ -313,9 +325,9 @@ struct ChartsView: View {
                         Text("Accounts & metrics").font(.subheadline.weight(.medium)).foregroundStyle(.primary)
                     }.padding(12).background(Theme.card, in: RoundedRectangle(cornerRadius: 12)).accessibilityIdentifier("chart-accounts")
                     if visible.isEmpty { Text(measure == .amount && available.contains(where: { chosen($0) }) ? "No selected metrics report " + activeUnit + "." : "No metrics selected.").font(.subheadline).foregroundStyle(.secondary) }
-                    else if heatmaps { activityCharts(wide: sizeClass == .regular && geometry.size.width >= 800) }
+                    else if heatmaps { activityCharts(wide: sizeClass == .regular && geometry.size.width >= 800 && !textSize.isAccessibilitySize) }
                     else {
-                        if sizeClass == .regular {
+                        if sizeClass == .regular && !textSize.isAccessibilitySize {
                             HStack(spacing: 24) {
                                 HistoryPeriodPicker(days: $days).frame(maxWidth: 400)
                                 Spacer()
@@ -336,12 +348,12 @@ struct ChartsView: View {
 
     }
     private var chartKindPicker: some View {
-        Picker("Chart type", selection: $kind) { ForEach(HistoryChartKind.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented)
+        Picker("Chart type", selection: $kind) { ForEach(HistoryChartKind.allCases) { Text($0.title).tag($0) } }.modifier(AccessiblePickerStyle())
     }
     private var plotOptions: some View {
-        HStack {
+        AccessibleStack {
             HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate)
-            Spacer()
+            if !textSize.isAccessibilitySize { Spacer() }
             HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours)
         }
     }
@@ -358,9 +370,9 @@ struct ChartsView: View {
     }
     private func activityCharts(wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            AccessibleStack {
                 HeatmapModeMenu(mode: $heatmapMode)
-                Spacer()
+                if !textSize.isAccessibilitySize { Spacer() }
                 HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: heatmapMode == .activity)
             }
             CombinedActivityView(inlineBreakdown: wide, series: visible.map { item in ActivitySeries(id: item.id, account: item.account, window: item.window, samples: samples(item.account.id), events: store.events.filter { $0.accountID == item.account.id }) }, measure: heatmapMode == .activity && measure == .remaining ? .used : measure, unit: activeUnit, mode: heatmapMode, period: $heatmapPeriod, date: $heatmapDate)
@@ -403,11 +415,10 @@ struct ChartsView: View {
                                 else if let main = usable.first(where: { $0.window.id == (account.window(for: .weekly) ?? account.snapshot?.windows.first)?.id }) ?? usable.first { next.insert(main.id) }
                                 selected = next; customSelection = true
                             } label: {
-                                HStack(spacing: 8) {
+                                AccessibleStack(spacing: 8) {
                                     ProviderLogo(provider: account.provider, color: account.color, size: 18)
                                     Text(account.title).font(.subheadline)
                                     Text(account.provider.name).font(.caption).foregroundStyle(.secondary)
-                                    Spacer()
                                     Image(systemName: enabled ? "checkmark.circle.fill" : "circle").foregroundStyle(enabled ? Theme.accent : .secondary)
                                 }.foregroundStyle(.primary).contentShape(Rectangle())
                             }.buttonStyle(.plain).disabled(usable.isEmpty).accessibilityIdentifier("chart-account-" + account.id.uuidString).accessibilityValue(enabled ? "On" : "Off")
@@ -425,7 +436,7 @@ struct ChartsView: View {
                         }
                     }
                 }
-            }.frame(maxHeight: 230)
+            }.frame(maxHeight: textSize.isAccessibilitySize ? 420 : 230)
         }
     }
 
@@ -445,7 +456,7 @@ struct HistoryLineOptions: View {
         if rate {
             Menu {
                 Picker("Rate averaging", selection: $averagingHours) { Text("1h average").tag(1); Text("6h average").tag(6); Text("12h average").tag(12) }
-            } label: { HStack(spacing: 4) { Text("\(averagingHours)h average"); Image(systemName: "chevron.down").font(.system(size: 8)) }.font(.caption).padding(.vertical, 6) }.tint(Theme.accent)
+            } label: { HStack(spacing: 4) { Text("\(averagingHours)h average"); Image(systemName: "chevron.down").imageScale(.small) }.font(.caption).padding(.vertical, 6) }.tint(Theme.accent)
         } else {
             Button { smooth.toggle() } label: {
                 Label("Smooth", systemImage: "waveform.path").font(.caption.weight(.medium)).padding(.horizontal, 10).padding(.vertical, 6)
@@ -459,7 +470,7 @@ struct HeatmapModeMenu: View {
     @Binding var mode: HeatmapMode
     var body: some View {
         Menu { Picker("Activity display", selection: $mode) { ForEach(HeatmapMode.allCases) { Text($0.title).tag($0) } } } label: {
-            HStack(spacing: 4) { Text(mode.title); Image(systemName: "chevron.down").font(.system(size: 8)) }.font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 4) { Text(mode.title); Image(systemName: "chevron.down").imageScale(.small) }.font(.caption).foregroundStyle(.secondary)
         }
     }
 }

@@ -135,20 +135,34 @@ final class SignInModel: ObservableObject {
         }
     }
     func changeEmail() { guard !working else { return }; emailAttempt = nil; inputCode = ""; awaitingEmailCode = false; message = nil }
+    func clearEmailIdentity() {
+        guard !working else { return }
+        changeEmail(); credential = nil; snapshot = nil; inputEmail = ""
+    }
     func cancel() { task?.cancel(); task = nil; emailAttempt = nil; inputCode = ""; awaitingEmailCode = false; browser.cancel(); copilotBrowser.cancel(); cursorBrowser.cancel(); clineBrowser.cancel(); ampBrowser.cancel(); kimiBrowser.cancel(); verificationCode = nil }
 }
 
 struct SignInView: View {
     let account: AgentAccount
     var allowActivation = false
+    var onConnected: ((UUID) -> Void)?
     @EnvironmentObject private var store: AccountStore
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var model = SignInModel()
+    @Environment(\.dynamicTypeSize) private var textSize
+    @StateObject private var model: SignInModel
     @State private var name = ""
     @State private var workstream = ""
     @State private var reporting = false
     @State private var emailLocked = false
     @State private var kimiRegion: KimiAuth.Region = .global
+    init(account: AgentAccount, allowActivation: Bool = false, onConnected: ((UUID) -> Void)? = nil) {
+        self.account = account; self.allowActivation = allowActivation; self.onConnected = onConnected
+        #if DEBUG && targetEnvironment(simulator)
+        _model = StateObject(wrappedValue: SignInUIFixture.enabled && account.provider == .claude ? SignInUIFixture.model() : SignInModel())
+        #else
+        _model = StateObject(wrappedValue: SignInModel())
+        #endif
+    }
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -159,42 +173,59 @@ struct SignInView: View {
                         Button("Add sample account") { store.addDemoAccount(provider: account.provider, name: name); dismiss() }.buttonStyle(PrimaryButtonStyle())
                         Text("Exit Demo to sign in to a provider.").font(.caption).foregroundStyle(.secondary)
                     } else if let snapshot = model.snapshot, let credential = model.credential {
-                        HStack(spacing: 20) {
+                        let existing = store.existingConnection(for: credential)
+                        AccessibleStack(spacing: 20) {
+                            if existing == nil {
                             let readings = AgentAccount(provider: account.provider, snapshot: snapshot).readings()
                             if readings.isEmpty, let balance = snapshot.formattedCreditBalance {
                                 VStack(spacing: 5) {
                                     Text(balance).font(.title2.monospacedDigit())
                                     Text("Credits").font(.caption).foregroundStyle(.secondary)
-                                }.frame(width: 100, height: 100)
+                                }.frame(maxWidth: textSize.isAccessibilitySize ? .infinity : 100)
                             } else if readings.isEmpty, let allowance = AgentAccount(provider: account.provider, snapshot: snapshot).primaryAllowance {
                                 VStack(spacing: 4) {
                                     Text(allowance.remaining.map { $0.formatted() } ?? allowance.value).font(.title2.monospacedDigit())
                                     Text(allowance.title + (allowance.remaining != nil ? " left" : "")).font(.caption).foregroundStyle(.secondary)
-                                }.frame(width: 100)
+                                }.frame(maxWidth: textSize.isAccessibilitySize ? .infinity : 100)
                             } else if readings.isEmpty {
-                                Text(AgentAccount(provider: account.provider, snapshot: snapshot).allowanceSummary ?? (account.provider == .kimi ? "No Code quota reported" : "No quota reported")).font(.caption).foregroundStyle(.secondary).frame(width: 100)
+                                Text(AgentAccount(provider: account.provider, snapshot: snapshot).allowanceSummary ?? (account.provider == .kimi ? "No Code quota reported" : "No quota reported")).font(.caption).foregroundStyle(.secondary).frame(maxWidth: textSize.isAccessibilitySize ? .infinity : 100)
                             } else {
-                                UsageRing(readings: readings, color: account.provider.color, size: 100)
+                                AccessibleUsageRing(readings: readings, color: account.provider.color, size: 100)
+                            }
                             }
                             VStack(alignment: .leading, spacing: 8) {
-                                Label("Account verified", systemImage: "checkmark.seal.fill").foregroundStyle(Theme.accent)
+                                Label(existing == nil ? "Account verified" : "Already connected", systemImage: "checkmark.seal.fill").foregroundStyle(Theme.accent)
+                                if let existing { Text(existing.title).font(.headline).accessibilityIdentifier("existing-account-name") }
                                 if let email = credential.email { Text(email).font(.subheadline).foregroundStyle(.secondary) }
                                 Text(snapshot.plan ?? "Usage connected").font(.caption).foregroundStyle(.secondary)
                             }
                         }.panel()
-                        VStack(spacing: 16) {
+                        if existing != nil {
+                            Text("Your saved settings will be kept.")
+                                .font(.subheadline).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("existing-account-message")
+                        } else { VStack(spacing: 16) {
                             TextField("Account name, e.g. Personal", text: $name).textContentType(.nickname).accessibilityIdentifier("new-account-name")
                             Divider()
                             TextField("Workstream or machine", text: $workstream)
-                        }.panel()
-                        Button("Save connection") {
+                        }.panel() }
+                        Button(existing.map { "Reconnect \($0.title)" } ?? "Save connection") {
                             var connected = account
                             connected.snapshot = snapshot
                             connected.label = String(name.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80))
                             connected.workstream = String(workstream.prefix(160))
-                            do { try store.connect(connected, credential: credential); dismiss() }
+                            do {
+                                let id = try store.connect(connected, credential: credential)
+                                dismiss()
+                                if let onConnected { onConnected(id) }
+                            }
                             catch { model.message = error.localizedDescription }
-                        }.buttonStyle(PrimaryButtonStyle()).disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }.buttonStyle(PrimaryButtonStyle()).disabled(existing == nil && name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .accessibilityIdentifier("save-connection")
+                        if existing != nil, account.snapshot == nil {
+                            Button("Use another account") { chooseAnotherAccount() }
+                                .font(.subheadline.weight(.medium)).frame(maxWidth: .infinity, minHeight: 44)
+                                .accessibilityIdentifier("choose-another-login")
+                        }
                     } else if account.provider == .perplexity {
                         HStack(spacing: 8) { ProviderLogo(provider: .perplexity, color: account.color, size: 22); Text("Sign in with email.").font(.subheadline).foregroundStyle(.secondary) }
                         if model.credential != nil {
@@ -213,8 +244,8 @@ struct SignInView: View {
                             Button("Send a new code") { requestPerplexityCode() }.disabled(model.working).font(.subheadline)
                             if !emailLocked { Button("Change email") { model.changeEmail() }.disabled(model.working).font(.subheadline) }
                         } else {
-                            TextField("Email address", text: $model.inputEmail).textContentType(.emailAddress).keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("perplexity-email")
+                            TextField("Email address", text: $model.inputEmail).textContentType(.emailAddress)
+                                .textInputAutocapitalization(.never).autocorrectionDisabled(false).accessibilityIdentifier("perplexity-email")
                                 .disabled(model.working || emailLocked).panel()
                             Button { requestPerplexityCode() } label: { HStack { if model.working { ProgressView() }; Text(model.working ? "Sending…" : "Send sign-in code") } }
                                 .buttonStyle(PrimaryButtonStyle()).disabled(model.working || model.inputEmail.isEmpty).accessibilityIdentifier("send-perplexity-code")
@@ -227,7 +258,7 @@ struct SignInView: View {
                         }
                         if account.provider == .gemini { Text("Shows Gemini CLI and Code Assist quotas.").font(.caption).foregroundStyle(.secondary) }
                         if account.provider == .kimi, account.snapshot == nil {
-                            Picker("Region", selection: $kimiRegion) { ForEach(KimiAuth.Region.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented).disabled(model.working)
+                            Picker("Region", selection: $kimiRegion) { ForEach(KimiAuth.Region.allCases) { Text($0.title).tag($0) } }.modifier(AccessiblePickerStyle()).disabled(model.working)
                         }
                         if let code = model.verificationCode {
                             VStack(alignment: .leading, spacing: 12) {
@@ -248,9 +279,9 @@ struct SignInView: View {
                         } label: {
                             HStack { if model.working { ProgressView() }; Text(model.working ? "Connecting…" : "Continue with \(account.provider == .codex ? "ChatGPT" : account.provider.name)") }
                         }.buttonStyle(PrimaryButtonStyle()).disabled(model.working)
+                            .accessibilityHint("Can use your browser’s signed-in account. Choose Use another account to sign in to a different one.")
                         Button(account.snapshot == nil ? "Use another account" : "Choose a different sign-in") {
-                            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true, kimiRegion: kimiRegion, allowActivation: allowActivation) }
-                            catch { model.message = error.localizedDescription }
+                            chooseAnotherAccount()
                         }.font(.subheadline.weight(.medium)).tint(Theme.accent)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                             .disabled(model.working).accessibilityIdentifier("choose-another-login")
@@ -279,6 +310,13 @@ struct SignInView: View {
                 }
                 .onDisappear { model.cancel() }
         }.interactiveDismissDisabled(model.working).sheet(isPresented: $reporting) { NavigationStack { ProblemReportView(title: "\(account.provider.name) sign-in response could not be parsed", includeDebug: true).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { reporting = false } } } } }
+    }
+    private func chooseAnotherAccount() {
+        if account.provider == .perplexity { model.clearEmailIdentity(); emailLocked = false }
+        else {
+            do { model.start(account: account, previous: try store.savedCredential(for: account.id), usePrivateSession: true, kimiRegion: kimiRegion, allowActivation: allowActivation) }
+            catch { model.message = error.localizedDescription }
+        }
     }
     private func requestPerplexityCode() {
         do { model.requestEmailCode(account: account, previous: try store.savedCredential(for: account.id)) }

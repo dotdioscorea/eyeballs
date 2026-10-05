@@ -10,7 +10,8 @@ enum Theme {
 struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.font(.body.weight(.semibold)).foregroundStyle(Theme.background)
-            .frame(maxWidth: .infinity).padding(.vertical, 16)
+            .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 16).frame(maxWidth: .infinity).padding(.vertical, 16)
             .background(Theme.accent.opacity(configuration.isPressed ? 0.7 : 1), in: RoundedRectangle(cornerRadius: 16))
     }
 }

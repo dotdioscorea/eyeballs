@@ -144,6 +144,11 @@ final class AccountStore: ObservableObject {
             saveEvents(); persist()
         }
         #endif
+        #if DEBUG && targetEnvironment(simulator)
+        if SignInUIFixture.enabled, let index = accounts.firstIndex(where: { $0.id == SignInUIFixture.existingID }) {
+            accounts[index].snapshot?.identity = SignInUIFixture.credential().registrationIdentity
+        }
+        #endif
         if publishesWidgetSummaries, loadedAccounts { publishWidgets() }
         if self.integratesWithSystem, loadedAccounts { Task { await scheduleNotifications() } }
     }
@@ -159,7 +164,11 @@ final class AccountStore: ObservableObject {
     }
     func restoreWidgetSummaries() { if loadedAccounts { publishWidgets() } }
     func savedCredential(for id: UUID) throws -> AccountCredential? { isDemo ? nil : try vault.load(id: id) }
-    func connect(_ account: AgentAccount, credential: AccountCredential) throws {
+    func existingConnection(for credential: AccountCredential) -> AgentAccount? {
+        accounts.first { $0.provider == credential.provider && $0.snapshot?.identity == credential.registrationIdentity }
+    }
+    @discardableResult
+    func connect(_ account: AgentAccount, credential: AccountCredential) throws -> UUID {
         guard !isDemo else { throw UsageError.unavailable }
         guard loadedAccounts else { throw UsageError.unavailable }
         guard account.provider == credential.provider, account.snapshot?.identity == credential.registrationIdentity else { throw UsageError.wrongAccount }
@@ -186,6 +195,7 @@ final class AccountStore: ObservableObject {
             if let snapshot = connected.snapshot { recordHistory(snapshot, id: connected.id) }
         }
         persist()
+        return existing.map { accounts[$0].id } ?? account.id
     }
     func update(_ account: AgentAccount) {
         guard let index = accounts.firstIndex(where: { $0.id == account.id }) else { return }

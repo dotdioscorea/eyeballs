@@ -1,6 +1,123 @@
 import XCTest
 
 final class RequotaUITests: XCTestCase {
+    private func attachScreen(_ app: XCUIApplication, _ name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = name; shot.lifetime = .keepAlways; add(shot)
+    }
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication, attempts: Int = 15) {
+        for _ in 0..<attempts { if element.isHittable { return }; app.swipeUp() }
+        XCTAssertTrue(element.isHittable)
+    }
+    private let largestText = ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+    func testLargestTextAccountLayoutsDetailsChartsAndSettings() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--claude-reset-fixture", "--credit-tile-fixture"] + largestText
+        app.launch()
+        app.buttons["layout-tiles"].tap()
+        let personal = app.buttons["account-Personal"]
+        reveal(personal, in: app)
+        XCTAssertGreaterThan(personal.frame.width, app.frame.width * 0.85, "Tiles use one readable column at accessibility sizes")
+        attachScreen(app, "Largest text — accounts")
+        personal.tap()
+        reveal(app.buttons["configure-display"], in: app)
+        attachScreen(app, "Largest text — usage values")
+        app.buttons["configure-display"].tap()
+        XCTAssertTrue(app.navigationBars["Display"].waitForExistence(timeout: 5))
+        attachScreen(app, "Largest text — display settings")
+        app.swipeUp()
+        let used = app.buttons["Used / elapsed"].firstMatch
+        reveal(used, in: app); used.tap(); XCTAssertEqual(used.value as? String, "Selected")
+        app.buttons["Remaining"].firstMatch.tap()
+        XCTAssertEqual(app.buttons["Remaining"].firstMatch.value as? String, "Selected")
+        attachScreen(app, "Largest text — amount choices")
+        app.buttons["Cancel"].tap()
+        reveal(app.buttons["activation-help-00000000-0000-0000-0000-000000000001"], in: app)
+        attachScreen(app, "Largest text — activation")
+        app.buttons["activation-help-00000000-0000-0000-0000-000000000001"].tap()
+        XCTAssertTrue(app.staticTexts["activation-explanation"].waitForExistence(timeout: 5))
+        attachScreen(app, "Largest text — activation help")
+        app.buttons["Done"].tap()
+        app.navigationBars.buttons["Requota"].tap()
+        app.tabBars.buttons["Charts"].tap()
+        reveal(app.buttons["chart-reading-00000000-0000-0000-0000-000000000001:week"], in: app)
+        attachScreen(app, "Largest text — chart readout")
+        app.tabBars.buttons["Settings"].tap()
+        app.buttons["notification-settings"].tap()
+        attachScreen(app, "Largest text — notifications")
+        app.navigationBars.buttons["Settings"].tap()
+        app.tabBars.buttons["Accounts"].tap()
+        for _ in 0..<20 { if app.buttons["compact-mode"].isHittable { break }; app.swipeDown() }
+        app.buttons["compact-mode"].tap(); reveal(personal, in: app)
+        attachScreen(app, "Largest text — compact bars")
+        app.swipeDown(); app.buttons["layout-cards"].tap(); reveal(personal, in: app)
+        attachScreen(app, "Largest text — cards")
+    }
+    func testDuplicateClaudeSignInNamesExistingAccountAndReconnectsIt() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--signin-fixture"] + largestText
+        app.launch(); app.buttons["add-account"].tap(); app.buttons["connect-claude"].tap()
+        app.buttons["Continue with Claude"].tap()
+        XCTAssertTrue(app.staticTexts["existing-account-name"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["existing-account-name"].label, "Work")
+        XCTAssertFalse(app.textFields["new-account-name"].exists)
+        let save = app.buttons["save-connection"]
+        reveal(save, in: app); XCTAssertEqual(save.label, "Reconnect Work"); XCTAssertTrue(save.isEnabled)
+        attachScreen(app, "Largest text — existing Claude account")
+        save.tap()
+        XCTAssertTrue(app.navigationBars["Work"].waitForExistence(timeout: 10), "Reconnect opens the saved account and closes both sign-in sheets")
+        app.navigationBars.buttons["Requota"].tap()
+        for _ in 0..<20 { if app.textFields["search-accounts"].isHittable { break }; app.swipeDown() }
+        let search = app.textFields["search-accounts"]; search.tap(); search.typeText("Work\n")
+        XCTAssertEqual(app.buttons.matching(identifier: "account-Work").count, 1)
+    }
+    func testDuplicateClaudeCanChooseAnotherIdentity() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture", "--exit-demo-test", "--signin-fixture"]
+        app.launch(); app.buttons["add-account"].tap(); app.buttons["connect-claude"].tap()
+        app.buttons["Continue with Claude"].tap()
+        XCTAssertTrue(app.staticTexts["existing-account-name"].waitForExistence(timeout: 5))
+        app.buttons["choose-another-login"].tap()
+        XCTAssertTrue(app.textFields["new-account-name"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["existing-account-name"].exists)
+        XCTAssertEqual(app.buttons["save-connection"].label, "Save connection")
+        app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
+    }
+    func testNativeEmailExpandsSystemTextReplacement() {
+        let settings = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
+        settings.launch()
+        for _ in 0..<5 {
+            if settings.navigationBars["Settings"].exists { break }
+            settings.navigationBars.buttons.firstMatch.tap()
+        }
+        for _ in 0..<5 { settings.swipeDown() }
+        reveal(settings.staticTexts["General"], in: settings); settings.staticTexts["General"].tap()
+        reveal(settings.staticTexts["Keyboard"], in: settings); settings.staticTexts["Keyboard"].tap()
+        settings.staticTexts["Text Replacement"].tap()
+        settings.navigationBars.buttons["Add"].tap()
+        let phrase = settings.textFields["Phrase"]
+        XCTAssertTrue(phrase.waitForExistence(timeout: 5)); phrase.tap(); phrase.typeText("shortcut@example.test")
+        let shortcut = settings.textFields["Shortcut"]; shortcut.tap(); shortcut.typeText("reqtestemail")
+        settings.navigationBars.buttons["Save"].tap()
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-fixture", "--exit-demo-test"] + largestText
+        app.launch(); app.buttons["add-account"].tap()
+        reveal(app.buttons["connect-perplexity"], in: app); app.buttons["connect-perplexity"].tap()
+        let email = app.textFields["perplexity-email"]
+        XCTAssertTrue(email.waitForExistence(timeout: 5)); email.tap()
+        for letter in "reqtestemail" { app.keyboards.keys[String(letter)].tap() }
+        app.keyboards.keys["space"].tap()
+        let expanded = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (email.value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) == "shortcut@example.test"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [expanded], timeout: 5), .completed)
+        attachScreen(app, "Largest text — native email and system text replacement")
+        XCTAssertTrue(app.buttons["send-perplexity-code"].isEnabled)
+        app.buttons["Cancel"].tap(); app.buttons["Done"].tap()
+        settings.activate()
+        let entry = settings.cells.containing(.staticText, identifier: "reqtestemail").firstMatch
+        entry.swipeLeft(); settings.buttons["Delete"].tap()
+        settings.terminate()
+    }
     func testManualAndAutomaticActivationAcrossAccountsDoNotRepeatAfterRelaunch() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-fixture", "--activation-fixture", "--reset-activation-fixture", "--reset-activation-settings", "--exit-demo-test"]

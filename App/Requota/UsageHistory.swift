@@ -52,6 +52,7 @@ struct UsageHistoryStore {
     private func location(_ id: UUID) -> URL { directory.appendingPathComponent(id.uuidString + ".json") }
 }
 struct UsageHistoryView: View {
+    @Environment(\.dynamicTypeSize) private var textSize
     let samples: [UsageHistorySample]
     let account: AgentAccount
     var events: [AccountEvent] = []
@@ -86,10 +87,10 @@ struct UsageHistoryView: View {
     var body: some View {
         VStack(spacing: 18) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text("Usage history").font(.headline); Spacer(); HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate) }
-                Picker("History chart type", selection: $kind) { Text("Lines").tag(HistoryChartKind.lines); Text("Rate").tag(HistoryChartKind.rate) }.pickerStyle(.segmented)
+                AccessibleStack { Text("Usage history").font(.headline); if !textSize.isAccessibilitySize { Spacer() }; HistoryMeasureMenu(measure: $measure, unit: $unit, units: units, activity: kind == .rate) }
+                Picker("History chart type", selection: $kind) { Text("Lines").tag(HistoryChartKind.lines); Text("Rate").tag(HistoryChartKind.rate) }.modifier(AccessiblePickerStyle())
                 HistoryPeriodPicker(days: $days)
-                HStack { windowLegend; Spacer(minLength: 8); HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours) }
+                AccessibleStack { windowLegend; HistoryLineOptions(smooth: $smooth, rate: kind == .rate, averagingHours: $averagingHours) }
                 if series.flatMap({ $0.segments.flatMap { $0 } }).isEmpty { Text(plottedWindows.isEmpty ? "Choose a metric." : "History starts with successful refreshes.").font(.caption).foregroundStyle(.secondary) }
                 else {
                     HistoryPlot(series: series, domain: domain, measure: kind == .rate && measure == .remaining ? .used : measure, unit: activeUnit,
@@ -99,10 +100,9 @@ struct UsageHistoryView: View {
             }.panel()
             if let window = windows.first(where: { $0.id == heatmapWindow }) ?? windows.first(where: EventDetection.weekly) ?? windows.first {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack {
+                    AccessibleStack {
                         Text("Activity").font(.headline)
-                        Spacer()
-                        Picker("Activity metric", selection: Binding(get: { window.id }, set: { heatmapWindow = $0 })) { ForEach(windows) { Text($0.shortTitle).tag($0.id) } }.font(.caption).lineLimit(1).frame(maxWidth: 200, alignment: .trailing).tint(.primary)
+                        Picker("Activity metric", selection: Binding(get: { window.id }, set: { heatmapWindow = $0 })) { ForEach(windows) { Text($0.shortTitle).tag($0.id) } }.font(.caption).tint(.primary)
                     }
                     UsageHeatmap(samples: samples, window: window, color: account.usageColor(for: window.id), events: events)
                 }.panel()
@@ -117,7 +117,7 @@ struct UsageHistoryView: View {
                 ForEach(windows.filter { measure != .amount || $0.amountUnit == activeUnit }) { window in
                     Button { if hiddenWindows.contains(window.id) { hiddenWindows.remove(window.id) } else { hiddenWindows.insert(window.id) } } label: {
                         HStack(spacing: 5) { Circle().fill(account.usageColor(for: window.id)).frame(width: 6, height: 6); Text(window.shortTitle) }.font(.caption).opacity(hiddenWindows.contains(window.id) ? 0.35 : 1)
-                    }.buttonStyle(.plain).accessibilityValue(hiddenWindows.contains(window.id) ? "Hidden" : "Visible")
+                    }.buttonStyle(.plain).frame(minHeight: 44).accessibilityValue(hiddenWindows.contains(window.id) ? "Hidden" : "Visible")
                 }
             }
         }

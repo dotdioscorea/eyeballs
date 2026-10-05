@@ -42,6 +42,7 @@ struct RootView: View {
 
 struct DashboardView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var textSize
     @EnvironmentObject private var store: AccountStore
     @AppStorage("dashboard-compact") private var oldCompact = false
     @AppStorage("dashboard-layout") private var layoutValue = ""
@@ -64,6 +65,7 @@ struct DashboardView: View {
     }
     var body: some View {
         ScrollView {
+            if textSize.isAccessibilitySize, !store.accounts.isEmpty { controls }
             if store.accounts.isEmpty {
                 VStack(spacing: 22) {
                     RequotaMark(size: 100).padding(.top, 70)
@@ -72,11 +74,11 @@ struct DashboardView: View {
                 }.padding(24).frame(maxWidth: 500).frame(maxWidth: .infinity)
             } else {
                 Group {
-                    if layout == .tiles {
+                    if layout == .tiles && !textSize.isAccessibilitySize {
                         LazyVGrid(columns: tablet ? [GridItem(.adaptive(minimum: 210, maximum: 280), spacing: 16)] : Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: tablet ? 16 : 10) {
                             ForEach(displayed) { account in accountLink(account, tile: true) }
                         }
-                    } else if tablet {
+                    } else if tablet && !textSize.isAccessibilitySize {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
                             ForEach(displayed) { account in accountLink(account, tile: false) }
                         }
@@ -93,7 +95,7 @@ struct DashboardView: View {
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
             Button { adding = true } label: { Image(systemName: "plus") }.accessibilityLabel("Add account").accessibilityIdentifier("add-account")
         } }
-        .safeAreaInset(edge: .top, spacing: 0) { if !store.accounts.isEmpty { controls } }
+        .safeAreaInset(edge: .top, spacing: 0) { if !store.accounts.isEmpty && !textSize.isAccessibilitySize { controls } }
         .refreshable { await store.refreshAll() }
         .sheet(isPresented: $adding) { AddAccountView() }
         .sheet(isPresented: $reordering) { reorderSheet }
@@ -101,25 +103,25 @@ struct DashboardView: View {
     }
     private var controls: some View {
         VStack(spacing: compact ? 6 : 10) {
-            HStack(spacing: 20) {
-                if tablet { Text("Requota").font(.title2.weight(.semibold)); Spacer(minLength: 16); searchField.frame(maxWidth: 360) }
+            AccessibleStack(spacing: 12) {
+                if tablet && !textSize.isAccessibilitySize { Text("Requota").font(.title2.weight(.semibold)); Spacer(minLength: 16); searchField.frame(maxWidth: 360) }
                 HStack(spacing: 12) {
                     ForEach(DashboardLayout.allCases) { choice in
                         Button { layoutValue = choice.rawValue; oldCompact = choice == .bars } label: {
-                            Image(systemName: choice.symbol).font(.subheadline).padding(.vertical, 5)
+                            Image(systemName: choice.symbol).font(.subheadline).frame(minWidth: 44, minHeight: 44)
                         }.tint(layout == choice ? Theme.accent : .secondary)
                             .accessibilityLabel(choice.title).accessibilityValue(layout == choice ? "On" : "Off")
                             .accessibilityIdentifier(choice == .bars ? "compact-mode" : "layout-\(choice.rawValue)")
                     }
                 }
-                Spacer()
+                if !textSize.isAccessibilitySize { Spacer() }
                 Menu {
                     Picker("Sort accounts", selection: $sortValue) { ForEach(AccountSort.allCases) { Text($0.title).tag($0.rawValue) } }
                     Button("Reorder accounts") { adoptCustomOrder(); reordering = true }
-                } label: { Label(sort.title, systemImage: "arrow.up.arrow.down").font(.caption.weight(.medium)) }
+                } label: { Label(sort.title, systemImage: "arrow.up.arrow.down").font(.caption.weight(.medium)).fixedSize(horizontal: false, vertical: true).frame(minHeight: 44) }
                     .accessibilityLabel("Sort accounts").accessibilityIdentifier("sort-accounts")
             }
-            if !tablet { searchField }
+            if !tablet || textSize.isAccessibilitySize { searchField }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     filterButton("All", selected: filter == nil) { filter = nil }
@@ -165,32 +167,35 @@ struct DashboardView: View {
         }
     }
     private func filterButton(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).font(.caption.weight(.medium)).padding(.horizontal, 13).padding(.vertical, 7).background(selected ? Theme.accent : Theme.card, in: Capsule()).foregroundStyle(selected ? Theme.background : .white.opacity(0.7)) }
+        Button(action: action) { Text(title).font(.caption.weight(.medium)).padding(.horizontal, 13).padding(.vertical, 7).frame(minHeight: 44).background(selected ? Theme.accent : Theme.card, in: Capsule()).foregroundStyle(selected ? Theme.background : .white.opacity(0.7)) }
     }
 }
 
 struct AccountCard: View {
     let account: AgentAccount
     var compact = false
+    @Environment(\.dynamicTypeSize) private var textSize
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let readings = account.readings(at: context.date)
             VStack(alignment: .leading, spacing: compact ? 5 : 15) {
-                HStack(spacing: compact ? 6 : 9) {
-                    ProviderLogo(provider: account.provider, color: account.color, size: compact ? 16 : 22)
-                    Text(account.title).font(compact ? .subheadline.weight(.semibold) : .title3.weight(.semibold)).lineLimit(1).layoutPriority(1)
-                    Spacer(minLength: 8)
+                AccessibleStack(spacing: compact ? 6 : 9) {
+                    HStack(spacing: 8) {
+                        ProviderLogo(provider: account.provider, color: account.color, size: compact ? 16 : 22)
+                        Text(account.title).font(compact ? .subheadline.weight(.semibold) : .title3.weight(.semibold)).lineLimit(textSize.isAccessibilitySize ? nil : 1).layoutPriority(1)
+                    }
+                    if !textSize.isAccessibilitySize { Spacer(minLength: 8) }
                     Text([account.provider.name, account.planTitle].compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(textSize.isAccessibilitySize ? nil : 1)
                 }
-                if !account.workstream.isEmpty { Text(account.workstream).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                if !account.workstream.isEmpty { Text(account.workstream).font(.caption).foregroundStyle(.secondary).lineLimit(textSize.isAccessibilitySize ? nil : 1) }
                 if !readings.isEmpty {
                 if compact {
                     MetricBars(readings: readings, color: account.color, dense: true)
                 }
                 else {
-                    HStack(spacing: 22) {
-                        UsageRing(readings: readings, color: account.color, size: 100, lineWidth: readings.count > 2 ? 6 : 8)
+                    AccessibleStack(spacing: 22) {
+                        AccessibleUsageRing(readings: readings, color: account.color, size: 100, lineWidth: readings.count > 2 ? 6 : 8)
                         MetricLegend(readings: readings, color: account.color)
                     }
                 }
@@ -198,15 +203,15 @@ struct AccountCard: View {
                 if let allowances = account.snapshot?.remainingAllowances, !allowances.isEmpty { RemainingAllowancesView(allowances: allowances, dense: compact) }
                 else if readings.isEmpty, account.snapshot?.formattedCreditBalance == nil { Text(account.emptyMetricMessage).font(.caption).foregroundStyle(.secondary) }
                 if let credits = account.snapshot?.formattedCreditBalance {
-                    HStack { Text("Credits").foregroundStyle(.secondary); Spacer(); Text(credits).monospacedDigit().fontWeight(.medium) }.font(compact ? .caption : .subheadline)
+                    AccessibleValueRow(title: "Credits", value: credits).font(compact ? .caption : .subheadline)
                     if !account.exhaustedWindows.isEmpty { Text(account.exhaustedWindows.map(\.title).joined(separator: ", ") + " allowance exhausted").font(.caption2).foregroundStyle(.orange) }
                 }
-                HStack(alignment: .top, spacing: 8) {
+                AccessibleStack(spacing: 8) {
                     if account.needsLogin { Text("Reconnect to update").foregroundStyle(.orange) }
                     else if let window = account.displayedResetWindow(for: readings), let reset = window.resetsAt { Text(reset <= context.date ? "\(window.shortTitle) reset due" : "\(window.shortTitle) resets in \(ResetText.relative(reset, now: context.date))").foregroundStyle(.secondary) }
-                    Spacer(minLength: 0)
+                    if !textSize.isAccessibilitySize { Spacer(minLength: 0) }
                     if let snapshot = account.snapshot {
-                        Text(UpdatedText.relative(snapshot.updatedAt, now: context.date) + (snapshot.isStale(at: context.date) ? " · stale" : "")).foregroundStyle(.secondary).multilineTextAlignment(.trailing)
+                        Text(UpdatedText.relative(snapshot.updatedAt, now: context.date) + (snapshot.isStale(at: context.date) ? " · stale" : "")).foregroundStyle(.secondary).multilineTextAlignment(textSize.isAccessibilitySize ? .leading : .trailing)
                     }
                 }.font(.caption2)
             }.padding(compact ? 8 : 18).background(Theme.card, in: RoundedRectangle(cornerRadius: compact ? 9 : 22))
@@ -316,7 +321,9 @@ struct AddAccountView: View {
                 }.padding(20).frame(maxWidth: 600).frame(maxWidth: .infinity)
             }.background(Theme.background).navigationTitle("Add account").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
-                .sheet(item: $selected) { account in SignInView(account: account) }
+                .sheet(item: $selected) { account in SignInView(account: account, onConnected: { id in
+                    selected = nil; dismiss(); store.notificationAccountID = id
+                }) }
                 .onChange(of: store.accounts.count) { old, new in if new > old { dismiss() } }
         }
     }
